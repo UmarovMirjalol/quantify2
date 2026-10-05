@@ -42,7 +42,7 @@ class BacktestSummary(BaseModel):
     strategy_description: str
     dataset_name: str
     created_at: str
-    demo_mode: bool
+    parser: str
     total_return: float | None
     sharpe_ratio: float | None
     max_drawdown: float | None
@@ -52,9 +52,10 @@ class BacktestSummary(BaseModel):
 
 class StatusResponse(BaseModel):
     status: str
-    demo_mode: bool
+    parser: str
     llm_enabled: bool
     llm_model: str
+    product: str = "QuantLLM Backtester"
 
 
 @router.get("/health", response_model=StatusResponse)
@@ -62,7 +63,7 @@ def health() -> StatusResponse:
     settings = get_settings()
     return StatusResponse(
         status="ok",
-        demo_mode=not settings.llm_enabled,
+        parser="llm" if settings.llm_enabled else "builtin",
         llm_enabled=settings.llm_enabled,
         llm_model=settings.llm_model,
     )
@@ -128,7 +129,8 @@ async def api_run_backtest(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     settings = get_settings()
-    demo_mode = not settings.llm_enabled
+    parser_used = "llm" if settings.llm_enabled else "builtin"
+    parsed_warnings: list[str] = []
 
     try:
         if body.strategy is not None:
@@ -146,7 +148,7 @@ async def api_run_backtest(
                     update={"risk_per_trade": body.config.risk_per_trade}
                 )
                 strategy = strategy.model_copy(update={"risk": risk})
-            parsed_warnings: list[str] = []
+            parser_used = "provided"
         else:
             parsed = await parse_strategy(
                 body.strategy_text,
@@ -157,7 +159,7 @@ async def api_run_backtest(
                 asset=body.asset,
             )
             strategy = parsed.strategy
-            demo_mode = parsed.demo_mode
+            parser_used = parsed.parser
             parsed_warnings = parsed.warnings
     except StrategyParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -185,7 +187,7 @@ async def api_run_backtest(
         config_json=json.dumps(body.config.model_dump(mode="json")),
         metrics_json=json.dumps(metrics),
         results_json=json.dumps(result),
-        demo_mode=1 if demo_mode else 0,
+        demo_mode=0 if parser_used == "llm" else 1,
         created_at=datetime.now(timezone.utc),
         total_return=metrics.get("total_return"),
         sharpe_ratio=metrics.get("sharpe_ratio"),
@@ -199,8 +201,8 @@ async def api_run_backtest(
 
     return {
         "id": record.id,
-        "demo_mode": demo_mode,
-        "warnings": parsed_warnings if body.strategy is None else [],
+        "parser": parser_used,
+        "warnings": parsed_warnings,
         "strategy_description": body.strategy_text,
         "dataset_name": body.dataset_id,
         "created_at": record.created_at.isoformat(),
@@ -222,7 +224,7 @@ def api_list_backtests(db: Session = Depends(get_db)) -> list[BacktestSummary]:
             strategy_description=r.strategy_description,
             dataset_name=r.dataset_name,
             created_at=r.created_at.isoformat() if r.created_at else "",
-            demo_mode=bool(r.demo_mode),
+            parser="builtin" if r.demo_mode else "llm",
             total_return=r.total_return,
             sharpe_ratio=r.sharpe_ratio,
             max_drawdown=r.max_drawdown,
@@ -244,7 +246,7 @@ def api_get_backtest(backtest_id: int, db: Session = Depends(get_db)) -> dict[st
         "strategy_description": record.strategy_description,
         "dataset_name": record.dataset_name,
         "created_at": record.created_at.isoformat() if record.created_at else None,
-        "demo_mode": bool(record.demo_mode),
+        "parser": "builtin" if record.demo_mode else "llm",
         "config": json.loads(record.config_json),
         **results,
     }

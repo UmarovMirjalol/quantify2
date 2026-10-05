@@ -81,36 +81,37 @@ export function HomePage({ health }: Props) {
   return (
     <div className="home">
       <section className="hero-panel">
-        <p className="eyebrow">Natural language → structured strategy → custom engine</p>
+        <p className="eyebrow">Natural language quantitative research</p>
         <h1>QuantLLM Backtester</h1>
         <p className="lede">
-          Describe a long-only quantitative strategy in plain English. The platform parses it into a
-          validated specification, runs a look-ahead-safe historical simulation, and reports real metrics.
+          Describe a long-only strategy in plain English. The platform converts it into a validated
+          specification, runs a look-ahead-safe simulation with risk, costs, and slippage, then
+          returns production metrics, charts, and trade history.
         </p>
-        {health?.demo_mode ? (
-          <div className="banner info">
-            Running in <strong>Demo Mode</strong> — no LLM API key detected. Predefined strategy
-            patterns are used. Set <code>LLM_API_KEY</code> to enable live parsing.
-          </div>
+        {health?.llm_enabled ? (
+          <p className="subtle-status">LLM parser active · {health.llm_model}</p>
         ) : (
-          <div className="banner ok">LLM parsing enabled ({health?.llm_model}).</div>
+          <p className="subtle-status">
+            Built-in strategy parser active · set <code>LLM_API_KEY</code> for broader NLP coverage
+          </p>
         )}
       </section>
 
       <form className="panel form-panel" onSubmit={onSubmit}>
         <label className="field">
-          <span>Strategy (natural language)</span>
+          <span>Strategy</span>
           <textarea
             value={strategyText}
             onChange={(e) => setStrategyText(e.target.value)}
             rows={5}
             required
             minLength={5}
+            placeholder="Describe entry, exit, and risk in plain English…"
           />
         </label>
 
         <div className="example-row">
-          <span>Examples:</span>
+          <span>Quick start:</span>
           {EXAMPLE_STRATEGIES.map((ex, i) => (
             <button
               key={i}
@@ -134,7 +135,10 @@ export function HomePage({ health }: Props) {
               ))}
               {!datasets.length ? <option value="sample_data.csv">sample_data.csv</option> : null}
             </select>
-            <small className="hint">sample_data.csv is synthetic OHLCV for demo purposes.</small>
+            <small className="hint">
+              Included sample is synthetic OHLCV for local runs. Upload your own market CSV for real
+              research.
+            </small>
           </label>
 
           <label className="field">

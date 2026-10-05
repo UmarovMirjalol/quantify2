@@ -47,7 +47,11 @@ export function ResultsView({ result }: { result: BacktestResult }) {
           <div className="meta-row">
             <span>Dataset: {result.dataset_name}</span>
             <span>{result.created_at?.slice(0, 19).replace('T', ' ')} UTC</span>
-            {result.demo_mode ? <span className="tag">Demo Mode</span> : <span className="tag llm">LLM Parsed</span>}
+            {result.parser === 'llm' ? (
+              <span className="tag llm">LLM parser</span>
+            ) : (
+              <span className="tag">Built-in parser</span>
+            )}
           </div>
         </div>
         <Link className="btn secondary" to="/">

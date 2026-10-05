@@ -77,7 +77,7 @@ export interface PriceBar {
 
 export interface BacktestResult {
   id: number;
-  demo_mode: boolean;
+  parser: string;
   warnings?: string[];
   strategy_description: string;
   dataset_name: string;
@@ -98,7 +98,7 @@ export interface BacktestSummary {
   strategy_description: string;
   dataset_name: string;
   created_at: string;
-  demo_mode: boolean;
+  parser: string;
   total_return: number | null;
   sharpe_ratio: number | null;
   max_drawdown: number | null;
@@ -115,7 +115,8 @@ export interface DatasetInfo {
 
 export interface HealthStatus {
   status: string;
-  demo_mode: boolean;
+  parser: string;
   llm_enabled: boolean;
   llm_model: string;
+  product?: string;
 }

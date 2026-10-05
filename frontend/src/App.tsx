@@ -17,7 +17,7 @@ export default function App() {
       .catch(() =>
         setHealth({
           status: 'unreachable',
-          demo_mode: true,
+          parser: 'builtin',
           llm_enabled: false,
           llm_model: '',
         }),

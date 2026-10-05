@@ -59,7 +59,7 @@ export async function parseStrategy(payload: {
   commission?: number;
   slippage?: number;
   asset?: string;
-}): Promise<{ strategy: StrategySpec; demo_mode: boolean; warnings: string[] }> {
+}): Promise<{ strategy: StrategySpec; parser: string; warnings: string[] }> {
   return request('/api/parse-strategy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

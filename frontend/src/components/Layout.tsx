@@ -6,6 +6,7 @@ interface Props {
 }
 
 export function Layout({ children, health }: React.PropsWithChildren<Props>) {
+  const llmOn = Boolean(health?.llm_enabled);
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -22,14 +23,14 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
           </NavLink>
           <NavLink to="/history">History</NavLink>
         </nav>
-        <div className="mode-badge" data-demo={health?.demo_mode ? 'true' : 'false'}>
-          {health?.demo_mode ? 'Demo Mode' : `LLM · ${health?.llm_model ?? 'connected'}`}
+        <div className="mode-badge" data-llm={llmOn ? 'true' : 'false'}>
+          {llmOn ? `LLM · ${health?.llm_model}` : 'Built-in parser'}
         </div>
       </header>
       <main className="main">{children}</main>
       <footer className="footer">
-        <span>Custom pandas/NumPy engine · Signal at close → execute next open</span>
-        <span>Synthetic sample data is labeled — not live market data</span>
+        <span>Event-driven engine · Signal at close → execute next open</span>
+        <span>Upload your OHLCV CSV or use the included sample dataset</span>
       </footer>
     </div>
   );

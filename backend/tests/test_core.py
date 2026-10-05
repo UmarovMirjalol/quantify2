@@ -431,24 +431,24 @@ def test_unsupported_indicator_validation():
 
 
 # ---------------------------------------------------------------------------
-# 17. LLM structured-output validation (demo parser)
+# 17. Built-in / LLM structured-output validation
 # ---------------------------------------------------------------------------
 
-def test_llm_structured_output_validation_demo():
+def test_builtin_structured_output_validation():
     text = "Buy when the 20-day SMA crosses above the 50-day SMA and sell when it crosses below."
     parsed = parse_demo(text, initial_capital=50000, risk_per_trade=0.02)
-    assert parsed.demo_mode is True
+    assert parsed.parser == "builtin"
     assert parsed.strategy.entry_conditions[0].left.period == 20
     assert parsed.strategy.initial_capital == 50000
     assert parsed.strategy.risk.risk_per_trade == 0.02
 
 
-def test_rsi_demo_parse():
+def test_rsi_builtin_parse():
     parsed = parse_demo("Buy when RSI falls below 30 and sell when RSI rises above 70.")
     assert parsed.strategy.entry_conditions[0].left.indicator == IndicatorType.RSI
 
 
-def test_demo_rejects_unknown():
+def test_builtin_rejects_unknown():
     with pytest.raises(StrategyParseError):
         parse_demo("Buy on full moon and sell on solar eclipse using quantum indicators.")
 

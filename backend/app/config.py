@@ -27,12 +27,12 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{DB_PATH}"
     cors_origins: str = "http://localhost:4173,http://127.0.0.1:4173,http://localhost:5173,http://127.0.0.1:5173"
     max_upload_size_mb: int = 25
-    demo_mode_force: bool = False
+    force_builtin_parser: bool = False
 
     @property
     def llm_enabled(self) -> bool:
-        """Return True when a real LLM API key is configured and demo mode is not forced."""
-        if self.demo_mode_force:
+        """Return True when a real LLM API key is configured and builtin force is off."""
+        if self.force_builtin_parser:
             return False
         return bool(self.llm_api_key and self.llm_api_key.strip())
 

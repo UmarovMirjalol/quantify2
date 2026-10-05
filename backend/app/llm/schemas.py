@@ -298,9 +298,14 @@ class ParseStrategyRequest(BaseModel):
 
 class ParseStrategyResponse(BaseModel):
     strategy: StrategySpec
-    demo_mode: bool
+    parser: str = Field(description="'builtin' or 'llm'")
     raw_text: str
     warnings: list[str] = Field(default_factory=list)
+
+    @property
+    def demo_mode(self) -> bool:
+        """Deprecated alias: True when built-in parser was used."""
+        return self.parser == "builtin"
 
 
 class BacktestConfig(BaseModel):

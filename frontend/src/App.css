@@ -76,10 +76,16 @@
   background: #fff;
 }
 
-.mode-badge[data-demo='true'] {
-  background: #fff6e8;
-  color: var(--warn);
-  border-color: rgba(154, 107, 47, 0.25);
+.mode-badge[data-llm='true'] {
+  background: #e8f5ef;
+  color: var(--ok);
+  border-color: rgba(11, 110, 79, 0.2);
+}
+
+.subtle-status {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .main {
@@ -350,8 +356,8 @@ h2 {
 }
 
 .tag {
-  background: #fff6e8;
-  color: var(--warn);
+  background: #eef2f6;
+  color: var(--ink);
   border-radius: 999px;
   padding: 0.15rem 0.55rem;
   font-weight: 650;
