@@ -51,6 +51,10 @@ for i in $(seq 1 45); do
     echo
     echo "Users open the URL and enter APP_ACCESS_TOKEN from .env when prompted."
     grep '^APP_ACCESS_TOKEN=' .env | sed 's/^/  /'
+    echo
+    echo "HTTPS tip:"
+    echo "  APP_PORT=18080 DOMAIN=your.domain.com EMAIL=you@example.com \\"
+    echo "    docker compose -f docker-compose.yml -f docker-compose.https.yml up -d"
     docker compose ps
     exit 0
   fi
