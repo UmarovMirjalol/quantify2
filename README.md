@@ -144,9 +144,30 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 ## Built-in parser vs LLM
 
-The product ships with a **built-in natural-language parser** that extracts SMA/EMA crossovers, RSI bands, MACD, Bollinger setups, risk %, stop-loss, and take-profit from English without an API key.
+QuantLLM is designed around an **LLM interpretation layer**:
 
-Set `LLM_API_KEY` (and optionally `LLM_BASE_URL` / `LLM_MODEL`) to expand coverage to freer phrasing. LLM JSON output is always validated with Pydantic — **no generated code is executed**. If the LLM fails, the platform falls back to the built-in parser.
+```
+natural language → LLM (OpenAI-compatible) → StrategySpec (Pydantic) → engine
+```
+
+1. Open **LLM** in the UI (`/settings`) and paste an API key, **or** set env vars:
+   ```bash
+   LLM_API_KEY=sk-...
+   LLM_MODEL=gpt-4o-mini
+   LLM_BASE_URL=https://api.openai.com/v1
+   ```
+2. Any OpenAI-compatible provider works (OpenAI, Groq, Together, Azure, local gateways).
+3. Model output is **JSON only**, validated with Pydantic. **No generated code is executed.**
+4. If the LLM fails or no key is set, the **built-in parser** still runs supported strategies.
+
+Runtime keys from the UI are stored server-side in `.llm_runtime.json` (gitignored). Prefer env vars in production.
+
+API:
+
+- `GET /api/llm/status` — enabled flag, model, masked key
+- `PUT /api/llm/config` — save key / model / base_url
+- `DELETE /api/llm/config` — clear runtime config
+- `POST /api/parse-strategy` — uses LLM when enabled
 
 ## Uploading data
 

@@ -118,5 +118,15 @@ export interface HealthStatus {
   parser: string;
   llm_enabled: boolean;
   llm_model: string;
+  llm_base_url?: string;
   product?: string;
+}
+
+export interface LLMStatus {
+  enabled: boolean;
+  model: string;
+  base_url: string;
+  api_key_configured: boolean;
+  api_key_masked: string;
+  provider: string;
 }

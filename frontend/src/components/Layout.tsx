@@ -22,6 +22,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             New Backtest
           </NavLink>
           <NavLink to="/history">History</NavLink>
+          <NavLink to="/settings">LLM</NavLink>
         </nav>
         <div className="mode-badge" data-llm={llmOn ? 'true' : 'false'}>
           {llmOn ? `LLM · ${health?.llm_model}` : 'Built-in parser'}
@@ -29,8 +30,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
       </header>
       <main className="main">{children}</main>
       <footer className="footer">
-        <span>Event-driven engine · Signal at close → execute next open</span>
-        <span>Upload your OHLCV CSV or use the included sample dataset</span>
+        <span>LLM → StrategySpec → custom engine · Signal at close → execute next open</span>
+        <span>
+          {llmOn ? 'LLM parser active' : 'Connect an LLM key in Settings for freer NLP'}
+        </span>
       </footer>
     </div>
   );

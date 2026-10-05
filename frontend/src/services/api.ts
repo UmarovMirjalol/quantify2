@@ -93,3 +93,24 @@ export async function listBacktests(): Promise<BacktestSummary[]> {
 export async function getBacktest(id: number): Promise<BacktestResult> {
   return request(`/api/backtests/${id}`);
 }
+
+export async function getLLMStatus(): Promise<import('../types').LLMStatus> {
+  return request('/api/llm/status');
+}
+
+export async function updateLLMConfig(payload: {
+  api_key?: string;
+  model?: string;
+  base_url?: string;
+  enabled?: boolean;
+}): Promise<import('../types').LLMStatus> {
+  return request('/api/llm/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function clearLLMConfig(): Promise<import('../types').LLMStatus> {
+  return request('/api/llm/config', { method: 'DELETE' });
+}

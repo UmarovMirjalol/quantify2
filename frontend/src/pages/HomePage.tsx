@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { listDatasets, runBacktest, uploadDataset } from '../services/api';
 import type { DatasetInfo, HealthStatus } from '../types';
 
@@ -89,10 +89,14 @@ export function HomePage({ health }: Props) {
           returns production metrics, charts, and trade history.
         </p>
         {health?.llm_enabled ? (
-          <p className="subtle-status">LLM parser active · {health.llm_model}</p>
+          <p className="subtle-status">
+            LLM parser active · {health.llm_model} — strategies are interpreted by the model, then
+            validated before the engine runs.
+          </p>
         ) : (
           <p className="subtle-status">
-            Built-in strategy parser active · set <code>LLM_API_KEY</code> for broader NLP coverage
+            Built-in parser active ·{' '}
+            <Link to="/settings">connect LLM</Link> (OpenAI-compatible) for broader natural language.
           </p>
         )}
       </section>

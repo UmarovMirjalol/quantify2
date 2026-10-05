@@ -17,7 +17,14 @@ from app.database import get_db
 from app.data.loader import list_available_datasets, load_dataset
 from app.data.validators import DataValidationError, load_ohlcv_bytes
 from app.backtesting.engine import BacktestEngine, BacktestError
+from app.llm.client import LLMClient
 from app.llm.parser import StrategyParseError, parse_strategy
+from app.llm.runtime_config import (
+    LLMConfigUpdate,
+    LLMRuntimeConfig,
+    clear_runtime_llm_config,
+    save_runtime_llm_config,
+)
 from app.llm.schemas import (
     BacktestConfig,
     ParseStrategyRequest,
@@ -55,6 +62,7 @@ class StatusResponse(BaseModel):
     parser: str
     llm_enabled: bool
     llm_model: str
+    llm_base_url: str = ""
     product: str = "QuantLLM Backtester"
 
 
@@ -66,7 +74,57 @@ def health() -> StatusResponse:
         parser="llm" if settings.llm_enabled else "builtin",
         llm_enabled=settings.llm_enabled,
         llm_model=settings.llm_model,
+        llm_base_url=settings.llm_base_url,
     )
+
+
+@router.get("/llm/status")
+def llm_status() -> dict[str, Any]:
+    """Return LLM provider status (key masked)."""
+    return LLMClient().status()
+
+
+@router.put("/llm/config")
+def update_llm_config(body: LLMConfigUpdate) -> dict[str, Any]:
+    """
+    Save runtime LLM credentials (OpenAI-compatible).
+
+    Stored in `.llm_runtime.json` on the server (gitignored). Prefer env vars
+    in production; this endpoint is for local / self-hosted setup from the UI.
+    """
+    if body.enabled and not body.api_key.strip():
+        # Keep existing key if updating model only
+        from app.llm.runtime_config import load_runtime_llm_config
+
+        existing = load_runtime_llm_config()
+        if existing and existing.api_key.strip():
+            api_key = existing.api_key
+        else:
+            settings = get_settings()
+            api_key = settings.llm_api_key
+        if not api_key.strip():
+            raise HTTPException(
+                status_code=422,
+                detail="api_key is required to enable the LLM parser",
+            )
+    else:
+        api_key = body.api_key.strip()
+
+    cfg = LLMRuntimeConfig(
+        api_key=api_key if body.enabled else "",
+        model=body.model.strip() or "gpt-4o-mini",
+        base_url=body.base_url.strip() or "https://api.openai.com/v1",
+        enabled=body.enabled,
+    )
+    save_runtime_llm_config(cfg)
+    return LLMClient().status()
+
+
+@router.delete("/llm/config")
+def delete_llm_config() -> dict[str, Any]:
+    """Clear runtime LLM config and fall back to environment / built-in parser."""
+    clear_runtime_llm_config()
+    return LLMClient().status()
 
 
 @router.post("/parse-strategy", response_model=ParseStrategyResponse)

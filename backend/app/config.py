@@ -64,6 +64,10 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
+    # Apply optional UI/runtime LLM overrides (never committed)
+    from app.llm.runtime_config import apply_runtime_overrides
+
+    settings = apply_runtime_overrides(settings)
     settings.resolved_upload_dir.mkdir(parents=True, exist_ok=True)
     settings.resolved_data_dir.mkdir(parents=True, exist_ok=True)
     return settings

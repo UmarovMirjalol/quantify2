@@ -327,14 +327,10 @@ async def parse_with_llm(
     slippage: float | None = None,
     asset: str | None = None,
 ) -> ParseStrategyResponse:
-    """Parse strategy text via an OpenAI-compatible chat completions API."""
-    settings = get_settings()
-    try:
-        from openai import AsyncOpenAI
-    except ImportError as exc:
-        raise StrategyParseError("openai package not installed") from exc
+    """Parse strategy text via the OpenAI-compatible LLM client."""
+    from app.llm.client import LLMClient, LLMClientError
 
-    client = AsyncOpenAI(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
+    client = LLMClient()
     user_prompt = build_user_prompt(
         text,
         initial_capital=initial_capital,
@@ -342,19 +338,9 @@ async def parse_with_llm(
         asset=asset,
     )
     try:
-        response = await client.chat.completions.create(
-            model=settings.llm_model,
-            temperature=0,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_object"},
-        )
-        content = response.choices[0].message.content or "{}"
-        raw = _extract_json(content)
-    except Exception as exc:  # noqa: BLE001
-        raise StrategyParseError(f"LLM parsing failed: {exc}") from exc
+        raw = await client.chat_json(system=SYSTEM_PROMPT, user=user_prompt)
+    except LLMClientError as exc:
+        raise StrategyParseError(str(exc)) from exc
 
     overrides = {
         "initial_capital": initial_capital,
@@ -379,6 +365,7 @@ async def parse_with_llm(
         raw_text=text,
         warnings=[],
     )
+
 
 
 async def parse_strategy(
