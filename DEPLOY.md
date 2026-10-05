@@ -44,9 +44,24 @@ Stop:
 ./deploy/scripts/down.sh --purge  # delete volumes
 ```
 
-## Environment
+## LLM (AI) configuration
 
-See `.env.production.example`:
+The product is built around LLM strategy interpretation.
+
+**Option A — UI (any environment)**  
+Open `/settings` → paste OpenAI-compatible API key → Save.
+
+**Option B — environment (recommended for production)**
+
+```bash
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+LLM_BASE_URL=https://api.openai.com/v1
+```
+
+Flow: `NL text → LLM JSON → Pydantic StrategySpec → backtest engine` (no code execution).
+
+Without a key the built-in parser remains available so the app stays fully usable.
 
 | Variable | Default | Notes |
 |----------|---------|--------|
