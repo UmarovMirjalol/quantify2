@@ -108,7 +108,17 @@ Never commit real secrets. `.env` is gitignored.
 
 ## Run
 
-### Backend (port 8765)
+### Production (Docker)
+
+```bash
+cp .env.production.example .env
+./deploy/scripts/deploy.sh
+# → http://127.0.0.1/   (or APP_PORT from .env)
+```
+
+Full guide: [DEPLOY.md](DEPLOY.md)
+
+### Backend (local, port 8765)
 
 ```bash
 cd backend
@@ -118,7 +128,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
 
 API docs: http://127.0.0.1:8765/docs
 
-### Frontend (port 4173)
+### Frontend (local, port 4173)
 
 ```bash
 cd frontend
@@ -127,12 +137,11 @@ npm run dev
 
 Open http://127.0.0.1:4173
 
-### Docker
+### Docker Compose (dev overlay)
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
-
 ## Built-in parser vs LLM
 
 The product ships with a **built-in natural-language parser** that extracts SMA/EMA crossovers, RSI bands, MACD, Bollinger setups, risk %, stop-loss, and take-profit from English without an API key.

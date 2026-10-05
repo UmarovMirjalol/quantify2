@@ -1,32 +1,77 @@
+# QuantLLM production stack
+# Public entry: http://HOST:${APP_PORT:-80}
+#
+#   cp .env.production.example .env
+#   ./deploy/scripts/deploy.sh
+
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    ports:
-      - "8765:8765"
+    image: quantllm-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
     environment:
-      - LLM_API_KEY=${LLM_API_KEY:-}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
-      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
-      - DATABASE_URL=sqlite:////data/backtests.db
-      - CORS_ORIGINS=http://localhost:4173,http://127.0.0.1:4173,http://localhost:5173,http://127.0.0.1:5173
+      APP_ENV: production
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      FORCE_BUILTIN_PARSER: ${FORCE_BUILTIN_PARSER:-false}
+      DATABASE_URL: sqlite:////data/backtests.db
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-25}
+      DATA_DIR: /app/data
+      UPLOAD_DIR: /app/uploads
     volumes:
-      - ./data:/app/data:ro
-      - ./uploads:/app/uploads
+      - uploads-data:/app/uploads
       - backtest-db:/data
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8765
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8765/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks:
+      - quantllm
+    expose:
+      - "8765"
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    ports:
-      - "4173:4173"
+      args:
+        VITE_API_URL: ""
+    image: quantllm-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
     depends_on:
-      - backend
-    environment:
-      - VITE_API_URL=http://127.0.0.1:8765
+      backend:
+        condition: service_healthy
+    networks:
+      - quantllm
+    expose:
+      - "80"
+
+  edge:
+    build:
+      context: .
+      dockerfile: Dockerfile.edge
+    image: quantllm-edge:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    ports:
+      - "${APP_PORT:-80}:80"
+    networks:
+      - quantllm
 
 volumes:
   backtest-db:
+  uploads-data:
+
+networks:
+  quantllm:
+    driver: bridge

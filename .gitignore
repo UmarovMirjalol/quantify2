@@ -13,6 +13,7 @@ frontend/dist/
 
 # App runtime
 uploads/
+!uploads/.gitkeep
 *.db
 .env
 .DS_Store

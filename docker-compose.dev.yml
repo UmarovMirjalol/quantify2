@@ -1,0 +1,28 @@
+# Local development overrides
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+services:
+  backend:
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8765
+      --reload
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./backend/app:/app/app
+      - ./data:/app/data:ro
+      - ./uploads:/app/uploads
+      - backtest-db:/data
+    environment:
+      APP_ENV: development
+      CORS_ORIGINS: http://localhost:4173,http://127.0.0.1:4173,http://localhost:8080,http://127.0.0.1:8080
+
+  frontend:
+    ports:
+      - "4173:80"
+
+  edge:
+    ports:
+      - "${APP_PORT:-8080}:80"
