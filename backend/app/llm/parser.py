@@ -27,14 +27,21 @@ def _extract_asset(text: str, override: str | None) -> str:
     if override:
         return override.strip().upper()
     m = re.search(
-        r"\b(?:for|on|trade|buy|sell)\s+([A-Z]{1,5})\b",
+        r"\b(?:ticker|symbol|asset)\s*[:=]?\s*([A-Za-z]{1,5})\b",
         text,
         re.IGNORECASE,
     )
     if m:
         return m.group(1).upper()
+    m = re.search(r"\b(?:buy|sell|trade)\s+([A-Z]{2,5})\b", text)
+    if m:
+        return m.group(1).upper()
     tickers = re.findall(r"\b([A-Z]{2,5})\b", text)
-    skip = {"SMA", "EMA", "RSI", "ATR", "MACD", "AND", "OR", "BUY", "SELL", "WHEN", "THE", "DAY"}
+    skip = {
+        "SMA", "EMA", "RSI", "ATR", "MACD", "AND", "OR", "BUY", "SELL", "WHEN",
+        "THE", "DAY", "FOR", "WITH", "FROM", "INTO", "OVER", "UNDER", "BELOW",
+        "ABOVE", "CROSS", "RISK", "STOP", "TAKE", "BAND", "PRICE", "CLOSE",
+    }
     for t in tickers:
         if t not in skip:
             return t

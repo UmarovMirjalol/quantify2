@@ -120,6 +120,8 @@ export interface HealthStatus {
   llm_model: string;
   llm_base_url?: string;
   product?: string;
+  auth_required?: boolean;
+  runtime_llm_config_allowed?: boolean;
 }
 
 export interface LLMStatus {
@@ -129,4 +131,5 @@ export interface LLMStatus {
   api_key_configured: boolean;
   api_key_masked: string;
   provider: string;
+  runtime_config_allowed?: boolean;
 }

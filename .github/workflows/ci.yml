@@ -26,9 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate Compose file
-        run: docker compose -f docker-compose.yml config
-      - name: Build images
         run: |
           cp .env.production.example .env
+          echo "APP_ACCESS_TOKEN=ci-test-token" >> .env
           echo "APP_PORT=8080" >> .env
-          docker compose build
+          docker compose -f docker-compose.yml config
+      - name: Build images
+        run: docker compose build

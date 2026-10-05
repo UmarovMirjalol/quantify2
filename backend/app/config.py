@@ -6,7 +6,21 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
+def _detect_root() -> Path:
+    """Resolve project root for both local (`…/backend/app`) and Docker (`/app/app`)."""
+    pkg = Path(__file__).resolve().parent  # …/app
+    docker_or_backend = pkg.parent  # /app or …/backend
+    repo = pkg.parents[1]  # /workspace or /
+    if (docker_or_backend / "data").is_dir():
+        return docker_or_backend
+    if (repo / "data").is_dir():
+        return repo
+    if (repo / "backend").is_dir():
+        return repo
+    return docker_or_backend
+
+
+ROOT_DIR = _detect_root()
 DEFAULT_DATA_DIR = ROOT_DIR / "data"
 DEFAULT_UPLOAD_DIR = ROOT_DIR / "uploads"
 DB_PATH = ROOT_DIR / "backtests.db"
@@ -16,12 +30,20 @@ class Settings(BaseSettings):
     """Runtime settings for the backtesting platform."""
 
     model_config = SettingsConfigDict(
-        env_file=str(ROOT_DIR / ".env"),
+        env_file=str(ROOT_DIR / ".env") if (ROOT_DIR / ".env").exists() else str(Path.cwd() / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     app_env: str = "development"
+    app_name: str = "QuantLLM Backtester"
+    # Shared access token for end users (required in docker compose production)
+    app_access_token: str = ""
+    # OpenAPI docs: off in production unless explicitly enabled
+    enable_docs: bool | None = None
+    # Allow saving LLM keys via UI (disable in public production; use env instead)
+    allow_runtime_llm_config: bool | None = None
+    rate_limit_per_minute: int = 60
     llm_api_key: str = ""
     llm_model: str = "gpt-4o-mini"
     llm_base_url: str = "https://api.openai.com/v1"
@@ -40,6 +62,22 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() in {"prod", "production"}
+
+    @property
+    def docs_enabled(self) -> bool:
+        if self.enable_docs is not None:
+            return bool(self.enable_docs)
+        return not self.is_production
+
+    @property
+    def runtime_llm_config_allowed(self) -> bool:
+        if self.allow_runtime_llm_config is not None:
+            return bool(self.allow_runtime_llm_config)
+        return not self.is_production
+
+    @property
+    def auth_required(self) -> bool:
+        return bool(self.app_access_token and self.app_access_token.strip())
 
     @property
     def llm_enabled(self) -> bool:
@@ -64,7 +102,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
-    # Apply optional UI/runtime LLM overrides (never committed)
     from app.llm.runtime_config import apply_runtime_overrides
 
     settings = apply_runtime_overrides(settings)
@@ -73,7 +110,6 @@ def get_settings() -> Settings:
     return settings
 
 
-# Module-level aliases used across the codebase
 def _dirs() -> tuple[Path, Path]:
     s = get_settings()
     return s.resolved_data_dir, s.resolved_upload_dir

@@ -8,22 +8,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.config import get_settings
 from app.database import init_db
+from app.security import AccessTokenMiddleware, RateLimitMiddleware
 
 settings = get_settings()
 
+docs_url = "/docs" if settings.docs_enabled else None
+redoc_url = "/redoc" if settings.docs_enabled else None
+
 app = FastAPI(
-    title="QuantLLM Backtester",
+    title=settings.app_name,
     description=(
         "LLM-powered quantitative backtesting platform. "
         "Natural language strategies → structured specs → custom engine."
     ),
     version="1.0.0",
-    docs_url="/docs" if not settings.is_production else "/docs",
-    redoc_url="/redoc",
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
 )
 
 cors_origins = settings.cors_origin_list
-# In production behind same-origin nginx, "*" is fine for API clients
 if cors_origins == ["*"] or "*" in cors_origins:
     allow_origins = ["*"]
     allow_credentials = False
@@ -38,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Order: last added runs first for request
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(AccessTokenMiddleware)
 
 app.include_router(router)
 
@@ -45,13 +52,30 @@ app.include_router(router)
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    _ensure_client_id_column()
+
+
+def _ensure_client_id_column() -> None:
+    """Lightweight migration: add client_id for per-browser isolation."""
+    from sqlalchemy import text
+
+    from app.database import engine
+
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(backtests)")).fetchall()
+        cols = {r[1] for r in rows}
+        if "client_id" not in cols:
+            conn.execute(
+                text("ALTER TABLE backtests ADD COLUMN client_id VARCHAR(64) DEFAULT ''")
+            )
 
 
 @app.get("/")
-def root() -> dict[str, str]:
+def root() -> dict[str, object]:
     return {
-        "name": "QuantLLM Backtester",
+        "name": settings.app_name,
         "env": settings.app_env,
-        "docs": "/docs",
         "health": "/api/health",
+        "auth_required": settings.auth_required,
+        "docs": "/docs" if settings.docs_enabled else None,
     }

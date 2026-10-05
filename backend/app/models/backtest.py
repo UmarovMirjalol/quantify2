@@ -27,6 +27,7 @@ class BacktestRecord(Base):
     metrics_json: Mapped[str] = mapped_column(Text, nullable=False)
     results_json: Mapped[str] = mapped_column(Text, nullable=False)
     demo_mode: Mapped[int] = mapped_column(Integer, default=0)
+    client_id: Mapped[str] = mapped_column(String(64), default="", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     total_return: Mapped[float | None] = mapped_column(Float, nullable=True)
     sharpe_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)

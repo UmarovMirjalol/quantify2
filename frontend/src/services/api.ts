@@ -3,13 +3,20 @@ import type {
   BacktestSummary,
   DatasetInfo,
   HealthStatus,
+  LLMStatus,
   StrategySpec,
 } from '../types';
+import { authHeaders } from './session';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const headers = new Headers(options?.headers);
+  const auth = authHeaders();
+  for (const [k, v] of Object.entries(auth)) {
+    if (!headers.has(k)) headers.set(k, v);
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     let detail: string = res.statusText;
     try {
@@ -26,7 +33,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     } catch {
       // keep statusText
     }
-    throw new Error(detail);
+    const err = new Error(detail) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
   }
   return res.json() as Promise<T>;
 }
@@ -94,7 +103,7 @@ export async function getBacktest(id: number): Promise<BacktestResult> {
   return request(`/api/backtests/${id}`);
 }
 
-export async function getLLMStatus(): Promise<import('../types').LLMStatus> {
+export async function getLLMStatus(): Promise<LLMStatus> {
   return request('/api/llm/status');
 }
 
@@ -103,7 +112,7 @@ export async function updateLLMConfig(payload: {
   model?: string;
   base_url?: string;
   enabled?: boolean;
-}): Promise<import('../types').LLMStatus> {
+}): Promise<LLMStatus> {
   return request('/api/llm/config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -111,6 +120,6 @@ export async function updateLLMConfig(payload: {
   });
 }
 
-export async function clearLLMConfig(): Promise<import('../types').LLMStatus> {
+export async function clearLLMConfig(): Promise<LLMStatus> {
   return request('/api/llm/config', { method: 'DELETE' });
 }

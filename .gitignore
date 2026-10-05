@@ -16,8 +16,9 @@ uploads/**
 !uploads/.gitkeep
 *.db
 .env
-.llm_runtime.json
-.DS_Store
+backups/
+*.tar.gz
+
 
 # IDE
 .idea/

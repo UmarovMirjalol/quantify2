@@ -108,15 +108,18 @@ Never commit real secrets. `.env` is gitignored.
 
 ## Run
 
-### Production (Docker)
+### Production (Docker) — ready for users
 
 ```bash
 cp .env.production.example .env
+# recommended: LLM_API_KEY=sk-...
+
 ./deploy/scripts/deploy.sh
-# → http://127.0.0.1/   (or APP_PORT from .env)
+# prints APP_ACCESS_TOKEN — share it with users
 ```
 
-Full guide: [DEPLOY.md](DEPLOY.md)
+Users open the URL → enter the access token → run backtests.  
+HTTPS: see [DEPLOY.md](DEPLOY.md).
 
 ### Backend (local, port 8765)
 

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -34,6 +34,16 @@ from app.llm.schemas import (
 from app.models.backtest import BacktestRecord
 
 router = APIRouter(prefix="/api")
+
+
+def _client_id(x_client_id: str | None = Header(default=None, alias="X-Client-Id")) -> str:
+    """Normalize per-browser client id for history isolation."""
+    if not x_client_id:
+        return ""
+    value = x_client_id.strip()[:64]
+    # Allow only safe characters
+    cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "-_")
+    return cleaned
 
 
 class BacktestRequest(BaseModel):
@@ -64,6 +74,8 @@ class StatusResponse(BaseModel):
     llm_model: str
     llm_base_url: str = ""
     product: str = "QuantLLM Backtester"
+    auth_required: bool = False
+    runtime_llm_config_allowed: bool = True
 
 
 @router.get("/health", response_model=StatusResponse)
@@ -75,13 +87,19 @@ def health() -> StatusResponse:
         llm_enabled=settings.llm_enabled,
         llm_model=settings.llm_model,
         llm_base_url=settings.llm_base_url,
+        product=settings.app_name,
+        auth_required=settings.auth_required,
+        runtime_llm_config_allowed=settings.runtime_llm_config_allowed,
     )
 
 
 @router.get("/llm/status")
 def llm_status() -> dict[str, Any]:
     """Return LLM provider status (key masked)."""
-    return LLMClient().status()
+    status = LLMClient().status()
+    settings = get_settings()
+    status["runtime_config_allowed"] = settings.runtime_llm_config_allowed
+    return status
 
 
 @router.put("/llm/config")
@@ -89,18 +107,25 @@ def update_llm_config(body: LLMConfigUpdate) -> dict[str, Any]:
     """
     Save runtime LLM credentials (OpenAI-compatible).
 
-    Stored in `.llm_runtime.json` on the server (gitignored). Prefer env vars
-    in production; this endpoint is for local / self-hosted setup from the UI.
+    Disabled in production by default — set ALLOW_RUNTIME_LLM_CONFIG=true to enable.
+    Prefer LLM_API_KEY env var for public deployments.
     """
+    settings = get_settings()
+    if not settings.runtime_llm_config_allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Runtime LLM config is disabled. Set LLM_API_KEY in the server environment "
+                "or ALLOW_RUNTIME_LLM_CONFIG=true."
+            ),
+        )
     if body.enabled and not body.api_key.strip():
-        # Keep existing key if updating model only
         from app.llm.runtime_config import load_runtime_llm_config
 
         existing = load_runtime_llm_config()
         if existing and existing.api_key.strip():
             api_key = existing.api_key
         else:
-            settings = get_settings()
             api_key = settings.llm_api_key
         if not api_key.strip():
             raise HTTPException(
@@ -123,6 +148,12 @@ def update_llm_config(body: LLMConfigUpdate) -> dict[str, Any]:
 @router.delete("/llm/config")
 def delete_llm_config() -> dict[str, Any]:
     """Clear runtime LLM config and fall back to environment / built-in parser."""
+    settings = get_settings()
+    if not settings.runtime_llm_config_allowed:
+        raise HTTPException(
+            status_code=403,
+            detail="Runtime LLM config is disabled on this server.",
+        )
     clear_runtime_llm_config()
     return LLMClient().status()
 
@@ -185,6 +216,7 @@ async def api_upload_data(file: UploadFile = File(...)) -> dict[str, Any]:
 async def api_run_backtest(
     body: BacktestRequest,
     db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
 ) -> dict[str, Any]:
     settings = get_settings()
     parser_used = "llm" if settings.llm_enabled else "builtin"
@@ -193,7 +225,6 @@ async def api_run_backtest(
     try:
         if body.strategy is not None:
             strategy = body.strategy
-            # Apply config overrides
             strategy = strategy.model_copy(
                 update={
                     "initial_capital": body.config.initial_capital,
@@ -246,6 +277,7 @@ async def api_run_backtest(
         metrics_json=json.dumps(metrics),
         results_json=json.dumps(result),
         demo_mode=0 if parser_used == "llm" else 1,
+        client_id=client_id,
         created_at=datetime.now(timezone.utc),
         total_return=metrics.get("total_return"),
         sharpe_ratio=metrics.get("sharpe_ratio"),
@@ -269,13 +301,14 @@ async def api_run_backtest(
 
 
 @router.get("/backtests", response_model=list[BacktestSummary])
-def api_list_backtests(db: Session = Depends(get_db)) -> list[BacktestSummary]:
-    rows = (
-        db.query(BacktestRecord)
-        .order_by(BacktestRecord.created_at.desc())
-        .limit(100)
-        .all()
-    )
+def api_list_backtests(
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> list[BacktestSummary]:
+    query = db.query(BacktestRecord)
+    if client_id:
+        query = query.filter(BacktestRecord.client_id == client_id)
+    rows = query.order_by(BacktestRecord.created_at.desc()).limit(100).all()
     return [
         BacktestSummary(
             id=r.id,
@@ -294,9 +327,15 @@ def api_list_backtests(db: Session = Depends(get_db)) -> list[BacktestSummary]:
 
 
 @router.get("/backtests/{backtest_id}")
-def api_get_backtest(backtest_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+def api_get_backtest(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
     record = db.query(BacktestRecord).filter(BacktestRecord.id == backtest_id).first()
     if not record:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    if client_id and record.client_id and record.client_id != client_id:
         raise HTTPException(status_code=404, detail="Backtest not found")
     results = json.loads(record.results_json)
     return {

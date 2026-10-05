@@ -1,141 +1,96 @@
 # Deploy QuantLLM Backtester
 
-Production deployment uses Docker Compose with three services behind one public port:
+Production deployment for end users: Docker Compose + access token + optional HTTPS.
 
 ```
-Browser → edge (nginx :80)
-            ├─ /api,/docs  → backend (FastAPI)
-            └─ /           → frontend (static SPA)
+Users → (optional Caddy HTTPS) → edge nginx :80
+                                    ├─ /api → backend (FastAPI + SQLite)
+                                    └─ /    → frontend (SPA)
 ```
 
-## Requirements
-
-- Docker Engine 24+
-- Docker Compose v2
-- Ports: host `APP_PORT` (default **80**)
-
-## Quick start
+## Quick start (users can log in)
 
 ```bash
 cp .env.production.example .env
-# optional: set LLM_API_KEY, APP_PORT=8080, …
+# optional: LLM_API_KEY=sk-...   APP_PORT=8080
 
 ./deploy/scripts/deploy.sh
-# or: make deploy
 ```
 
-Open:
+The script:
 
-- App: `http://YOUR_HOST/` (or `http://YOUR_HOST:$APP_PORT/`)
-- Health: `http://YOUR_HOST/api/health`
-- API docs: `http://YOUR_HOST/docs`
+1. Creates `.env` if missing  
+2. **Generates `APP_ACCESS_TOKEN`** if empty  
+3. Builds & starts containers  
+4. Prints the token to share with users  
+
+Users open `http://YOUR_HOST/` (or `https://DOMAIN/` with HTTPS overlay), paste the access token once, then run backtests. Each browser gets its own history (`X-Client-Id`).
 
 Smoke test:
 
 ```bash
-./deploy/scripts/smoke.sh
-# APP_PORT=8080 ./deploy/scripts/smoke.sh http://127.0.0.1:8080
+export APP_ACCESS_TOKEN=$(grep APP_ACCESS_TOKEN .env | cut -d= -f2)
+./deploy/scripts/smoke.sh http://127.0.0.1:${APP_PORT:-80}
 ```
 
-Stop:
-
-```bash
-./deploy/scripts/down.sh          # keep DB/uploads volumes
-./deploy/scripts/down.sh --purge  # delete volumes
-```
-
-## LLM (AI) configuration
-
-The product is built around LLM strategy interpretation.
-
-**Option A — UI (any environment)**  
-Open `/settings` → paste OpenAI-compatible API key → Save.
-
-**Option B — environment (recommended for production)**
-
-```bash
-LLM_API_KEY=sk-...
-LLM_MODEL=gpt-4o-mini
-LLM_BASE_URL=https://api.openai.com/v1
-```
-
-Flow: `NL text → LLM JSON → Pydantic StrategySpec → backtest engine` (no code execution).
-
-Without a key the built-in parser remains available so the app stays fully usable.
+## Environment
 
 | Variable | Default | Notes |
 |----------|---------|--------|
-| `APP_PORT` | `80` | Host port for edge nginx |
-| `IMAGE_TAG` | `latest` | Docker image tag |
-| `LLM_API_KEY` | empty | Enables LLM parser |
-| `LLM_MODEL` | `gpt-4o-mini` | |
-| `LLM_BASE_URL` | OpenAI | Any OpenAI-compatible API |
+| `APP_PORT` | `80` | Host port for edge |
+| `APP_ACCESS_TOKEN` | auto | **Required for users** — gate on first visit |
+| `LLM_API_KEY` | empty | Enables LLM NLP |
+| `LLM_MODEL` / `LLM_BASE_URL` | gpt-4o-mini / OpenAI | Any OpenAI-compatible API |
+| `ENABLE_DOCS` | `false` | OpenAPI `/docs` in production |
+| `ALLOW_RUNTIME_LLM_CONFIG` | `false` | UI key editing (keep false publicly) |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Per IP / client |
+| `MAX_UPLOAD_SIZE_MB` | `25` | CSV uploads |
 | `CORS_ORIGINS` | `*` | Same-origin via edge is fine |
-| `MAX_UPLOAD_SIZE_MB` | `25` | CSV upload limit |
 
-Secrets stay in `.env` (gitignored). Never bake keys into images.
+## HTTPS (Let's Encrypt)
 
-## Architecture details
-
-| Service | Image | Role |
-|---------|-------|------|
-| `backend` | `Dockerfile.backend` | FastAPI, SQLite, sample data baked in |
-| `frontend` | `Dockerfile.frontend` | Vite build served by nginx |
-| `edge` | `Dockerfile.edge` | Reverse proxy, single public port |
-
-Persistent volumes:
-
-- `backtest-db` → `/data/backtests.db`
-- `uploads-data` → `/app/uploads`
-
-Healthchecks run on backend, frontend, and edge.
-
-## HTTPS / cloud
-
-Put a TLS terminator in front of `edge`:
-
-- **Caddy / Traefik / nginx** on the host
-- **AWS ALB / GCP LB / Cloudflare** pointing to `APP_PORT`
-- Or change edge to listen with certs (extend `deploy/nginx/edge.conf`)
-
-Example Traefik label approach is left to your orchestrator; the container already speaks plain HTTP on port 80 inside the network.
-
-## Local non-Docker run
-
-Still supported for development — see root `README.md`.
+DNS A-record → server, then:
 
 ```bash
-# API
-cd backend && PYTHONPATH=. uvicorn app.main:app --host 127.0.0.1 --port 8765
-
-# UI (proxies /api → 8765)
-cd frontend && npm run dev
+DOMAIN=app.example.com EMAIL=ops@example.com \
+  docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
 ```
 
-## Dev Compose overlay
+Requires free host ports **80** and **443**. Compose v2.24+ recommended (`ports: !override`).
+
+## Backup / restore
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+./deploy/scripts/backup.sh
+# → backups/quantllm-XXXX.tar.gz
 ```
 
-Exposes backend `:8765`, frontend `:4173`, edge `:8080` by default.
-
-## Troubleshooting
+Restore DB:
 
 ```bash
-docker compose ps
-docker compose logs backend --tail=100
-docker compose logs edge --tail=100
-curl -v http://127.0.0.1:${APP_PORT:-80}/api/health
+docker compose cp ./backups/.../backtests.db backend:/data/backtests.db
+docker compose restart backend
 ```
 
-If port 80 is busy: set `APP_PORT=8080` in `.env` and redeploy.
+## What users get
 
-## CI suggestion
+1. Access token screen (if `APP_ACCESS_TOKEN` set)  
+2. Strategy in natural language + CSV upload  
+3. LLM or built-in parser → backtest → charts / trades / history  
+4. Isolated history per browser  
 
-```yaml
-# example
-- run: docker compose build
-- run: docker compose up -d
-- run: ./deploy/scripts/smoke.sh http://127.0.0.1:80
+## Security defaults (production)
+
+- Access token required (generated by deploy)  
+- Rate limiting on  
+- `/docs` off  
+- Runtime LLM key upload off (use env `LLM_API_KEY`)  
+- Security headers on edge nginx  
+- Non-root backend container  
+
+## Stop
+
+```bash
+./deploy/scripts/down.sh          # keep volumes
+./deploy/scripts/down.sh --purge  # wipe DB/uploads
 ```
