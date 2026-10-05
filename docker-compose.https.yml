@@ -1,8 +1,10 @@
-# Optional HTTPS terminator in front of edge
-# Usage:
-#   DOMAIN=app.example.com EMAIL=ops@example.com docker compose -f docker-compose.yml -f docker-compose.https.yml up -d
+# HTTPS via Caddy (Let's Encrypt)
 #
-# Requires ports 80 and 443 free on the host. Caddy obtains Let's Encrypt certs automatically.
+#   # Put edge on an internal host port so Caddy can bind 80/443:
+#   APP_PORT=18080 DOMAIN=app.example.com EMAIL=ops@example.com \
+#     docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+#
+# Caddy proxies to edge:80 on the Docker network (not the host port).
 
 services:
   caddy:
@@ -22,12 +24,6 @@ services:
       - edge
     networks:
       - quantllm
-
-  # Edge stays internal when HTTPS overlay is used
-  edge:
-    ports: !override []
-    expose:
-      - "80"
 
 volumes:
   caddy-data:

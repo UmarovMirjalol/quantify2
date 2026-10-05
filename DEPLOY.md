@@ -49,14 +49,13 @@ export APP_ACCESS_TOKEN=$(grep APP_ACCESS_TOKEN .env | cut -d= -f2)
 
 ## HTTPS (Let's Encrypt)
 
-DNS A-record → server, then:
-
 ```bash
-DOMAIN=app.example.com EMAIL=ops@example.com \
+# Edge on an internal host port; Caddy owns 80/443
+APP_PORT=18080 DOMAIN=app.example.com EMAIL=ops@example.com \
   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
 ```
 
-Requires free host ports **80** and **443**. Compose v2.24+ recommended (`ports: !override`).
+DNS A-record must point to the server. Users open `https://DOMAIN/` and paste `APP_ACCESS_TOKEN`.
 
 ## Backup / restore
 

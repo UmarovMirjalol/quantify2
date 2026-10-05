@@ -385,6 +385,12 @@ async def parse_strategy(
     asset: str | None = None,
 ) -> ParseStrategyResponse:
     """Parse natural language into StrategySpec via LLM (if configured) or built-in parser."""
+    from app.utils.normalize import normalize_strategy_text
+
+    text = normalize_strategy_text(text)
+    if len(text) < 5:
+        raise StrategyParseError("Strategy text is too short after cleaning paste input.")
+
     settings = get_settings()
     kwargs = dict(
         initial_capital=initial_capital,

@@ -18,6 +18,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('quantllm:unauthorized'));
+    }
     let detail: string = res.statusText;
     try {
       const body = await res.json();
@@ -32,6 +35,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       }
     } catch {
       // keep statusText
+    }
+    if (res.status === 429) {
+      detail = detail || 'Too many requests. Please wait a minute and try again.';
     }
     const err = new Error(detail) as Error & { status?: number };
     err.status = res.status;

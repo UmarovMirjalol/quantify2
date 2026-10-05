@@ -6,9 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.config import ROOT_DIR, get_settings
+from app.utils.normalize import normalize_secret
 
 
 RUNTIME_CONFIG_PATH = ROOT_DIR / ".llm_runtime.json"
@@ -32,11 +33,11 @@ def load_runtime_llm_config() -> LLMRuntimeConfig | None:
 
 
 def save_runtime_llm_config(cfg: LLMRuntimeConfig) -> None:
+    RUNTIME_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     RUNTIME_CONFIG_PATH.write_text(
         cfg.model_dump_json(indent=2),
         encoding="utf-8",
     )
-    # Clear settings cache so next request picks up overrides
     get_settings.cache_clear()
 
 
@@ -52,7 +53,7 @@ def apply_runtime_overrides(settings: Any) -> Any:
     if runtime is None or not runtime.enabled:
         return settings
     if runtime.api_key.strip():
-        settings.llm_api_key = runtime.api_key.strip()
+        settings.llm_api_key = normalize_secret(runtime.api_key)
     if runtime.model.strip():
         settings.llm_model = runtime.model.strip()
     if runtime.base_url.strip():
@@ -65,3 +66,17 @@ class LLMConfigUpdate(BaseModel):
     model: str = Field(default="gpt-4o-mini", min_length=1, max_length=128)
     base_url: str = Field(default="https://api.openai.com/v1", min_length=8, max_length=512)
     enabled: bool = True
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _api_key(cls, v: object) -> object:
+        if isinstance(v, str):
+            return normalize_secret(v)
+        return v
+
+    @field_validator("model", "base_url", mode="before")
+    @classmethod
+    def _trim(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip().strip('"').strip("'")
+        return v

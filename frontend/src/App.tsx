@@ -6,8 +6,8 @@ import { HistoryPage } from './pages/HistoryPage';
 import { HomePage } from './pages/HomePage';
 import { ResultsLoader } from './pages/ResultsLoader';
 import { SettingsPage } from './pages/SettingsPage';
-import { getHealth } from './services/api';
-import { getAccessToken } from './services/session';
+import { getHealth, listDatasets } from './services/api';
+import { clearAccessToken, getAccessToken } from './services/session';
 import type { HealthStatus } from './types';
 import './App.css';
 
@@ -15,20 +15,46 @@ export default function App() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [authEpoch, setAuthEpoch] = useState(0);
 
   useEffect(() => {
-    const load = () =>
-      getHealth()
-        .then((h) => {
-          setHealth(h);
-          if (!h.auth_required) {
-            setUnlocked(true);
-          } else if (getAccessToken()) {
-            setUnlocked(true);
-          }
+    let cancelled = false;
+
+    async function bootstrap() {
+      try {
+        const h = await getHealth();
+        if (cancelled) return;
+        setHealth(h);
+
+        if (!h.auth_required) {
+          setUnlocked(true);
           setBootstrapped(true);
-        })
-        .catch(() => {
+          return;
+        }
+
+        const token = getAccessToken();
+        if (!token) {
+          setUnlocked(false);
+          setBootstrapped(true);
+          return;
+        }
+
+        // Validate stored token before unlocking the app
+        try {
+          await listDatasets();
+          if (!cancelled) {
+            setUnlocked(true);
+            setBootstrapped(true);
+          }
+        } catch {
+          clearAccessToken();
+          if (!cancelled) {
+            setUnlocked(false);
+            setBootstrapped(true);
+          }
+        }
+      } catch {
+        if (!cancelled) {
           setHealth({
             status: 'unreachable',
             parser: 'builtin',
@@ -38,10 +64,34 @@ export default function App() {
           });
           setUnlocked(true);
           setBootstrapped(true);
-        });
-    load();
-    const id = window.setInterval(load, 15000);
-    return () => window.clearInterval(id);
+        }
+      }
+    }
+
+    bootstrap();
+    const id = window.setInterval(() => {
+      getHealth()
+        .then((h) => {
+          if (!cancelled) setHealth(h);
+        })
+        .catch(() => undefined);
+    }, 15000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [authEpoch]);
+
+  // Global 401 handler: force re-auth
+  useEffect(() => {
+    function onUnauthorized() {
+      clearAccessToken();
+      setUnlocked(false);
+      setAuthEpoch((n) => n + 1);
+    }
+    window.addEventListener('quantllm:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('quantllm:unauthorized', onUnauthorized);
   }, []);
 
   if (!bootstrapped) {
@@ -49,7 +99,14 @@ export default function App() {
   }
 
   if (health?.auth_required && !unlocked) {
-    return <AccessGate onUnlocked={() => setUnlocked(true)} />;
+    return (
+      <AccessGate
+        onUnlocked={() => {
+          setUnlocked(true);
+          setAuthEpoch((n) => n + 1);
+        }}
+      />
+    );
   }
 
   return (

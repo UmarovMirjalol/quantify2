@@ -7,6 +7,8 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.utils.normalize import normalize_fraction, normalize_strategy_text
+
 
 class IndicatorType(str, Enum):
     SMA = "SMA"
@@ -295,6 +297,23 @@ class ParseStrategyRequest(BaseModel):
     slippage: float | None = Field(default=None, ge=0.0, le=0.05)
     asset: str | None = None
 
+    @field_validator("text", mode="before")
+    @classmethod
+    def _clean_text(cls, v: object) -> object:
+        if isinstance(v, str):
+            return normalize_strategy_text(v)
+        return v
+
+    @field_validator("risk_per_trade", "commission", "slippage", mode="before")
+    @classmethod
+    def _pct_fields(cls, v: object) -> object:
+        if v is None or v == "":
+            return None
+        try:
+            return normalize_fraction(float(v))
+        except (TypeError, ValueError):
+            return v
+
 
 class ParseStrategyResponse(BaseModel):
     strategy: StrategySpec
@@ -313,3 +332,23 @@ class BacktestConfig(BaseModel):
     commission: float = Field(default=0.001, ge=0.0, le=0.05)
     slippage: float = Field(default=0.0005, ge=0.0, le=0.05)
     risk_per_trade: float | None = Field(default=None, ge=0.0001, le=1.0)
+
+    @field_validator("commission", "slippage", mode="before")
+    @classmethod
+    def _pct_cost_fields(cls, v: object) -> object:
+        if v is None or v == "":
+            return v
+        try:
+            return normalize_fraction(float(v))
+        except (TypeError, ValueError):
+            return v
+
+    @field_validator("risk_per_trade", mode="before")
+    @classmethod
+    def _pct_risk_field(cls, v: object) -> object:
+        if v is None or v == "":
+            return None
+        try:
+            return normalize_fraction(float(v))
+        except (TypeError, ValueError):
+            return v

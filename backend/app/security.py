@@ -21,6 +21,9 @@ PUBLIC_PATHS = {
 }
 
 
+from app.utils.normalize import normalize_secret
+
+
 class AccessTokenMiddleware(BaseHTTPMiddleware):
     """Require Bearer / X-API-Key when APP_ACCESS_TOKEN is configured."""
 
@@ -38,14 +41,14 @@ class AccessTokenMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        expected = settings.app_access_token.strip()
+        expected = normalize_secret(settings.app_access_token)
         auth = request.headers.get("authorization", "")
         api_key = request.headers.get("x-api-key", "")
         provided = ""
         if auth.lower().startswith("bearer "):
-            provided = auth[7:].strip()
+            provided = normalize_secret(auth[7:])
         elif api_key:
-            provided = api_key.strip()
+            provided = normalize_secret(api_key)
 
         if not provided or not secrets.compare_digest(provided, expected):
             return JSONResponse(

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listDatasets, runBacktest, uploadDataset } from '../services/api';
+import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus } from '../types';
 
 const EXAMPLE_STRATEGIES = [
@@ -59,9 +60,16 @@ export function HomePage({ health }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const cleanedStrategy = normalizeStrategyText(strategyText);
+    if (cleanedStrategy.length < 5) {
+      setError('Please paste a full strategy description.');
+      setLoading(false);
+      return;
+    }
+    setStrategyText(cleanedStrategy);
     try {
       const result = await runBacktest({
-        strategy_text: strategyText,
+        strategy_text: cleanedStrategy,
         dataset_id: datasetId,
         config: {
           initial_capital: initialCapital,
@@ -72,7 +80,8 @@ export function HomePage({ health }: Props) {
       });
       navigate(`/results/${result.id}`, { state: { result } });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Backtest failed');
+      const msg = err instanceof Error ? err.message : 'Backtest failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -169,11 +178,11 @@ export function HomePage({ health }: Props) {
             />
           </label>
           <label className="field">
-            <span>Risk per trade</span>
+            <span>Risk per trade (0.01 = 1%, or type 1 for 1%)</span>
             <input
               type="number"
               min={0.0001}
-              max={1}
+              max={100}
               step={0.001}
               value={riskPerTrade}
               onChange={(e) => setRiskPerTrade(Number(e.target.value))}
@@ -181,11 +190,11 @@ export function HomePage({ health }: Props) {
             />
           </label>
           <label className="field">
-            <span>Commission (frac)</span>
+            <span>Commission (0.001 = 0.1%)</span>
             <input
               type="number"
               min={0}
-              max={0.05}
+              max={5}
               step={0.0001}
               value={commission}
               onChange={(e) => setCommission(Number(e.target.value))}
@@ -193,11 +202,11 @@ export function HomePage({ health }: Props) {
             />
           </label>
           <label className="field">
-            <span>Slippage (frac)</span>
+            <span>Slippage (0.0005 = 0.05%)</span>
             <input
               type="number"
               min={0}
-              max={0.05}
+              max={5}
               step={0.0001}
               value={slippage}
               onChange={(e) => setSlippage(Number(e.target.value))}

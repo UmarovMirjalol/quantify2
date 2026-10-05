@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { listDatasets } from '../services/api';
-import { getAccessToken, setAccessToken } from '../services/session';
+import { getAccessToken, normalizeSecret, setAccessToken } from '../services/session';
 
 interface Props {
   onUnlocked: () => void;
@@ -15,9 +15,15 @@ export function AccessGate({ onUnlocked }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setAccessToken(token);
+    const cleaned = normalizeSecret(token);
+    if (cleaned.length < 4) {
+      setError('Paste the full access token from your administrator.');
+      setLoading(false);
+      return;
+    }
+    setAccessToken(cleaned);
+    setToken(cleaned);
     try {
-      // Validate token against a protected endpoint
       await listDatasets();
       onUnlocked();
     } catch (err) {
@@ -38,8 +44,8 @@ export function AccessGate({ onUnlocked }: Props) {
         <p className="eyebrow">Secure access</p>
         <h1>Enter access token</h1>
         <p className="lede">
-          This QuantLLM deployment is protected. Paste the shared access token provided by your
-          administrator to continue.
+          Paste the shared access token from your administrator. Extra spaces or quotes are cleaned
+          automatically.
         </p>
         <form className="form-panel" onSubmit={onSubmit}>
           <label className="field">
@@ -48,10 +54,17 @@ export function AccessGate({ onUnlocked }: Props) {
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData('text');
+                if (pasted) {
+                  e.preventDefault();
+                  setToken(normalizeSecret(pasted));
+                }
+              }}
               required
               minLength={4}
               autoComplete="off"
-              placeholder="APP_ACCESS_TOKEN"
+              placeholder="Paste APP_ACCESS_TOKEN"
             />
           </label>
           {error ? <div className="banner error">{error}</div> : null}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { clearLLMConfig, getLLMStatus, updateLLMConfig } from '../services/api';
+import { normalizeSecret } from '../services/session';
 import type { LLMStatus } from '../types';
 
 export function SettingsPage() {
@@ -31,9 +32,9 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const s = await updateLLMConfig({
-        api_key: apiKey,
-        model,
-        base_url: baseUrl,
+        api_key: normalizeSecret(apiKey),
+        model: model.trim(),
+        base_url: baseUrl.trim(),
         enabled: true,
       });
       setStatus(s);
@@ -115,6 +116,13 @@ export function SettingsPage() {
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData('text');
+                if (pasted) {
+                  e.preventDefault();
+                  setApiKey(normalizeSecret(pasted));
+                }
+              }}
               placeholder={status?.api_key_configured ? '•••• leave blank to keep current' : 'sk-…'}
               autoComplete="off"
             />

@@ -1,13 +1,41 @@
 const ACCESS_TOKEN_KEY = 'quantllm_access_token';
 const CLIENT_ID_KEY = 'quantllm_client_id';
 
+/** Clean pasted secrets (tokens / API keys). */
+export function normalizeSecret(value: string): string {
+  let v = value.replace(/^\uFEFF/, '').trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  if (/^bearer\s+/i.test(v)) {
+    v = v.replace(/^bearer\s+/i, '').trim();
+  }
+  return v.replace(/\s+/g, '');
+}
+
+export function normalizeStrategyText(value: string): string {
+  let v = value.replace(/^\uFEFF/, '').trim();
+  v = v.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  return v.replace(/[ \t]+/g, ' ').trim();
+}
+
 export function getAccessToken(): string {
   return localStorage.getItem(ACCESS_TOKEN_KEY) ?? '';
 }
 
 export function setAccessToken(token: string): void {
-  if (token.trim()) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token.trim());
+  const cleaned = normalizeSecret(token);
+  if (cleaned) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, cleaned);
   } else {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
   }

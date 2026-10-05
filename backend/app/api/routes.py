@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.config import UPLOAD_DIR, get_settings
@@ -52,6 +52,15 @@ class BacktestRequest(BaseModel):
     strategy: StrategySpec | None = None
     config: BacktestConfig = Field(default_factory=BacktestConfig)
     asset: str | None = None
+
+    @field_validator("strategy_text", mode="before")
+    @classmethod
+    def _clean_strategy(cls, v: object) -> object:
+        from app.utils.normalize import normalize_strategy_text
+
+        if isinstance(v, str):
+            return normalize_strategy_text(v)
+        return v
 
 
 class BacktestSummary(BaseModel):

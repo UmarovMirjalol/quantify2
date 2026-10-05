@@ -9,6 +9,40 @@ from pydantic import BaseModel, Field
 
 
 REQUIRED_COLUMNS = ("date", "open", "high", "low", "close", "volume")
+COLUMN_ALIASES = {
+    "timestamp": "date",
+    "time": "date",
+    "datetime": "date",
+    "o": "open",
+    "h": "high",
+    "l": "low",
+    "c": "close",
+    "vol": "volume",
+    "adj_close": "close",
+    "adjclose": "close",
+}
+
+
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df.columns = [str(c).strip().lower().lstrip("\ufeff") for c in df.columns]
+    rename = {}
+    for col in df.columns:
+        if col in COLUMN_ALIASES:
+            rename[col] = COLUMN_ALIASES[col]
+    if rename:
+        df = df.rename(columns=rename)
+    return df
+
+
+def _read_csv(source) -> pd.DataFrame:
+    """Read CSV with BOM-safe encoding and common separators."""
+    try:
+        return pd.read_csv(source, encoding="utf-8-sig")
+    except Exception:
+        if hasattr(source, "seek"):
+            source.seek(0)
+        return pd.read_csv(source, encoding="utf-8-sig", sep=None, engine="python")
 
 
 class DataValidationError(Exception):
@@ -26,12 +60,6 @@ class ValidationResult(BaseModel):
     rows: int = 0
     date_start: str | None = None
     date_end: str | None = None
-
-
-def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    df.columns = [str(c).strip().lower() for c in df.columns]
-    return df
 
 
 def validate_ohlcv_dataframe(df: pd.DataFrame) -> ValidationResult:
@@ -107,7 +135,7 @@ def load_ohlcv_csv(path: str | Path) -> pd.DataFrame:
         raise DataValidationError([f"File not found: {path}"])
 
     try:
-        df = pd.read_csv(path)
+        df = _read_csv(path)
     except Exception as exc:  # noqa: BLE001
         raise DataValidationError([f"Failed to parse CSV: {exc}"]) from exc
 
@@ -131,7 +159,7 @@ def load_ohlcv_bytes(content: bytes, filename: str = "upload.csv") -> tuple[pd.D
     from io import BytesIO
 
     try:
-        df = pd.read_csv(BytesIO(content))
+        df = _read_csv(BytesIO(content))
     except Exception as exc:  # noqa: BLE001
         raise DataValidationError([f"Failed to parse CSV '{filename}': {exc}"]) from exc
 
