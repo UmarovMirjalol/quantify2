@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8765:8765"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - DATABASE_URL=sqlite:////data/backtests.db
+      - CORS_ORIGINS=http://localhost:4173,http://127.0.0.1:4173,http://localhost:5173,http://127.0.0.1:5173
+    volumes:
+      - ./data:/app/data:ro
+      - ./uploads:/app/uploads
+      - backtest-db:/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8765
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "4173:4173"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://127.0.0.1:8765
+
+volumes:
+  backtest-db:
