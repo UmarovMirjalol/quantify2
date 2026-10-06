@@ -111,7 +111,7 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       </div>
 
       {tab === 'overview' ? (
-        <>
+        <div className="tab-pane" key="overview">
           <section className="panel">
             <h2>Portfolio equity</h2>
             <EquityChart data={result.equity_curve} />
@@ -162,11 +162,11 @@ export function ResultsView({ result }: { result: BacktestResult }) {
             <h2>Price & trades</h2>
             <PriceTradeChart prices={result.price_series} markers={result.markers} />
           </section>
-        </>
+        </div>
       ) : null}
 
       {tab === 'risk' ? (
-        <>
+        <div className="tab-pane" key="risk">
           <div className="split">
             <section className="panel">
               <h2>Drawdown</h2>
@@ -193,18 +193,20 @@ export function ResultsView({ result }: { result: BacktestResult }) {
             <KpiCard label="Max Drawdown" value={pct(m.max_drawdown)} tone="negative" />
             <KpiCard label="Sortino" value={num(m.sortino_ratio)} />
           </section>
-        </>
+        </div>
       ) : null}
 
       {tab === 'trades' ? (
-        <section className="panel">
-          <h2>Trade ledger</h2>
-          <TradeTable trades={result.trades} asset={result.strategy.asset} />
-        </section>
+        <div className="tab-pane" key="trades">
+          <section className="panel">
+            <h2>Trade ledger</h2>
+            <TradeTable trades={result.trades} asset={result.strategy.asset} />
+          </section>
+        </div>
       ) : null}
 
       {tab === 'statistics' ? (
-        <>
+        <div className="tab-pane" key="statistics">
           <section className="kpi-grid">
             <KpiCard label="Initial capital" value={money(m.initial_capital)} />
             <KpiCard label="Final capital" value={money(m.final_capital)} tone={toneFor(m.total_return)} />
@@ -227,7 +229,7 @@ export function ResultsView({ result }: { result: BacktestResult }) {
               <pre className="code-block">{strategyJson}</pre>
             </details>
           </section>
-        </>
+        </div>
       ) : null}
     </div>
   );

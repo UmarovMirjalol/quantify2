@@ -110,10 +110,12 @@ code,
 @media (prefers-reduced-motion: reduce) {
   .landing-motion,
   .landing-motion *,
+  .hero-stage-float,
   .product-frame,
   .product-frame::before,
   .product-live i,
   .flow-step,
+  .flow-step.current,
   .flow-arrow,
   .product-chart::after,
   .chart-dot,
@@ -121,19 +123,23 @@ code,
   .product-chart path.line,
   .product-chart path.line-glow,
   .product-chart path.fill,
+  .chart-waiting line,
+  .chart-waiting text,
   .hero-copy .wordmark,
   .hero-actions .btn.primary,
   .hero-actions .btn.primary::after,
-  .count-up,
   .meta-tick,
-  .feature,
   .feature-num,
-  .prompt-type,
   .caret,
   .kpi-card,
+  .kpi-card.flash .kpi-value,
   .workspace > *,
   .status-panel.running,
-  .pipeline li.active .step-icon {
+  .pipeline li.active .step-icon,
+  .interp-row.flash,
+  .tab-pane,
+  .tab-glow,
+  .tabs button.active::after {
     animation: none !important;
   }
 
@@ -142,14 +148,24 @@ code,
   .side-kpis > div,
   .feature,
   .kpi-card,
-  .workspace > * {
+  .workspace > *,
+  .feature-bar {
     opacity: 1 !important;
     animation: none !important;
     transform: none !important;
+    transition: none !important;
+  }
+
+  .landing-section .feature-bar {
+    width: 42% !important;
   }
 
   .hero-copy .wordmark {
     -webkit-text-fill-color: var(--text);
     background: none;
+  }
+
+  .product-frame {
+    transition: none !important;
   }
 }

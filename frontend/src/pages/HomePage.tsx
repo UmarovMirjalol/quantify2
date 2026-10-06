@@ -348,28 +348,28 @@ export function HomePage({ health }: Props) {
             ))}
           </ul>
 
-          <div className="interp-block">
-            <div className="interp-row">
+          <div className="interp-block" key={strategyText}>
+            <div className="interp-row flash">
               <span>Universe</span>
               <span>{previewInterpretation.asset}</span>
             </div>
-            <div className="interp-row">
+            <div className="interp-row flash" style={{ animationDelay: '40ms' }}>
               <span>Entry</span>
               <span>{previewInterpretation.entry}</span>
             </div>
-            <div className="interp-row">
+            <div className="interp-row flash" style={{ animationDelay: '80ms' }}>
               <span>Exit</span>
               <span>{previewInterpretation.exit}</span>
             </div>
-            <div className="interp-row">
+            <div className="interp-row flash" style={{ animationDelay: '120ms' }}>
               <span>Position size</span>
               <span>{previewInterpretation.sizing}</span>
             </div>
-            <div className="interp-row">
+            <div className="interp-row flash" style={{ animationDelay: '160ms' }}>
               <span>Risk / trade</span>
               <span>{previewInterpretation.risk}</span>
             </div>
-            <div className="interp-row">
+            <div className="interp-row flash" style={{ animationDelay: '200ms' }}>
               <span>Data frequency</span>
               <span>{previewInterpretation.frequency}</span>
             </div>
