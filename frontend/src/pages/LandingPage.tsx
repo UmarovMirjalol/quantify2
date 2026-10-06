@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 
-const LogoMark = ({ size = 16 }: { size?: number }) => (
+const LogoMark = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path
       d="M2 12 L5.5 5 L9 9.5 L14 3"
       stroke="#3dffb5"
-      strokeWidth="1.85"
+      strokeWidth="1.9"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -15,7 +15,11 @@ const LogoMark = ({ size = 16 }: { size?: number }) => (
 export function LandingPage() {
   return (
     <div className="landing">
-      <div className="landing-atmosphere" aria-hidden="true" />
+      <div className="landing-atmosphere" aria-hidden="true">
+        <span className="orb orb-a" />
+        <span className="orb orb-b" />
+        <span className="orb orb-c" />
+      </div>
 
       <header className="landing-nav">
         <Link to="/" className="brand" style={{ padding: 0 }}>
@@ -39,116 +43,102 @@ export function LandingPage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="wordmark">
-            <span className="wordmark-glow">Quantify</span>
-          </p>
+          <p className="wordmark">Quantify</p>
           <h1>Turn trading ideas into backtests.</h1>
           <p className="lede">
-            Describe your strategy in plain English. Quantify translates it into executable logic,
-            runs the backtest, and gives you the results.
+            Describe a strategy in plain English. Quantify interprets it, runs a look-ahead-safe
+            simulation, and returns institutional results.
           </p>
           <div className="hero-actions">
             <Link className="btn primary" to="/app">
               Start a backtest
+              <span className="btn-arrow" aria-hidden="true">
+                →
+              </span>
             </Link>
             <Link className="btn secondary" to="/history">
               View results
             </Link>
           </div>
-          <p className="hero-proof mono">Signal at close → execute next open · look-ahead safe</p>
         </div>
 
-        <div className="hero-stage" aria-hidden="true">
-          <div className="hero-glow" />
+        <div className="hero-visual" aria-hidden="true">
+          <div className="hero-visual-glow" />
           <div className="product-preview">
             <div className="preview-bar">
-              <span className="preview-dot" />
-              <span className="preview-dot" />
-              <span className="preview-dot" />
-              <span className="preview-title">quantify · research workspace</span>
+              <span className="preview-brand-mini">
+                <LogoMark size={12} />
+                quantify
+              </span>
+              <span className="preview-path">research / backtest / live</span>
               <span className="preview-live">
                 <span className="live-pulse" />
                 live
               </span>
             </div>
-            <div className="preview-body">
-              <div className="preview-left">
-                <div className="preview-prompt">
-                  Buy SPY when the 20-day moving average crosses above the 50-day moving average. Risk
-                  1% per trade and exit when RSI exceeds 70.
-                </div>
-                <div className="preview-flow">
-                  <span className="on">Natural language</span>
-                  <span className="arrow">→</span>
-                  <span className="on">Interpretation</span>
-                  <span className="arrow">→</span>
-                  <span className="on">Backtest</span>
-                  <span className="arrow">→</span>
-                  <span className="on">Results</span>
-                </div>
-                <div className="preview-interp">
-                  <div className="interp-row">
-                    <span>Entry</span>
-                    <span>SMA(20) × SMA(50)</span>
-                  </div>
-                  <div className="interp-row">
-                    <span>Exit</span>
-                    <span>RSI &gt; 70</span>
-                  </div>
-                  <div className="interp-row">
-                    <span>Universe</span>
-                    <span>SPY</span>
-                  </div>
-                  <div className="interp-row">
-                    <span>Risk / trade</span>
-                    <span>1.00%</span>
-                  </div>
-                </div>
+
+            <div className="preview-stage">
+              <div className="preview-prompt">
+                <span className="preview-kicker">Strategy</span>
+                Buy SPY when the 20-day moving average crosses above the 50-day. Risk 1% per trade;
+                exit when RSI exceeds 70.
               </div>
-              <div className="preview-right">
-                <div className="preview-chart">
-                  <header>
+
+              <div className="preview-chart-hero">
+                <header>
+                  <div>
                     <small>Equity curve</small>
-                    <strong>+12.40%</strong>
-                  </header>
-                  <svg viewBox="0 0 240 88" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3dffb5" stopOpacity="0.38" />
-                        <stop offset="100%" stopColor="#3dffb5" stopOpacity="0" />
-                      </linearGradient>
-                      <filter id="eqGlow" x="-20%" y="-40%" width="140%" height="180%">
-                        <feGaussianBlur stdDeviation="1.4" result="b" />
-                        <feMerge>
-                          <feMergeNode in="b" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    <path
-                      className="fill"
-                      d="M0 70 L20 64 L40 66 L60 52 L80 56 L100 42 L120 46 L140 34 L160 36 L180 22 L200 26 L220 14 L240 10 L240 88 L0 88 Z"
-                    />
-                    <path
-                      className="line"
-                      filter="url(#eqGlow)"
-                      d="M0 70 L20 64 L40 66 L60 52 L80 56 L100 42 L120 46 L140 34 L160 36 L180 22 L200 26 L220 14 L240 10"
-                    />
-                  </svg>
+                    <strong className="preview-return">+12.40%</strong>
+                  </div>
+                  <div className="preview-spark-meta mono">
+                    <span>Sharpe 1.38</span>
+                    <span>DD −8.2%</span>
+                  </div>
+                </header>
+                <svg viewBox="0 0 480 160" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3dffb5" stopOpacity="0.35" />
+                      <stop offset="55%" stopColor="#3dffb5" stopOpacity="0.06" />
+                      <stop offset="100%" stopColor="#3dffb5" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="eqStroke" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#3dffb5" stopOpacity="0.55" />
+                      <stop offset="100%" stopColor="#7dffcb" />
+                    </linearGradient>
+                  </defs>
+                  <g className="grid-lines" opacity="0.35">
+                    <line x1="0" y1="40" x2="480" y2="40" />
+                    <line x1="0" y1="80" x2="480" y2="80" />
+                    <line x1="0" y1="120" x2="480" y2="120" />
+                  </g>
+                  <path
+                    className="fill"
+                    d="M0 128 L40 118 L80 122 L120 98 L160 104 L200 78 L240 86 L280 62 L320 68 L360 42 L400 48 L440 28 L480 18 L480 160 L0 160 Z"
+                  />
+                  <path
+                    className="line"
+                    d="M0 128 L40 118 L80 122 L120 98 L160 104 L200 78 L240 86 L280 62 L320 68 L360 42 L400 48 L440 28 L480 18"
+                  />
+                </svg>
+              </div>
+
+              <div className="preview-spec">
+                <div className="interp-row">
+                  <span>Entry</span>
+                  <span>SMA(20) × SMA(50)</span>
                 </div>
-                <div className="preview-metrics">
-                  <div>
-                    <small>Return</small>
-                    <strong style={{ color: 'var(--positive)' }}>+12.4%</strong>
-                  </div>
-                  <div>
-                    <small>Sharpe</small>
-                    <strong>1.38</strong>
-                  </div>
-                  <div>
-                    <small>Max DD</small>
-                    <strong style={{ color: 'var(--negative)' }}>−8.2%</strong>
-                  </div>
+                <div className="interp-row">
+                  <span>Exit</span>
+                  <span>RSI &gt; 70</span>
+                </div>
+                <div className="interp-row">
+                  <span>Universe</span>
+                  <span>SPY</span>
+                </div>
+                <div className="interp-row">
+                  <span>Risk</span>
+                  <span>1.00% / trade</span>
                 </div>
               </div>
             </div>

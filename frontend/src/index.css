@@ -1,47 +1,47 @@
 :root {
   color-scheme: dark;
 
-  --bg: #020304;
-  --bg-elevated: #06080b;
-  --bg-panel: #090c11;
-  --bg-panel-2: #0c1016;
-  --bg-hover: #12171f;
-  --bg-input: #04060a;
+  --bg: #010203;
+  --bg-elevated: #050709;
+  --bg-panel: #080b10;
+  --bg-panel-2: #0b0f15;
+  --bg-hover: #11161e;
+  --bg-input: #030508;
   --bg-deep: #000000;
 
-  --border: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.11);
-  --border-focus: rgba(61, 255, 181, 0.6);
+  --border: rgba(255, 255, 255, 0.065);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-focus: rgba(61, 255, 181, 0.55);
 
-  --text: #f3f5f7;
-  --text-secondary: #8d96a1;
-  --text-muted: #545c67;
-  --text-inverse: #020304;
+  --text: #f5f7f9;
+  --text-secondary: #8e97a2;
+  --text-muted: #555d68;
+  --text-inverse: #010203;
 
   --accent: #3dffb5;
   --accent-dim: rgba(61, 255, 181, 0.1);
-  --accent-hover: #72ffc9;
-  --accent-glow: rgba(61, 255, 181, 0.22);
+  --accent-hover: #6bffc5;
+  --accent-glow: rgba(61, 255, 181, 0.2);
 
   --positive: #3dffb5;
   --positive-dim: rgba(61, 255, 181, 0.1);
-  --negative: #ff6b7a;
-  --negative-dim: rgba(255, 107, 122, 0.1);
+  --negative: #ff6878;
+  --negative-dim: rgba(255, 104, 120, 0.1);
   --warn: #ffc14a;
   --warn-dim: rgba(255, 193, 74, 0.1);
 
-  --sidebar-w: 232px;
-  --radius: 8px;
-  --radius-sm: 5px;
-  --radius-lg: 12px;
+  --sidebar-w: 236px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
   --font: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --display: 'Syne', var(--font);
+  --display: 'Outfit', var(--font);
   --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --shadow: 0 0 0 1px var(--border), 0 32px 90px rgba(0, 0, 0, 0.72);
-  --shadow-soft: 0 0 0 1px var(--border), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow: 0 0 0 1px var(--border), 0 40px 100px rgba(0, 0, 0, 0.75);
+  --shadow-soft: 0 0 0 1px var(--border), 0 14px 40px rgba(0, 0, 0, 0.5);
 
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.5;
   font-weight: 400;
   color: var(--text);
@@ -68,37 +68,35 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(1100px 580px at 8% -12%, rgba(61, 255, 181, 0.1), transparent 55%),
-    radial-gradient(900px 520px at 96% 0%, rgba(70, 110, 200, 0.045), transparent 50%),
-    radial-gradient(700px 420px at 55% 110%, rgba(61, 255, 181, 0.03), transparent 55%),
-    var(--bg);
+    radial-gradient(1200px 640px at 12% -18%, rgba(61, 255, 181, 0.11), transparent 58%),
+    radial-gradient(900px 500px at 88% 8%, rgba(61, 255, 181, 0.045), transparent 55%),
+    radial-gradient(700px 480px at 70% 100%, rgba(40, 80, 120, 0.04), transparent 55%),
+    linear-gradient(180deg, #030506 0%, var(--bg) 40%, #010203 100%);
   background-attachment: fixed;
 }
 
-/* Signature grain */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.055;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Precision grid wash */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.45;
+  opacity: 0.35;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: radial-gradient(ellipse 75% 50% at 50% -8%, #000, transparent 72%);
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(ellipse 80% 55% at 50% -10%, #000, transparent 70%);
 }
 
 #root {
@@ -130,7 +128,7 @@ code,
 }
 
 ::selection {
-  background: rgba(61, 255, 181, 0.3);
+  background: rgba(61, 255, 181, 0.28);
   color: var(--text);
 }
 

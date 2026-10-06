@@ -8,30 +8,30 @@ const MONO = 'JetBrains Mono, ui-monospace, monospace';
 const layoutBase = {
   paper_bgcolor: 'rgba(0,0,0,0)',
   plot_bgcolor: 'rgba(0,0,0,0)',
-  font: { family: FONT, color: '#8b939e', size: 11 },
+  font: { family: FONT, color: '#8e97a2', size: 11 },
   margin: { t: 10, r: 12, b: 34, l: 50 },
   xaxis: {
-    gridcolor: 'rgba(255,255,255,0.03)',
+    gridcolor: 'rgba(255,255,255,0.035)',
     zeroline: false,
     linecolor: 'rgba(255,255,255,0.05)',
-    tickfont: { size: 10, family: MONO, color: '#565e69' },
+    tickfont: { size: 10, family: MONO, color: '#555d68' },
     showspikes: true,
     spikemode: 'across' as const,
     spikesnap: 'cursor' as const,
-    spikecolor: 'rgba(61,255,181,0.28)',
+    spikecolor: 'rgba(61,255,181,0.3)',
     spikethickness: 1,
   },
   yaxis: {
-    gridcolor: 'rgba(255,255,255,0.03)',
+    gridcolor: 'rgba(255,255,255,0.035)',
     zeroline: false,
     linecolor: 'rgba(255,255,255,0.05)',
-    tickfont: { size: 10, family: MONO, color: '#565e69' },
+    tickfont: { size: 10, family: MONO, color: '#555d68' },
   },
   hovermode: 'x unified' as const,
   hoverlabel: {
-    bgcolor: '#0a0d12',
+    bgcolor: '#080b10',
     bordercolor: 'rgba(255,255,255,0.1)',
-    font: { family: MONO, size: 11, color: '#f4f6f8' },
+    font: { family: MONO, size: 11, color: '#f5f7f9' },
   },
 };
 
