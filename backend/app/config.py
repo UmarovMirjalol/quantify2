@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "development"
-    app_name: str = "QuantLLM Backtester"
+    app_name: str = "Quantify"
     # Shared access token for end users (required in docker compose production)
     app_access_token: str = ""
     # OpenAPI docs: off in production unless explicitly enabled

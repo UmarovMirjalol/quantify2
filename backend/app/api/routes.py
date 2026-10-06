@@ -82,7 +82,7 @@ class StatusResponse(BaseModel):
     llm_enabled: bool
     llm_model: str
     llm_base_url: str = ""
-    product: str = "QuantLLM Backtester"
+    product: str = "Quantify"
     auth_required: bool = False
     runtime_llm_config_allowed: bool = True
 
