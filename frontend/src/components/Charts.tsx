@@ -2,36 +2,36 @@ import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import type { EquityPoint, Marker, PriceBar } from '../types';
 
-const FONT = 'IBM Plex Sans, system-ui, sans-serif';
-const MONO = 'IBM Plex Mono, ui-monospace, monospace';
+const FONT = 'Instrument Sans, system-ui, sans-serif';
+const MONO = 'JetBrains Mono, ui-monospace, monospace';
 
 const layoutBase = {
   paper_bgcolor: 'rgba(0,0,0,0)',
   plot_bgcolor: 'rgba(0,0,0,0)',
-  font: { family: FONT, color: '#9aa3b2', size: 11 },
-  margin: { t: 16, r: 16, b: 40, l: 52 },
+  font: { family: FONT, color: '#9ba3b0', size: 11 },
+  margin: { t: 12, r: 14, b: 36, l: 52 },
   xaxis: {
-    gridcolor: 'rgba(255,255,255,0.04)',
+    gridcolor: 'rgba(255,255,255,0.035)',
     zeroline: false,
-    linecolor: 'rgba(255,255,255,0.08)',
-    tickfont: { size: 10, family: MONO, color: '#6b7380' },
+    linecolor: 'rgba(255,255,255,0.06)',
+    tickfont: { size: 10, family: MONO, color: '#5f6773' },
     showspikes: true,
     spikemode: 'across' as const,
     spikesnap: 'cursor' as const,
-    spikecolor: 'rgba(94,234,212,0.35)',
+    spikecolor: 'rgba(74,222,176,0.3)',
     spikethickness: 1,
   },
   yaxis: {
-    gridcolor: 'rgba(255,255,255,0.04)',
+    gridcolor: 'rgba(255,255,255,0.035)',
     zeroline: false,
-    linecolor: 'rgba(255,255,255,0.08)',
-    tickfont: { size: 10, family: MONO, color: '#6b7380' },
+    linecolor: 'rgba(255,255,255,0.06)',
+    tickfont: { size: 10, family: MONO, color: '#5f6773' },
   },
   hovermode: 'x unified' as const,
   hoverlabel: {
-    bgcolor: '#12151a',
-    bordercolor: 'rgba(255,255,255,0.12)',
-    font: { family: MONO, size: 11, color: '#e8eaed' },
+    bgcolor: '#0d1015',
+    bordercolor: 'rgba(255,255,255,0.1)',
+    font: { family: MONO, size: 11, color: '#f2f4f7' },
   },
 };
 
@@ -44,9 +44,9 @@ export function EquityChart({ data }: { data: EquityPoint[] }) {
           y: data.map((d) => d.equity),
           type: 'scatter',
           mode: 'lines',
-          line: { color: '#5eead4', width: 1.75 },
+          line: { color: '#4adeb0', width: 1.75 },
           fill: 'tozeroy',
-          fillcolor: 'rgba(94,234,212,0.06)',
+          fillcolor: 'rgba(74,222,176,0.07)',
           name: 'Equity',
           hovertemplate: '%{x}<br>$%{y:,.0f}<extra></extra>',
         },
@@ -72,9 +72,9 @@ export function DrawdownChart({ data }: { data: EquityPoint[] }) {
           y: data.map((d) => (d.drawdown ?? 0) * 100),
           type: 'scatter',
           mode: 'lines',
-          line: { color: '#f07178', width: 1.4 },
+          line: { color: '#fb7185', width: 1.4 },
           fill: 'tozeroy',
-          fillcolor: 'rgba(240,113,120,0.1)',
+          fillcolor: 'rgba(251,113,133,0.1)',
           name: 'Drawdown',
           hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
         },
@@ -118,7 +118,7 @@ export function PriceTradeChart({
           y: entries.map((m) => m.price),
           type: 'scatter',
           mode: 'markers',
-          marker: { color: '#3dd68c', size: 9, symbol: 'triangle-up', line: { width: 0 } },
+          marker: { color: '#34d399', size: 9, symbol: 'triangle-up', line: { width: 0 } },
           name: 'Entry',
           hovertemplate: '%{x}<br>$%{y:.2f}<extra>Entry</extra>',
         },
@@ -127,7 +127,7 @@ export function PriceTradeChart({
           y: exits.map((m) => m.price),
           type: 'scatter',
           mode: 'markers',
-          marker: { color: '#f07178', size: 9, symbol: 'triangle-down', line: { width: 0 } },
+          marker: { color: '#fb7185', size: 9, symbol: 'triangle-down', line: { width: 0 } },
           name: 'Exit',
           hovertemplate: '%{x}<br>$%{y:.2f}<extra>Exit</extra>',
         },
@@ -182,7 +182,7 @@ export function MonthlyReturnsChart({ data }: { data: EquityPoint[] }) {
           y: monthly.values,
           type: 'bar',
           marker: {
-            color: monthly.values.map((v) => (v >= 0 ? 'rgba(61,214,140,0.75)' : 'rgba(240,113,120,0.75)')),
+            color: monthly.values.map((v) => (v >= 0 ? 'rgba(52,211,153,0.75)' : 'rgba(251,113,133,0.75)')),
           },
           name: 'Monthly %',
           hovertemplate: '%{x}<br>%{y:.2f}%<extra></extra>',
@@ -222,15 +222,15 @@ export function ReturnsDistributionChart({ data }: { data: EquityPoint[] }) {
           x: returns,
           type: 'histogram',
           nbinsx: 40,
-          marker: { color: 'rgba(94,234,212,0.55)', line: { color: 'rgba(94,234,212,0.2)', width: 0.5 } },
+          marker: { color: 'rgba(74,222,176,0.55)', line: { color: 'rgba(74,222,176,0.2)', width: 0.5 } },
           name: 'Daily return %',
           hovertemplate: '%{x:.2f}%<br>count %{y}<extra></extra>',
         },
       ]}
       layout={{
         ...layoutBase,
-        xaxis: { ...layoutBase.xaxis, ticksuffix: '%', title: { text: 'Daily return', font: { size: 11, color: '#6b7380' } } },
-        yaxis: { ...layoutBase.yaxis, title: { text: 'Count', font: { size: 11, color: '#6b7380' } } },
+        xaxis: { ...layoutBase.xaxis, ticksuffix: '%', title: { text: 'Daily return', font: { size: 11, color: '#5f6773' } } },
+        yaxis: { ...layoutBase.yaxis, title: { text: 'Count', font: { size: 11, color: '#5f6773' } } },
         height: 260,
         bargap: 0.05,
       }}

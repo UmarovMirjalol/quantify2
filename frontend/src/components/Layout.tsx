@@ -18,7 +18,7 @@ const LogoMark = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path
       d="M2 12 L5.5 5 L9 9.5 L14 3"
-      stroke="#5eead4"
+      stroke="#4adeb0"
       strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -47,7 +47,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
-            <span className="brand-tag">AI quant research</span>
+            <span className="brand-tag">Quant research</span>
           </span>
         </Link>
 

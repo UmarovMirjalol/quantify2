@@ -1,24 +1,28 @@
 import { Link } from 'react-router-dom';
 
+const LogoMark = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M2 12 L5.5 5 L9 9.5 L14 3"
+      stroke="#4adeb0"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export function LandingPage() {
   return (
     <div className="landing">
       <header className="landing-nav">
         <Link to="/" className="brand" style={{ padding: 0 }}>
           <span className="brand-mark">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d="M2 12 L5.5 5 L9 9.5 L14 3"
-                stroke="#5eead4"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <LogoMark />
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
-            <span className="brand-tag">AI quant research</span>
+            <span className="brand-tag">Quant research</span>
           </span>
         </Link>
         <div className="nav-links">
@@ -33,7 +37,15 @@ export function LandingPage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">AI-powered quantitative research</p>
+          <div className="brand-lockup">
+            <span className="brand-mark">
+              <LogoMark />
+            </span>
+            <span className="brand-text">
+              <span className="brand-name">Quantify</span>
+              <span className="brand-tag">AI-powered quantitative research</span>
+            </span>
+          </div>
           <h1>Turn trading ideas into backtests.</h1>
           <p className="lede">
             Describe your strategy in plain English. Quantify translates it into executable logic,
@@ -47,6 +59,20 @@ export function LandingPage() {
               View results
             </Link>
           </div>
+          <div className="hero-meta">
+            <div>
+              <small>Execution</small>
+              <strong>Close → next open</strong>
+            </div>
+            <div>
+              <small>Engine</small>
+              <strong>Custom Python</strong>
+            </div>
+            <div>
+              <small>Parser</small>
+              <strong>LLM + builtin</strong>
+            </div>
+          </div>
         </div>
 
         <div className="product-preview" aria-hidden="true">
@@ -54,52 +80,78 @@ export function LandingPage() {
             <span className="preview-dot" />
             <span className="preview-dot" />
             <span className="preview-dot" />
-            <span style={{ marginLeft: 8 }}>New Backtest · Quantify</span>
+            <span style={{ marginLeft: 8 }}>workspace · new backtest</span>
           </div>
           <div className="preview-body">
-            <div className="preview-prompt">
-              Buy SPY when the 20-day moving average crosses above the 50-day moving average. Risk 1%
-              per trade and exit when RSI exceeds 70.
+            <div className="preview-left">
+              <div className="preview-prompt">
+                Buy SPY when the 20-day moving average crosses above the 50-day moving average. Risk
+                1% per trade and exit when RSI exceeds 70.
+              </div>
+              <div className="preview-flow">
+                <span className="on">Natural language</span>
+                <span className="arrow">→</span>
+                <span className="on">Interpretation</span>
+                <span className="arrow">→</span>
+                <span className="on">Backtest</span>
+                <span className="arrow">→</span>
+                <span className="on">Results</span>
+              </div>
+              <div className="preview-interp">
+                <div className="interp-row">
+                  <span>Entry</span>
+                  <span>SMA(20) × SMA(50)</span>
+                </div>
+                <div className="interp-row">
+                  <span>Exit</span>
+                  <span>RSI &gt; 70</span>
+                </div>
+                <div className="interp-row">
+                  <span>Universe</span>
+                  <span>SPY</span>
+                </div>
+                <div className="interp-row">
+                  <span>Risk / trade</span>
+                  <span>1.00%</span>
+                </div>
+              </div>
             </div>
-            <div className="preview-flow">
-              <span className="on">Natural language</span>
-              <span>→</span>
-              <span className="on">Interpretation</span>
-              <span>→</span>
-              <span className="on">Backtest</span>
-              <span>→</span>
-              <span className="on">Results</span>
-            </div>
-            <div className="preview-interp">
-              <div className="interp-row">
-                <span>Entry</span>
-                <span>SMA(20) cross above SMA(50)</span>
+            <div className="preview-right">
+              <div className="preview-chart">
+                <header>
+                  <small>Equity</small>
+                  <strong>+12.4%</strong>
+                </header>
+                <svg viewBox="0 0 240 72" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4adeb0" stopOpacity="0.28" />
+                      <stop offset="100%" stopColor="#4adeb0" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    className="fill"
+                    d="M0 58 L18 52 L36 54 L54 42 L72 46 L90 34 L108 38 L126 28 L144 30 L162 18 L180 22 L198 12 L216 16 L240 8 L240 72 L0 72 Z"
+                  />
+                  <path
+                    className="line"
+                    d="M0 58 L18 52 L36 54 L54 42 L72 46 L90 34 L108 38 L126 28 L144 30 L162 18 L180 22 L198 12 L216 16 L240 8"
+                  />
+                </svg>
               </div>
-              <div className="interp-row">
-                <span>Exit</span>
-                <span>RSI &gt; 70</span>
-              </div>
-              <div className="interp-row">
-                <span>Universe</span>
-                <span>SPY</span>
-              </div>
-              <div className="interp-row">
-                <span>Risk / trade</span>
-                <span>1.00%</span>
-              </div>
-            </div>
-            <div className="preview-metrics">
-              <div>
-                <small>Total return</small>
-                <strong style={{ color: 'var(--positive)' }}>+12.4%</strong>
-              </div>
-              <div>
-                <small>Sharpe</small>
-                <strong>1.38</strong>
-              </div>
-              <div>
-                <small>Max DD</small>
-                <strong style={{ color: 'var(--negative)' }}>−8.2%</strong>
+              <div className="preview-metrics">
+                <div>
+                  <small>Return</small>
+                  <strong style={{ color: 'var(--positive)' }}>+12.4%</strong>
+                </div>
+                <div>
+                  <small>Sharpe</small>
+                  <strong>1.38</strong>
+                </div>
+                <div>
+                  <small>Max DD</small>
+                  <strong style={{ color: 'var(--negative)' }}>−8.2%</strong>
+                </div>
               </div>
             </div>
           </div>
@@ -107,10 +159,11 @@ export function LandingPage() {
       </section>
 
       <section className="landing-section">
-        <p className="eyebrow">Workflow</p>
-        <h1 style={{ fontSize: '1.35rem' }}>Built for serious research, not chat demos.</h1>
+        <p className="eyebrow">Research workflow</p>
+        <h2>Built for serious research, not chat demos.</h2>
         <div className="feature-grid">
           <article className="feature">
+            <div className="feature-index">01</div>
             <h3>Natural language → logic</h3>
             <p>
               Strategies become validated specs. No arbitrary code execution — deterministic engine
@@ -118,12 +171,14 @@ export function LandingPage() {
             </p>
           </article>
           <article className="feature">
+            <div className="feature-index">02</div>
             <h3>Look-ahead safe engine</h3>
             <p>
               Signal at close, execute next open. Risk, costs, and slippage applied on every fill.
             </p>
           </article>
           <article className="feature">
+            <div className="feature-index">03</div>
             <h3>Institutional metrics</h3>
             <p>
               Sharpe, Sortino, drawdown, profit factor, trade ledger, and equity curves from real
@@ -135,7 +190,7 @@ export function LandingPage() {
 
       <footer className="landing-footer">
         <span>Quantify · AI-powered quantitative research</span>
-        <span>Signal at close → execute next open</span>
+        <span className="mono">Signal at close → execute next open</span>
       </footer>
     </div>
   );

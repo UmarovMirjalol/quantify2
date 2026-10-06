@@ -46,7 +46,7 @@ export function AccessGate({ onUnlocked }: Props) {
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path
                 d="M2 12 L5.5 5 L9 9.5 L14 3"
-                stroke="#5eead4"
+                stroke="#4adeb0"
                 strokeWidth="1.75"
                 strokeLinecap="round"
                 strokeLinejoin="round"
