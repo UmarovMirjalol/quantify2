@@ -21,11 +21,18 @@ export function LandingPage() {
   return (
     <div className="landing">
       <div className="landing-motion" aria-hidden="true">
+        <span className="motion-grid" />
+        <span className="beam beam-a" />
+        <span className="beam beam-b" />
+        <span className="orbit orbit-a" />
+        <span className="orbit orbit-b" />
+        <span className="scanline" />
         <span className="mote mote-a" />
         <span className="mote mote-b" />
         <span className="mote mote-c" />
         <span className="mote mote-d" />
-        <span className="beam" />
+        <span className="mote mote-e" />
+        <span className="mote mote-f" />
       </div>
 
       <header className="landing-nav">
@@ -90,24 +97,33 @@ export function LandingPage() {
               <div className="product-main">
                 <div className="product-prompt">
                   <span>Strategy</span>
-                  Buy SPY when the 20-day moving average crosses above the 50-day. Risk 1% per trade;
-                  exit when RSI exceeds 70.
+                  <p className="prompt-type">
+                    Buy SPY when the 20-day moving average crosses above the 50-day. Risk 1% per
+                    trade; exit when RSI exceeds 70.
+                    <i className="caret" />
+                  </p>
                 </div>
 
                 <div className="product-flow">
-                  <span className="flow-step on" style={{ ['--i' as string]: 0 }}>
+                  <span className="flow-step" style={{ ['--i' as string]: 0 }}>
                     NL
                   </span>
-                  <span className="flow-arrow">→</span>
-                  <span className="flow-step on" style={{ ['--i' as string]: 1 }}>
+                  <span className="flow-arrow" style={{ ['--i' as string]: 0 }}>
+                    →
+                  </span>
+                  <span className="flow-step" style={{ ['--i' as string]: 1 }}>
                     Spec
                   </span>
-                  <span className="flow-arrow">→</span>
-                  <span className="flow-step on" style={{ ['--i' as string]: 2 }}>
+                  <span className="flow-arrow" style={{ ['--i' as string]: 1 }}>
+                    →
+                  </span>
+                  <span className="flow-step" style={{ ['--i' as string]: 2 }}>
                     Sim
                   </span>
-                  <span className="flow-arrow">→</span>
-                  <span className="flow-step on" style={{ ['--i' as string]: 3 }}>
+                  <span className="flow-arrow" style={{ ['--i' as string]: 2 }}>
+                    →
+                  </span>
+                  <span className="flow-step" style={{ ['--i' as string]: 3 }}>
                     Results
                   </span>
                 </div>
@@ -119,8 +135,8 @@ export function LandingPage() {
                       <strong className="count-up">+12.40%</strong>
                     </div>
                     <div className="product-meta mono">
-                      <span>Sharpe 1.38</span>
-                      <span>DD −8.2%</span>
+                      <span className="meta-tick">Sharpe 1.38</span>
+                      <span className="meta-tick">DD −8.2%</span>
                     </div>
                   </header>
                   <svg viewBox="0 0 460 150" preserveAspectRatio="none">
@@ -129,21 +145,47 @@ export function LandingPage() {
                         <stop offset="0%" stopColor={ACCENT} stopOpacity="0.28" />
                         <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
                       </linearGradient>
+                      <filter id="eqGlow" x="-20%" y="-40%" width="140%" height="180%">
+                        <feGaussianBlur stdDeviation="2.2" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
                     </defs>
                     <g className="chart-grid">
                       <line x1="0" y1="37" x2="460" y2="37" />
                       <line x1="0" y1="75" x2="460" y2="75" />
                       <line x1="0" y1="112" x2="460" y2="112" />
                     </g>
+                    <path className="fill" d={`${EQUITY_PATH} L460 150 L0 150 Z`} />
                     <path
-                      className="fill"
-                      d={`${EQUITY_PATH} L460 150 L0 150 Z`}
+                      className="line line-glow"
+                      d={EQUITY_PATH}
+                      filter="url(#eqGlow)"
                     />
                     <path className="line" id="equityLine" d={EQUITY_PATH} />
                     <circle className="chart-dot" r="4.5" fill={ACCENT}>
-                      <animateMotion dur="6s" repeatCount="indefinite" rotate="auto">
-                        <mpath xlinkHref="#equityLine" />
+                      <animateMotion dur="5.5s" repeatCount="indefinite" rotate="auto">
+                        <mpath href="#equityLine" />
                       </animateMotion>
+                    </circle>
+                    <circle className="chart-pulse" r="4" fill="none" stroke={ACCENT} strokeWidth="1.5">
+                      <animateMotion dur="5.5s" repeatCount="indefinite">
+                        <mpath href="#equityLine" />
+                      </animateMotion>
+                      <animate
+                        attributeName="r"
+                        values="4;14"
+                        dur="1.6s"
+                        repeatCount="indefinite"
+                      />
+                      <animate
+                        attributeName="opacity"
+                        values="0.55;0"
+                        dur="1.6s"
+                        repeatCount="indefinite"
+                      />
                     </circle>
                   </svg>
                 </div>
@@ -195,23 +237,29 @@ export function LandingPage() {
           <h2>Built for serious research, not chat demos.</h2>
         </div>
         <div className="feature-rail">
-          <article className="feature">
-            <div className="feature-index">01 — Parse</div>
+          <article className="feature" style={{ ['--i' as string]: 0 }}>
+            <div className="feature-index">
+              <span className="feature-num">01</span> — Parse
+            </div>
             <h3>Natural language → logic</h3>
             <p>
               Strategies become validated specs. No arbitrary code execution — deterministic engine
               interpretation only.
             </p>
           </article>
-          <article className="feature">
-            <div className="feature-index">02 — Simulate</div>
+          <article className="feature" style={{ ['--i' as string]: 1 }}>
+            <div className="feature-index">
+              <span className="feature-num">02</span> — Simulate
+            </div>
             <h3>Look-ahead safe engine</h3>
             <p>
               Signal at close, execute next open. Risk, costs, and slippage applied on every fill.
             </p>
           </article>
-          <article className="feature">
-            <div className="feature-index">03 — Measure</div>
+          <article className="feature" style={{ ['--i' as string]: 2 }}>
+            <div className="feature-index">
+              <span className="feature-num">03</span> — Measure
+            </div>
             <h3>Institutional metrics</h3>
             <p>
               Sharpe, Sortino, drawdown, profit factor, trade ledger, and equity curves from real

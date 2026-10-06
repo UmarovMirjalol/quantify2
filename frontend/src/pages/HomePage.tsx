@@ -326,7 +326,7 @@ export function HomePage({ health }: Props) {
           </div>
         </form>
 
-        <aside className="panel panel-tight status-panel">
+        <aside className={`panel panel-tight status-panel${loading ? ' running' : ''}`}>
           <h2>Strategy interpretation</h2>
           <p className="hint" style={{ marginBottom: '0.85rem' }}>
             Research copilot — assumptions before execution

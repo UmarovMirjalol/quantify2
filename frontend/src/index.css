@@ -109,21 +109,47 @@ code,
 
 @media (prefers-reduced-motion: reduce) {
   .landing-motion,
+  .landing-motion *,
   .product-frame,
+  .product-frame::before,
   .product-live i,
-  .flow-step.on,
+  .flow-step,
+  .flow-arrow,
   .product-chart::after,
   .chart-dot,
+  .chart-pulse,
   .product-chart path.line,
-  .product-chart path.fill {
+  .product-chart path.line-glow,
+  .product-chart path.fill,
+  .hero-copy .wordmark,
+  .hero-actions .btn.primary,
+  .hero-actions .btn.primary::after,
+  .count-up,
+  .meta-tick,
+  .feature,
+  .feature-num,
+  .prompt-type,
+  .caret,
+  .kpi-card,
+  .workspace > *,
+  .status-panel.running,
+  .pipeline li.active .step-icon {
     animation: none !important;
   }
 
   .reveal,
   .side-row,
-  .side-kpis > div {
+  .side-kpis > div,
+  .feature,
+  .kpi-card,
+  .workspace > * {
     opacity: 1 !important;
     animation: none !important;
     transform: none !important;
+  }
+
+  .hero-copy .wordmark {
+    -webkit-text-fill-color: var(--text);
+    background: none;
   }
 }
