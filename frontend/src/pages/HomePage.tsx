@@ -88,10 +88,12 @@ export function HomePage({ health }: Props) {
 
   const previewInterpretation = useMemo(() => {
     const text = strategyText.toLowerCase();
-    const assetMatch = text.match(/\b(spy|qqq|aapl|msft|tsla|btc|eth|[a-z]{1,5})\b/i);
+    const known = text.match(/\b(spy|qqq|iwm|dia|aapl|msft|nvda|tsla|amzn|meta|googl|btc|eth)\b/i);
+    const afterBuy = strategyText.match(/\bbuy\s+([A-Za-z]{1,6})\b/i);
+    const asset = (known?.[1] ?? afterBuy?.[1] ?? '—').toUpperCase();
     const riskMatch = text.match(/risk\s+(\d+(?:\.\d+)?)\s*%/i);
     return {
-      asset: assetMatch?.[1]?.toUpperCase() ?? '—',
+      asset,
       entry: text.includes('cross')
         ? 'Crossover / signal rule'
         : text.includes('rsi')
