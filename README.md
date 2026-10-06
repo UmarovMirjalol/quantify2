@@ -131,14 +131,14 @@ uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
 
 API docs: http://127.0.0.1:8765/docs
 
-### Frontend (local, port 4173)
+### Frontend (local, port 43127)
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open http://127.0.0.1:4173
+Open http://127.0.0.1:43127
 
 ### Docker Compose (dev overlay)
 
