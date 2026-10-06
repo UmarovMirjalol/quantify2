@@ -1378,33 +1378,12 @@ h2 {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 320;
-  stroke-dashoffset: 0;
-  animation: draw-line 2s ease both;
+  filter: drop-shadow(0 0 5px rgba(61, 255, 181, 0.4));
 }
 
 .preview-chart path.fill {
   fill: url(#eqFill);
   opacity: 1;
-  animation: fade-fill 1s ease both 0.85s;
-}
-
-@keyframes draw-line {
-  from {
-    stroke-dashoffset: 320;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes fade-fill {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .preview-metrics {
