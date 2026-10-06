@@ -953,7 +953,6 @@ h2 {
 
 .plane-fill {
   fill: url(#planeFill);
-  animation: plane-fade 1.4s ease both 0.2s;
 }
 
 .plane-line {
@@ -964,15 +963,6 @@ h2 {
   stroke-linejoin: round;
   filter: drop-shadow(0 0 10px rgba(0, 245, 160, 0.35));
   animation: plane-breathe 7s ease-in-out infinite;
-}
-
-@keyframes plane-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 @keyframes plane-breathe {
@@ -991,7 +981,7 @@ h2 {
   width: min(720px, calc(100% - clamp(2rem, 6vw, 6rem)));
   margin: 0;
   padding: clamp(4.5rem, 12vh, 8rem) clamp(1.25rem, 3.5vw, 3rem) 2.5rem;
-  animation: rise-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes rise-in {
@@ -1077,7 +1067,7 @@ h2 {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(4, 6, 7, 0.78);
   backdrop-filter: blur(16px);
-  animation: rise-in 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  animation: rise-in 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.12s;
 }
 
 .dock-strategy {
@@ -1377,17 +1367,30 @@ h2 {
     padding: 0.9rem 1rem;
   }
 
+  .landing-nav .btn.ghost {
+    display: none;
+  }
+
+  .landing-nav .btn.primary {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.8rem;
+  }
+
   .hero-theater {
     min-height: auto;
   }
 
   .hero-content {
-    padding-top: 3rem;
-    width: calc(100% - 2rem);
+    padding: 2.75rem 1rem 1.75rem;
+    width: auto;
+  }
+
+  .hero-content .wordmark {
+    font-size: clamp(3.2rem, 18vw, 4.8rem);
   }
 
   .plane-equity {
-    height: 55%;
+    height: 48%;
   }
 
   .landing-section {
