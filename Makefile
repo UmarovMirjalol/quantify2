@@ -1,7 +1,7 @@
 .PHONY: help build up down logs smoke test deploy restart ps
 
 help:
-	@echo "QuantLLM make targets:"
+	@echo "Quantify make targets:"
 	@echo "  make deploy   - build + start production stack"
 	@echo "  make up       - start (no rebuild)"
 	@echo "  make down     - stop containers"
