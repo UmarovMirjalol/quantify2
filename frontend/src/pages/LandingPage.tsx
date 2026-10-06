@@ -14,9 +14,20 @@ const LogoMark = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+const EQUITY_PATH =
+  'M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16';
+
 export function LandingPage() {
   return (
     <div className="landing">
+      <div className="landing-motion" aria-hidden="true">
+        <span className="mote mote-a" />
+        <span className="mote mote-b" />
+        <span className="mote mote-c" />
+        <span className="mote mote-d" />
+        <span className="beam" />
+      </div>
+
       <header className="landing-nav">
         <Link to="/" className="brand" style={{ padding: 0 }}>
           <span className="brand-mark">
@@ -39,13 +50,17 @@ export function LandingPage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="wordmark">Quantify</p>
-          <h1>Turn trading ideas into backtests.</h1>
-          <p className="lede">
+          <p className="wordmark reveal" style={{ ['--d' as string]: '0ms' }}>
+            Quantify
+          </p>
+          <h1 className="reveal" style={{ ['--d' as string]: '80ms' }}>
+            Turn trading ideas into backtests.
+          </h1>
+          <p className="lede reveal" style={{ ['--d' as string]: '140ms' }}>
             Describe a strategy in plain English. Quantify interprets it, runs a look-ahead-safe
             simulation, and returns institutional results.
           </p>
-          <div className="hero-actions">
+          <div className="hero-actions reveal" style={{ ['--d' as string]: '200ms' }}>
             <Link className="btn primary" to="/app">
               Start a backtest
             </Link>
@@ -53,10 +68,12 @@ export function LandingPage() {
               View results
             </Link>
           </div>
-          <p className="hero-note mono">Signal at close → execute next open</p>
+          <p className="hero-note mono reveal" style={{ ['--d' as string]: '260ms' }}>
+            Signal at close → execute next open
+          </p>
         </div>
 
-        <div className="hero-stage" aria-hidden="true">
+        <div className="hero-stage reveal" style={{ ['--d' as string]: '120ms' }}>
           <div className="product-frame">
             <div className="product-top">
               <span className="product-brand">
@@ -77,11 +94,29 @@ export function LandingPage() {
                   exit when RSI exceeds 70.
                 </div>
 
+                <div className="product-flow">
+                  <span className="flow-step on" style={{ ['--i' as string]: 0 }}>
+                    NL
+                  </span>
+                  <span className="flow-arrow">→</span>
+                  <span className="flow-step on" style={{ ['--i' as string]: 1 }}>
+                    Spec
+                  </span>
+                  <span className="flow-arrow">→</span>
+                  <span className="flow-step on" style={{ ['--i' as string]: 2 }}>
+                    Sim
+                  </span>
+                  <span className="flow-arrow">→</span>
+                  <span className="flow-step on" style={{ ['--i' as string]: 3 }}>
+                    Results
+                  </span>
+                </div>
+
                 <div className="product-chart">
                   <header>
                     <div>
                       <small>Equity curve</small>
-                      <strong>+12.40%</strong>
+                      <strong className="count-up">+12.40%</strong>
                     </div>
                     <div className="product-meta mono">
                       <span>Sharpe 1.38</span>
@@ -102,12 +137,14 @@ export function LandingPage() {
                     </g>
                     <path
                       className="fill"
-                      d="M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16 L460 150 L0 150 Z"
+                      d={`${EQUITY_PATH} L460 150 L0 150 Z`}
                     />
-                    <path
-                      className="line"
-                      d="M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16"
-                    />
+                    <path className="line" id="equityLine" d={EQUITY_PATH} />
+                    <circle className="chart-dot" r="4.5" fill={ACCENT}>
+                      <animateMotion dur="6s" repeatCount="indefinite" rotate="auto">
+                        <mpath xlinkHref="#equityLine" />
+                      </animateMotion>
+                    </circle>
                   </svg>
                 </div>
               </div>
@@ -115,33 +152,33 @@ export function LandingPage() {
               <aside className="product-side">
                 <div className="side-block">
                   <small>Interpretation</small>
-                  <div className="side-row">
+                  <div className="side-row" style={{ ['--i' as string]: 0 }}>
                     <span>Entry</span>
                     <span>SMA(20) × SMA(50)</span>
                   </div>
-                  <div className="side-row">
+                  <div className="side-row" style={{ ['--i' as string]: 1 }}>
                     <span>Exit</span>
                     <span>RSI &gt; 70</span>
                   </div>
-                  <div className="side-row">
+                  <div className="side-row" style={{ ['--i' as string]: 2 }}>
                     <span>Universe</span>
                     <span>SPY</span>
                   </div>
-                  <div className="side-row">
+                  <div className="side-row" style={{ ['--i' as string]: 3 }}>
                     <span>Risk</span>
                     <span>1.00% / trade</span>
                   </div>
                 </div>
                 <div className="side-kpis">
-                  <div>
+                  <div style={{ ['--i' as string]: 0 }}>
                     <small>Return</small>
                     <strong className="pos">+12.4%</strong>
                   </div>
-                  <div>
+                  <div style={{ ['--i' as string]: 1 }}>
                     <small>Trades</small>
                     <strong>48</strong>
                   </div>
-                  <div>
+                  <div style={{ ['--i' as string]: 2 }}>
                     <small>Win rate</small>
                     <strong>56%</strong>
                   </div>

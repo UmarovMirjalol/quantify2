@@ -879,6 +879,98 @@ h2 {
   background: var(--bg);
 }
 
+.landing-motion {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: min(100vh, 900px);
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.landing-motion .mote {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  filter: blur(0.5px);
+  animation: mote-drift 14s ease-in-out infinite;
+}
+
+.mote-a {
+  top: 18%;
+  left: 12%;
+  animation-duration: 16s;
+}
+.mote-b {
+  top: 42%;
+  right: 18%;
+  width: 6px;
+  height: 6px;
+  opacity: 0.25;
+  animation-duration: 12s;
+  animation-delay: -3s;
+}
+.mote-c {
+  top: 68%;
+  left: 28%;
+  width: 5px;
+  height: 5px;
+  opacity: 0.2;
+  animation-duration: 18s;
+  animation-delay: -7s;
+}
+.mote-d {
+  top: 28%;
+  left: 55%;
+  width: 7px;
+  height: 7px;
+  opacity: 0.28;
+  animation-duration: 13s;
+  animation-delay: -5s;
+}
+
+.landing-motion .beam {
+  position: absolute;
+  top: -10%;
+  right: 8%;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 214, 160, 0.12), transparent 68%);
+  animation: beam-breathe 9s ease-in-out infinite;
+}
+
+@keyframes mote-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(18px, -28px);
+  }
+}
+
+@keyframes beam-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  animation: rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
 .landing-nav {
   display: flex;
   align-items: center;
@@ -904,6 +996,8 @@ h2 {
 }
 
 .hero {
+  position: relative;
+  z-index: 1;
   width: min(1240px, calc(100% - clamp(1.5rem, 4vw, 3rem)));
   margin: 0 auto;
   padding: clamp(2.5rem, 6vh, 4.25rem) 0 2.5rem;
@@ -915,11 +1009,11 @@ h2 {
 }
 
 .hero-copy {
-  animation: rise 0.7s ease;
+  /* staggered via .reveal */
 }
 
 .hero-stage {
-  animation: rise 0.85s ease;
+  /* staggered via .reveal */
 }
 
 @keyframes rise {
@@ -989,6 +1083,18 @@ h2 {
   box-shadow:
     0 0 0 1px rgba(79, 214, 160, 0.05),
     0 28px 70px rgba(0, 0, 0, 0.45);
+  animation: frame-float 7.5s ease-in-out infinite;
+  transform: translateY(0);
+}
+
+@keyframes frame-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .product-top {
@@ -1026,6 +1132,20 @@ h2 {
   border-radius: 50%;
   background: var(--accent);
   display: block;
+  box-shadow: 0 0 0 0 rgba(79, 214, 160, 0.5);
+  animation: live-ping 1.8s ease-out infinite;
+}
+
+@keyframes live-ping {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 214, 160, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(79, 214, 160, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 214, 160, 0);
+  }
 }
 
 .product-grid {
@@ -1064,12 +1184,82 @@ h2 {
   margin-bottom: 0.4rem;
 }
 
+.product-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.flow-step {
+  padding: 0.28rem 0.48rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.flow-step.on {
+  color: var(--accent);
+  border-color: rgba(79, 214, 160, 0.35);
+  background: var(--accent-dim);
+  animation: flow-glow 2.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.35s);
+}
+
+.flow-arrow {
+  color: var(--text-muted);
+  opacity: 0.45;
+}
+
+@keyframes flow-glow {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(79, 214, 160, 0.08);
+  }
+}
+
 .product-chart {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.32);
   padding: 0.85rem 0.9rem 0.5rem;
   flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.product-chart::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 60%
+  );
+  background-size: 220% 100%;
+  animation: chart-sheen 5.5s ease-in-out infinite;
+}
+
+@keyframes chart-sheen {
+  0%,
+  20% {
+    background-position: 120% 0;
+  }
+  80%,
+  100% {
+    background-position: -20% 0;
+  }
 }
 
 .product-chart header {
@@ -1122,10 +1312,37 @@ h2 {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-dasharray: 640;
+  stroke-dashoffset: 0;
+  animation: draw-equity 2.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .product-chart path.fill {
   fill: url(#eqFill);
+  opacity: 1;
+  animation: fade-fill 1s ease 0.9s;
+}
+
+.chart-dot {
+  filter: drop-shadow(0 0 4px rgba(79, 214, 160, 0.55));
+}
+
+@keyframes draw-equity {
+  from {
+    stroke-dashoffset: 640;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-fill {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .product-side {
@@ -1161,6 +1378,9 @@ h2 {
   padding: 0.42rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 0.78rem;
+  opacity: 0;
+  animation: rise 0.55s ease forwards;
+  animation-delay: calc(0.5s + var(--i, 0) * 0.09s);
 }
 
 .side-row:last-child {
@@ -1192,6 +1412,9 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 7px;
   background: rgba(10, 12, 15, 0.45);
+  opacity: 0;
+  animation: rise 0.55s ease forwards;
+  animation-delay: calc(0.75s + var(--i, 0) * 0.09s);
 }
 
 .side-kpis small {

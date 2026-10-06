@@ -108,10 +108,22 @@ code,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  .landing-motion,
+  .product-frame,
+  .product-live i,
+  .flow-step.on,
+  .product-chart::after,
+  .chart-dot,
+  .product-chart path.line,
+  .product-chart path.fill {
+    animation: none !important;
+  }
+
+  .reveal,
+  .side-row,
+  .side-kpis > div {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
   }
 }
