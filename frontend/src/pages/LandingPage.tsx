@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 
+const ACCENT = '#36f0a8';
+
 const LogoMark = ({ size = 17 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path
       d="M2 12 L5.5 5 L9 9.5 L14 3"
-      stroke="#3dffb5"
+      stroke={ACCENT}
       strokeWidth="1.9"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -15,10 +17,30 @@ const LogoMark = ({ size = 17 }: { size?: number }) => (
 export function LandingPage() {
   return (
     <div className="landing">
-      <div className="landing-atmosphere" aria-hidden="true">
-        <span className="orb orb-a" />
-        <span className="orb orb-b" />
-        <span className="orb orb-c" />
+      <div className="landing-backdrop" aria-hidden="true">
+        <svg className="backdrop-equity" viewBox="0 0 1400 700" preserveAspectRatio="xMaxYMid slice">
+          <defs>
+            <linearGradient id="bgFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={ACCENT} stopOpacity="0.14" />
+              <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="bgStroke" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={ACCENT} stopOpacity="0" />
+              <stop offset="35%" stopColor={ACCENT} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={ACCENT} stopOpacity="0.75" />
+            </linearGradient>
+          </defs>
+          <path
+            fill="url(#bgFill)"
+            d="M0 520 L120 500 L240 510 L360 430 L480 450 L600 340 L720 370 L840 260 L960 290 L1080 170 L1200 200 L1320 90 L1400 60 L1400 700 L0 700 Z"
+          />
+          <path
+            fill="none"
+            stroke="url(#bgStroke)"
+            strokeWidth="2.5"
+            d="M0 520 L120 500 L240 510 L360 430 L480 450 L600 340 L720 370 L840 260 L960 290 L1080 170 L1200 200 L1320 90 L1400 60"
+          />
+        </svg>
       </div>
 
       <header className="landing-nav">
@@ -63,14 +85,13 @@ export function LandingPage() {
         </div>
 
         <div className="hero-visual" aria-hidden="true">
-          <div className="hero-visual-glow" />
           <div className="product-preview">
             <div className="preview-bar">
               <span className="preview-brand-mini">
                 <LogoMark size={12} />
                 quantify
               </span>
-              <span className="preview-path">research / backtest / live</span>
+              <span className="preview-path">research · backtest</span>
               <span className="preview-live">
                 <span className="live-pulse" />
                 live
@@ -95,30 +116,25 @@ export function LandingPage() {
                     <span>DD −8.2%</span>
                   </div>
                 </header>
-                <svg viewBox="0 0 480 160" preserveAspectRatio="none">
+                <svg viewBox="0 0 480 168" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3dffb5" stopOpacity="0.35" />
-                      <stop offset="55%" stopColor="#3dffb5" stopOpacity="0.06" />
-                      <stop offset="100%" stopColor="#3dffb5" stopOpacity="0" />
-                    </linearGradient>
-                    <linearGradient id="eqStroke" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#3dffb5" stopOpacity="0.55" />
-                      <stop offset="100%" stopColor="#7dffcb" />
+                      <stop offset="0%" stopColor={ACCENT} stopOpacity="0.28" />
+                      <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <g className="grid-lines" opacity="0.35">
-                    <line x1="0" y1="40" x2="480" y2="40" />
-                    <line x1="0" y1="80" x2="480" y2="80" />
-                    <line x1="0" y1="120" x2="480" y2="120" />
+                  <g className="grid-lines">
+                    <line x1="0" y1="42" x2="480" y2="42" />
+                    <line x1="0" y1="84" x2="480" y2="84" />
+                    <line x1="0" y1="126" x2="480" y2="126" />
                   </g>
                   <path
                     className="fill"
-                    d="M0 128 L40 118 L80 122 L120 98 L160 104 L200 78 L240 86 L280 62 L320 68 L360 42 L400 48 L440 28 L480 18 L480 160 L0 160 Z"
+                    d="M0 132 L40 122 L80 126 L120 102 L160 108 L200 82 L240 90 L280 64 L320 70 L360 44 L400 50 L440 28 L480 18 L480 168 L0 168 Z"
                   />
                   <path
                     className="line"
-                    d="M0 128 L40 118 L80 122 L120 98 L160 104 L200 78 L240 86 L280 62 L320 68 L360 42 L400 48 L440 28 L480 18"
+                    d="M0 132 L40 122 L80 126 L120 102 L160 108 L200 82 L240 90 L280 64 L320 70 L360 44 L400 50 L440 28 L480 18"
                   />
                 </svg>
               </div>
