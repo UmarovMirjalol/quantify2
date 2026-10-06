@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 
-const ACCENT = '#00f5a0';
+const ACCENT = '#68d9a4';
 
-const LogoMark = ({ size = 17 }: { size?: number }) => (
+const LogoMark = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path
       d="M2 12 L5.5 5 L9 9.5 L14 3"
       stroke={ACCENT}
-      strokeWidth="1.9"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -43,14 +43,9 @@ export function LandingPage() {
           <svg className="plane-equity" viewBox="0 0 1600 620" preserveAspectRatio="none">
             <defs>
               <linearGradient id="planeFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.32" />
-                <stop offset="40%" stopColor={ACCENT} stopOpacity="0.08" />
+                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.16" />
+                <stop offset="55%" stopColor={ACCENT} stopOpacity="0.03" />
                 <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="planeStroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.15" />
-                <stop offset="40%" stopColor={ACCENT} stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#7dffc8" stopOpacity="1" />
               </linearGradient>
             </defs>
             <g className="plane-grid">
@@ -80,9 +75,6 @@ export function LandingPage() {
           <div className="hero-actions">
             <Link className="btn primary" to="/app">
               Start a backtest
-              <span className="btn-arrow" aria-hidden="true">
-                →
-              </span>
             </Link>
             <Link className="btn secondary" to="/history">
               View results
@@ -92,7 +84,7 @@ export function LandingPage() {
 
         <div className="hero-dock" aria-hidden="true">
           <div className="dock-strategy">
-            <span className="dock-kicker">Live strategy</span>
+            <span className="dock-kicker">Example strategy</span>
             <p>
               Buy SPY when SMA(20) crosses above SMA(50). Risk 1% per trade · exit RSI &gt; 70.
             </p>
@@ -111,7 +103,7 @@ export function LandingPage() {
         </div>
         <div className="feature-rail">
           <article className="feature">
-            <div className="feature-index">01 — PARSE</div>
+            <div className="feature-index">01 — Parse</div>
             <h3>Natural language → logic</h3>
             <p>
               Strategies become validated specs. No arbitrary code execution — deterministic engine
@@ -119,14 +111,14 @@ export function LandingPage() {
             </p>
           </article>
           <article className="feature">
-            <div className="feature-index">02 — SIMULATE</div>
+            <div className="feature-index">02 — Simulate</div>
             <h3>Look-ahead safe engine</h3>
             <p>
               Signal at close, execute next open. Risk, costs, and slippage applied on every fill.
             </p>
           </article>
           <article className="feature">
-            <div className="feature-index">03 — MEASURE</div>
+            <div className="feature-index">03 — Measure</div>
             <h3>Institutional metrics</h3>
             <p>
               Sharpe, Sortino, drawdown, profit factor, trade ledger, and equity curves from real
@@ -137,7 +129,7 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        <span>Quantify · AI-powered quantitative research</span>
+        <span>Quantify · Quantitative research</span>
         <span className="mono">Signal at close → execute next open</span>
       </footer>
     </div>
