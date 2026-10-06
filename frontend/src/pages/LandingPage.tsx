@@ -40,27 +40,35 @@ export function LandingPage() {
       <section className="hero-theater">
         <div className="hero-plane" aria-hidden="true">
           <div className="plane-wash" />
-          <svg className="plane-equity" viewBox="0 0 1600 620" preserveAspectRatio="none">
+          <svg className="plane-equity" viewBox="0 0 1600 640" preserveAspectRatio="none">
             <defs>
               <linearGradient id="planeFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.16" />
-                <stop offset="55%" stopColor={ACCENT} stopOpacity="0.03" />
+                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.22" />
+                <stop offset="50%" stopColor={ACCENT} stopOpacity="0.05" />
                 <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
               </linearGradient>
             </defs>
             <g className="plane-grid">
-              <line x1="0" y1="120" x2="1600" y2="120" />
-              <line x1="0" y1="240" x2="1600" y2="240" />
-              <line x1="0" y1="360" x2="1600" y2="360" />
-              <line x1="0" y1="480" x2="1600" y2="480" />
+              <line x1="0" y1="100" x2="1600" y2="100" />
+              <line x1="0" y1="200" x2="1600" y2="200" />
+              <line x1="0" y1="300" x2="1600" y2="300" />
+              <line x1="0" y1="400" x2="1600" y2="400" />
+              <line x1="0" y1="500" x2="1600" y2="500" />
+              <line x1="200" y1="0" x2="200" y2="640" />
+              <line x1="400" y1="0" x2="400" y2="640" />
+              <line x1="600" y1="0" x2="600" y2="640" />
+              <line x1="800" y1="0" x2="800" y2="640" />
+              <line x1="1000" y1="0" x2="1000" y2="640" />
+              <line x1="1200" y1="0" x2="1200" y2="640" />
+              <line x1="1400" y1="0" x2="1400" y2="640" />
             </g>
             <path
               className="plane-fill"
-              d="M0 480 L80 465 L160 470 L240 410 L320 425 L400 340 L480 360 L560 280 L640 300 L720 210 L800 235 L880 155 L960 180 L1040 110 L1120 130 L1200 70 L1280 90 L1360 40 L1440 55 L1520 22 L1600 10 L1600 620 L0 620 Z"
+              d="M0 500 L70 488 L140 495 L210 430 L280 448 L350 360 L420 385 L490 300 L560 325 L630 230 L700 255 L770 175 L840 200 L910 125 L980 148 L1050 85 L1120 108 L1190 55 L1260 72 L1330 30 L1400 48 L1470 18 L1540 28 L1600 8 L1600 640 L0 640 Z"
             />
             <path
               className="plane-line"
-              d="M0 480 L80 465 L160 470 L240 410 L320 425 L400 340 L480 360 L560 280 L640 300 L720 210 L800 235 L880 155 L960 180 L1040 110 L1120 130 L1200 70 L1280 90 L1360 40 L1440 55 L1520 22 L1600 10"
+              d="M0 500 L70 488 L140 495 L210 430 L280 448 L350 360 L420 385 L490 300 L560 325 L630 230 L700 255 L770 175 L840 200 L910 125 L980 148 L1050 85 L1120 108 L1190 55 L1260 72 L1330 30 L1400 48 L1470 18 L1540 28 L1600 8"
             />
           </svg>
         </div>
@@ -69,8 +77,7 @@ export function LandingPage() {
           <p className="wordmark">Quantify</p>
           <h1>Turn trading ideas into backtests.</h1>
           <p className="lede">
-            Describe a strategy in plain English. Quantify interprets it, runs a look-ahead-safe
-            simulation, and returns institutional results.
+            Plain English in. Look-ahead-safe simulation out. Institutional metrics you can trust.
           </p>
           <div className="hero-actions">
             <Link className="btn primary" to="/app">
@@ -89,9 +96,19 @@ export function LandingPage() {
               Buy SPY when SMA(20) crosses above SMA(50). Risk 1% per trade · exit RSI &gt; 70.
             </p>
           </div>
-          <div className="dock-return">
-            <small>Equity</small>
-            <strong>+12.40%</strong>
+          <div className="dock-stats">
+            <div>
+              <small>Equity</small>
+              <strong className="pos">+12.40%</strong>
+            </div>
+            <div>
+              <small>Sharpe</small>
+              <strong>1.38</strong>
+            </div>
+            <div>
+              <small>Max DD</small>
+              <strong className="neg">−8.2%</strong>
+            </div>
           </div>
         </div>
       </section>
