@@ -53,7 +53,9 @@ export function HistoryPage() {
 
       {!loading && !items.length ? (
         <div className="empty-state">
-          <p style={{ margin: '0 0 0.75rem' }}>No saved backtests yet.</p>
+          <p style={{ margin: '0 0 0.75rem' }}>
+            No backtests in this browser session yet.
+          </p>
           <Link className="btn primary" to="/app">
             Run your first backtest
           </Link>

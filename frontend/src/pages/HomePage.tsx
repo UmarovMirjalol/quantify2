@@ -251,9 +251,8 @@ export function HomePage({ health }: Props) {
               <span>Risk per trade</span>
               <input
                 type="number"
-                min={0.0001}
-                max={100}
-                step={0.001}
+                min={0}
+                step="any"
                 value={riskPerTrade}
                 onChange={(e) => setRiskPerTrade(Number(e.target.value))}
                 required
@@ -267,8 +266,7 @@ export function HomePage({ health }: Props) {
               <input
                 type="number"
                 min={0}
-                max={5}
-                step={0.0001}
+                step="any"
                 value={commission}
                 onChange={(e) => setCommission(Number(e.target.value))}
                 required
@@ -281,8 +279,7 @@ export function HomePage({ health }: Props) {
               <input
                 type="number"
                 min={0}
-                max={5}
-                step={0.0001}
+                step="any"
                 value={slippage}
                 onChange={(e) => setSlippage(Number(e.target.value))}
                 required

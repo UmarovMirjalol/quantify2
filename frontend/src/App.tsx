@@ -23,7 +23,12 @@ export default function App() {
 
     async function bootstrap() {
       try {
-        const h = await getHealth();
+        const h = await Promise.race([
+          getHealth(),
+          new Promise<never>((_, reject) =>
+            window.setTimeout(() => reject(new Error('health timeout')), 8000),
+          ),
+        ]);
         if (cancelled) return;
         setHealth(h);
 
