@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-const ACCENT = '#68d9a4';
+const ACCENT = '#4fd6a0';
 
 const LogoMark = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -37,47 +37,13 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section className="hero-theater">
-        <div className="hero-plane" aria-hidden="true">
-          <div className="plane-wash" />
-          <svg className="plane-equity" viewBox="0 0 1600 640" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="planeFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.22" />
-                <stop offset="50%" stopColor={ACCENT} stopOpacity="0.05" />
-                <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <g className="plane-grid">
-              <line x1="0" y1="100" x2="1600" y2="100" />
-              <line x1="0" y1="200" x2="1600" y2="200" />
-              <line x1="0" y1="300" x2="1600" y2="300" />
-              <line x1="0" y1="400" x2="1600" y2="400" />
-              <line x1="0" y1="500" x2="1600" y2="500" />
-              <line x1="200" y1="0" x2="200" y2="640" />
-              <line x1="400" y1="0" x2="400" y2="640" />
-              <line x1="600" y1="0" x2="600" y2="640" />
-              <line x1="800" y1="0" x2="800" y2="640" />
-              <line x1="1000" y1="0" x2="1000" y2="640" />
-              <line x1="1200" y1="0" x2="1200" y2="640" />
-              <line x1="1400" y1="0" x2="1400" y2="640" />
-            </g>
-            <path
-              className="plane-fill"
-              d="M0 500 L70 488 L140 495 L210 430 L280 448 L350 360 L420 385 L490 300 L560 325 L630 230 L700 255 L770 175 L840 200 L910 125 L980 148 L1050 85 L1120 108 L1190 55 L1260 72 L1330 30 L1400 48 L1470 18 L1540 28 L1600 8 L1600 640 L0 640 Z"
-            />
-            <path
-              className="plane-line"
-              d="M0 500 L70 488 L140 495 L210 430 L280 448 L350 360 L420 385 L490 300 L560 325 L630 230 L700 255 L770 175 L840 200 L910 125 L980 148 L1050 85 L1120 108 L1190 55 L1260 72 L1330 30 L1400 48 L1470 18 L1540 28 L1600 8"
-            />
-          </svg>
-        </div>
-
-        <div className="hero-content">
+      <section className="hero">
+        <div className="hero-copy">
           <p className="wordmark">Quantify</p>
           <h1>Turn trading ideas into backtests.</h1>
           <p className="lede">
-            Plain English in. Look-ahead-safe simulation out. Institutional metrics you can trust.
+            Describe a strategy in plain English. Quantify interprets it, runs a look-ahead-safe
+            simulation, and returns institutional results.
           </p>
           <div className="hero-actions">
             <Link className="btn primary" to="/app">
@@ -87,27 +53,100 @@ export function LandingPage() {
               View results
             </Link>
           </div>
+          <p className="hero-note mono">Signal at close → execute next open</p>
         </div>
 
-        <div className="hero-dock" aria-hidden="true">
-          <div className="dock-strategy">
-            <span className="dock-kicker">Example strategy</span>
-            <p>
-              Buy SPY when SMA(20) crosses above SMA(50). Risk 1% per trade · exit RSI &gt; 70.
-            </p>
-          </div>
-          <div className="dock-stats">
-            <div>
-              <small>Equity</small>
-              <strong className="pos">+12.40%</strong>
+        <div className="hero-stage" aria-hidden="true">
+          <div className="product-frame">
+            <div className="product-top">
+              <span className="product-brand">
+                <LogoMark size={12} />
+                quantify · workspace
+              </span>
+              <span className="product-live">
+                <i />
+                live
+              </span>
             </div>
-            <div>
-              <small>Sharpe</small>
-              <strong>1.38</strong>
-            </div>
-            <div>
-              <small>Max DD</small>
-              <strong className="neg">−8.2%</strong>
+
+            <div className="product-grid">
+              <div className="product-main">
+                <div className="product-prompt">
+                  <span>Strategy</span>
+                  Buy SPY when the 20-day moving average crosses above the 50-day. Risk 1% per trade;
+                  exit when RSI exceeds 70.
+                </div>
+
+                <div className="product-chart">
+                  <header>
+                    <div>
+                      <small>Equity curve</small>
+                      <strong>+12.40%</strong>
+                    </div>
+                    <div className="product-meta mono">
+                      <span>Sharpe 1.38</span>
+                      <span>DD −8.2%</span>
+                    </div>
+                  </header>
+                  <svg viewBox="0 0 460 150" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={ACCENT} stopOpacity="0.28" />
+                        <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <g className="chart-grid">
+                      <line x1="0" y1="37" x2="460" y2="37" />
+                      <line x1="0" y1="75" x2="460" y2="75" />
+                      <line x1="0" y1="112" x2="460" y2="112" />
+                    </g>
+                    <path
+                      className="fill"
+                      d="M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16 L460 150 L0 150 Z"
+                    />
+                    <path
+                      className="line"
+                      d="M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <aside className="product-side">
+                <div className="side-block">
+                  <small>Interpretation</small>
+                  <div className="side-row">
+                    <span>Entry</span>
+                    <span>SMA(20) × SMA(50)</span>
+                  </div>
+                  <div className="side-row">
+                    <span>Exit</span>
+                    <span>RSI &gt; 70</span>
+                  </div>
+                  <div className="side-row">
+                    <span>Universe</span>
+                    <span>SPY</span>
+                  </div>
+                  <div className="side-row">
+                    <span>Risk</span>
+                    <span>1.00% / trade</span>
+                  </div>
+                </div>
+                <div className="side-kpis">
+                  <div>
+                    <small>Return</small>
+                    <strong className="pos">+12.4%</strong>
+                  </div>
+                  <div>
+                    <small>Trades</small>
+                    <strong>48</strong>
+                  </div>
+                  <div>
+                    <small>Win rate</small>
+                    <strong>56%</strong>
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
         </div>

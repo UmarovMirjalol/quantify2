@@ -1,44 +1,44 @@
 :root {
   color-scheme: dark;
 
-  --bg: #0b0d10;
-  --bg-elevated: #101318;
-  --bg-panel: #14181e;
-  --bg-panel-2: #181d24;
-  --bg-hover: #1f262f;
-  --bg-input: #0e1216;
-  --bg-deep: #080a0c;
+  --bg: #0a0c0f;
+  --bg-elevated: #0f1216;
+  --bg-panel: #13171c;
+  --bg-panel-2: #171c22;
+  --bg-hover: #1c232b;
+  --bg-input: #0c0f13;
+  --bg-deep: #07090b;
 
-  --border: rgba(255, 255, 255, 0.075);
-  --border-strong: rgba(255, 255, 255, 0.13);
-  --border-focus: rgba(104, 217, 164, 0.48);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-focus: rgba(79, 214, 160, 0.5);
 
-  --text: #f1f3f4;
-  --text-secondary: #9ca5af;
+  --text: #eef1f3;
+  --text-secondary: #98a2ac;
   --text-muted: #66707a;
-  --text-inverse: #0b0d10;
+  --text-inverse: #0a0c0f;
 
-  --accent: #68d9a4;
-  --accent-dim: rgba(104, 217, 164, 0.1);
-  --accent-hover: #87e3b7;
-  --accent-glow: rgba(104, 217, 164, 0.12);
+  --accent: #4fd6a0;
+  --accent-dim: rgba(79, 214, 160, 0.1);
+  --accent-hover: #6ee0b2;
+  --accent-glow: rgba(79, 214, 160, 0.14);
 
-  --positive: #68d9a4;
-  --positive-dim: rgba(104, 217, 164, 0.1);
-  --negative: #e87a84;
-  --negative-dim: rgba(232, 122, 132, 0.1);
-  --warn: #e0b35a;
-  --warn-dim: rgba(224, 179, 90, 0.1);
+  --positive: #4fd6a0;
+  --positive-dim: rgba(79, 214, 160, 0.1);
+  --negative: #e57a84;
+  --negative-dim: rgba(229, 122, 132, 0.1);
+  --warn: #dfb45c;
+  --warn-dim: rgba(223, 180, 92, 0.1);
 
-  --sidebar-w: 236px;
-  --radius: 6px;
-  --radius-sm: 4px;
-  --radius-lg: 8px;
+  --sidebar-w: 232px;
+  --radius: 7px;
+  --radius-sm: 5px;
+  --radius-lg: 10px;
   --font: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --display: 'IBM Plex Sans', var(--font);
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --shadow: 0 0 0 1px var(--border), 0 20px 56px rgba(0, 0, 0, 0.45);
-  --shadow-soft: 0 0 0 1px var(--border), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow: 0 0 0 1px var(--border), 0 24px 60px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 0 0 1px var(--border), 0 10px 28px rgba(0, 0, 0, 0.32);
 
   font-family: var(--font);
   font-size: 14px;
@@ -68,8 +68,8 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(900px 520px at 85% 75%, rgba(104, 217, 164, 0.06), transparent 55%),
-    radial-gradient(700px 400px at 10% 0%, rgba(255, 255, 255, 0.02), transparent 50%),
+    radial-gradient(1000px 560px at 88% 18%, rgba(79, 214, 160, 0.07), transparent 58%),
+    radial-gradient(700px 420px at 8% 90%, rgba(79, 214, 160, 0.03), transparent 55%),
     var(--bg);
   background-attachment: fixed;
 }
@@ -103,7 +103,7 @@ code,
 }
 
 ::selection {
-  background: rgba(104, 217, 164, 0.25);
+  background: rgba(79, 214, 160, 0.26);
   color: var(--text);
 }
 
