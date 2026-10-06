@@ -882,19 +882,22 @@ h2 {
   position: relative;
   overflow-x: clip;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
 }
 
 .landing-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem clamp(1.25rem, 3.5vw, 3rem);
+  padding: 0.95rem clamp(1.25rem, 3.5vw, 3rem);
   position: sticky;
   top: 0;
   background: rgba(7, 10, 12, 0.7);
   backdrop-filter: blur(18px) saturate(1.15);
   z-index: 40;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .landing-nav .nav-links {
@@ -911,7 +914,8 @@ h2 {
 
 .hero-theater {
   position: relative;
-  min-height: 100svh;
+  flex: 1 0 auto;
+  min-height: calc(100svh - 4.25rem);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
