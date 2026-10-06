@@ -1,6 +1,6 @@
-# QuantLLM Backtester
+# Quantify
 
-Production-ready LLM-powered quantitative backtesting platform. Describe a long-only trading strategy in natural language, upload historical OHLCV data, and run a custom pandas/NumPy simulation with risk management, transaction costs, performance metrics, charts, and persisted history.
+AI-powered quantitative research platform. Describe a trading strategy in plain English, convert it into executable logic, run a look-ahead-safe backtest, and inspect institutional-grade metrics, charts, and trade history.
 
 > **Sample dataset:** `data/sample_data.csv` is synthetic OHLCV for local development and tests. Upload your own market CSV for research. Do not treat synthetic results as live market performance.
 

@@ -7,7 +7,15 @@ function fmt(n: number, digits = 2) {
   });
 }
 
-export function TradeTable({ trades }: { trades: Trade[] }) {
+function money(n: number) {
+  const sign = n < 0 ? '−' : n > 0 ? '+' : '';
+  return `${sign}$${Math.abs(n).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+export function TradeTable({ trades, asset }: { trades: Trade[]; asset?: string }) {
   if (!trades.length) {
     return <div className="empty-state">No trades were executed in this backtest.</div>;
   }
@@ -17,31 +25,36 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
       <table className="data-table">
         <thead>
           <tr>
+            <th>Date</th>
+            <th>Asset</th>
+            <th>Side</th>
             <th>Entry</th>
             <th>Exit</th>
-            <th>Qty</th>
-            <th>Entry $</th>
-            <th>Exit $</th>
-            <th>PnL</th>
+            <th>P&amp;L</th>
             <th>Return</th>
-            <th>Bars</th>
-            <th>Exit Reason</th>
+            <th>Holding</th>
+            <th>Exit reason</th>
           </tr>
         </thead>
         <tbody>
           {trades.map((t, i) => (
             <tr key={`${t.entry_date}-${i}`}>
-              <td>{t.entry_date.slice(0, 10)}</td>
-              <td>{t.exit_date.slice(0, 10)}</td>
-              <td>{fmt(t.quantity, 0)}</td>
-              <td>{fmt(t.entry_price)}</td>
-              <td>{fmt(t.exit_price)}</td>
-              <td className={t.pnl >= 0 ? 'pos' : 'neg'}>{fmt(t.pnl)}</td>
+              <td className="mono">
+                {t.entry_date.slice(0, 10)}
+                <span className="hint"> → {t.exit_date.slice(0, 10)}</span>
+              </td>
+              <td className="mono">{asset ?? '—'}</td>
+              <td>
+                <span className="tag">{t.side || 'long'}</span>
+              </td>
+              <td className="mono">${fmt(t.entry_price)}</td>
+              <td className="mono">${fmt(t.exit_price)}</td>
+              <td className={t.pnl >= 0 ? 'pos' : 'neg'}>{money(t.pnl)}</td>
               <td className={t.return_pct >= 0 ? 'pos' : 'neg'}>
                 {(t.return_pct * 100).toFixed(2)}%
               </td>
-              <td>{t.bars_held}</td>
-              <td>{t.exit_reason}</td>
+              <td className="mono">{t.bars_held}d</td>
+              <td className="truncate">{t.exit_reason}</td>
             </tr>
           ))}
         </tbody>

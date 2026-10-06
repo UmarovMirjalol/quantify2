@@ -64,19 +64,19 @@ export function SettingsPage() {
 
   return (
     <div className="settings">
-      <div className="results-header">
+      <div className="page-header">
         <div>
-          <p className="eyebrow">OpenAI-compatible provider</p>
-          <h1>LLM Settings</h1>
+          <p className="eyebrow">Configuration</p>
+          <h1>Settings</h1>
           <p className="lede">
-            QuantLLM converts strategy text with an LLM into a validated StrategySpec. Configure an
-            OpenAI-compatible provider. Without a key, the built-in parser still runs backtests.
+            Connect an OpenAI-compatible LLM for broader natural-language parsing. Without a key,
+            the built-in parser still runs backtests.
           </p>
         </div>
       </div>
 
       <section className="panel">
-        <h2>Current status</h2>
+        <h2>Parser status</h2>
         <dl className="kv">
           <div>
             <dt>LLM enabled</dt>
@@ -84,7 +84,7 @@ export function SettingsPage() {
           </div>
           <div>
             <dt>Model</dt>
-            <dd>{status?.model ?? '—'}</dd>
+            <dd className="mono">{status?.model ?? '—'}</dd>
           </div>
           <div>
             <dt>Base URL</dt>
@@ -138,8 +138,8 @@ export function SettingsPage() {
             </label>
           </div>
           <p className="hint">
-            Keys are stored only on the server in <code>.llm_runtime.json</code> (gitignored). Prefer
-            env vars in production.
+            Works with OpenAI, Groq, OpenRouter, and other OpenAI-compatible endpoints. Keys stay on
+            the server in <code>.llm_runtime.json</code>.
           </p>
           {error ? <div className="banner error">{error}</div> : null}
           {message ? <div className="banner ok">{message}</div> : null}

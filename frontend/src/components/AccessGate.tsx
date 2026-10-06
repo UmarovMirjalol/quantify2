@@ -41,13 +41,29 @@ export function AccessGate({ onUnlocked }: Props) {
   return (
     <div className="access-gate">
       <div className="panel access-card">
-        <p className="eyebrow">Secure access</p>
+        <div className="brand" style={{ padding: '0 0 1rem' }}>
+          <span className="brand-mark">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M2 12 L5.5 5 L9 9.5 L14 3"
+                stroke="#5eead4"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span className="brand-text">
+            <span className="brand-name">Quantify</span>
+            <span className="brand-tag">Secure access</span>
+          </span>
+        </div>
         <h1>Enter access token</h1>
         <p className="lede">
           Paste the shared access token from your administrator. Extra spaces or quotes are cleaned
           automatically.
         </p>
-        <form className="form-panel" onSubmit={onSubmit}>
+        <form className="form-panel" onSubmit={onSubmit} style={{ marginTop: '1.25rem' }}>
           <label className="field">
             <span>Access token</span>
             <input
@@ -69,7 +85,7 @@ export function AccessGate({ onUnlocked }: Props) {
           </label>
           {error ? <div className="banner error">{error}</div> : null}
           <button className="btn primary" type="submit" disabled={loading}>
-            {loading ? 'Checking…' : 'Continue'}
+            {loading ? 'Checking…' : 'Continue to workspace'}
           </button>
         </form>
       </div>

@@ -1,31 +1,55 @@
 :root {
-  --bg0: #f3efe6;
-  --bg1: #e7eef2;
-  --ink: #1a2332;
-  --muted: #5b6777;
-  --panel: rgba(255, 255, 255, 0.78);
-  --line: rgba(26, 35, 50, 0.1);
-  --accent: #0b6e4f;
-  --accent-soft: #d7ebe3;
-  --danger: #b23a48;
-  --warn: #9a6b2f;
-  --ok: #0b6e4f;
-  --shadow: 0 18px 50px rgba(26, 35, 50, 0.08);
-  --radius: 18px;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  color: var(--ink);
-  background:
-    radial-gradient(1200px 600px at 10% -10%, #d7ebe3 0%, transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, #d9e4f0 0%, transparent 50%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+  color-scheme: dark;
+
+  --bg: #090a0c;
+  --bg-elevated: #0e1014;
+  --bg-panel: #12151a;
+  --bg-panel-2: #161a21;
+  --bg-hover: #1a1f28;
+  --bg-input: #0c0e12;
+
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-focus: rgba(94, 234, 212, 0.45);
+
+  --text: #e8eaed;
+  --text-secondary: #9aa3b2;
+  --text-muted: #6b7380;
+  --text-inverse: #090a0c;
+
+  --accent: #5eead4;
+  --accent-dim: rgba(94, 234, 212, 0.12);
+  --accent-hover: #7af0dc;
+
+  --positive: #3dd68c;
+  --positive-dim: rgba(61, 214, 140, 0.12);
+  --negative: #f07178;
+  --negative-dim: rgba(240, 113, 120, 0.12);
+  --warn: #e6b450;
+  --warn-dim: rgba(230, 180, 80, 0.12);
+
+  --sidebar-w: 220px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --shadow: 0 0 0 1px var(--border), 0 12px 40px rgba(0, 0, 0, 0.35);
+
+  font-family: var(--font);
+  font-size: 14px;
   line-height: 1.5;
   font-weight: 400;
+  color: var(--text);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -38,6 +62,10 @@ body,
 
 body {
   min-width: 320px;
+  background:
+    radial-gradient(900px 500px at 15% -10%, rgba(94, 234, 212, 0.05), transparent 55%),
+    radial-gradient(700px 400px at 100% 0%, rgba(80, 120, 200, 0.04), transparent 50%),
+    var(--bg);
 }
 
 a {
@@ -45,7 +73,24 @@ a {
   text-decoration: none;
 }
 
-code {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.92em;
+a:hover {
+  color: var(--accent-hover);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+code,
+.mono {
+  font-family: var(--mono);
+}
+
+::selection {
+  background: rgba(94, 234, 212, 0.25);
+  color: var(--text);
 }

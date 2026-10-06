@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { getBacktest } from '../services/api';
 import type { BacktestResult } from '../types';
 import { ResultsView } from './ResultsPage';
@@ -27,8 +27,33 @@ export function ResultsLoader() {
       .finally(() => setLoading(false));
   }, [id, result]);
 
-  if (loading) return <div className="empty-state">Loading results…</div>;
-  if (error) return <div className="banner error">{error}</div>;
-  if (!result) return <div className="empty-state">Backtest not found.</div>;
+  if (loading) {
+    return (
+      <div className="empty-state">
+        <div className="skeleton-line" style={{ width: '55%', margin: '0 auto 0.85rem' }} />
+        Calculating risk metrics…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="banner error">
+        {error}
+        <div style={{ marginTop: '0.65rem' }}>
+          <Link className="btn secondary small" to="/history">
+            Back to results
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  if (!result) {
+    return (
+      <div className="empty-state">
+        Backtest not found.{' '}
+        <Link to="/app">Run a new backtest</Link>
+      </div>
+    );
+  }
   return <ResultsView result={result} />;
 }

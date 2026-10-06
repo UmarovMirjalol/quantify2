@@ -4,6 +4,7 @@ import { AccessGate } from './components/AccessGate';
 import { Layout } from './components/Layout';
 import { HistoryPage } from './pages/HistoryPage';
 import { HomePage } from './pages/HomePage';
+import { LandingPage } from './pages/LandingPage';
 import { ResultsLoader } from './pages/ResultsLoader';
 import { SettingsPage } from './pages/SettingsPage';
 import { getHealth, listDatasets } from './services/api';
@@ -39,7 +40,6 @@ export default function App() {
           return;
         }
 
-        // Validate stored token before unlocking the app
         try {
           await listDatasets();
           if (!cancelled) {
@@ -83,7 +83,6 @@ export default function App() {
     };
   }, [authEpoch]);
 
-  // Global 401 handler: force re-auth
   useEffect(() => {
     function onUnauthorized() {
       clearAccessToken();
@@ -95,7 +94,11 @@ export default function App() {
   }, []);
 
   if (!bootstrapped) {
-    return <div className="empty-state">Starting QuantLLM…</div>;
+    return (
+      <div className="empty-state" style={{ margin: '2rem auto', maxWidth: 420 }}>
+        Starting Quantify…
+      </div>
+    );
   }
 
   if (health?.auth_required && !unlocked) {
@@ -112,7 +115,8 @@ export default function App() {
   return (
     <Layout health={health}>
       <Routes>
-        <Route path="/" element={<HomePage health={health} />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/app" element={<HomePage health={health} />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/results/:id" element={<ResultsLoader />} />
         <Route path="/settings" element={<SettingsPage />} />

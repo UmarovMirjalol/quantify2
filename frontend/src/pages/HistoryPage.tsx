@@ -5,7 +5,8 @@ import type { BacktestSummary } from '../types';
 
 function pct(v: number | null): string {
   if (v === null || v === undefined) return '—';
-  return `${(v * 100).toFixed(2)}%`;
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${(v * 100).toFixed(2)}%`;
 }
 
 export function HistoryPage() {
@@ -22,20 +23,40 @@ export function HistoryPage() {
 
   return (
     <div className="history">
-      <div className="results-header">
+      <div className="page-header">
         <div>
           <p className="eyebrow">Saved runs</p>
-          <h1>Backtest History</h1>
+          <h1>Results</h1>
           <p className="lede">Open a previous backtest to inspect metrics, charts, and trades.</p>
         </div>
+        <Link className="btn primary" to="/app">
+          New Backtest
+        </Link>
       </div>
 
-      {loading ? <div className="empty-state">Loading history…</div> : null}
-      {error ? <div className="banner error">{error}</div> : null}
+      {loading ? (
+        <div className="empty-state">
+          <div className="skeleton-line" style={{ width: '40%', margin: '0 auto 0.75rem' }} />
+          Loading history…
+        </div>
+      ) : null}
+      {error ? (
+        <div className="banner error">
+          {error}
+          <div style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn secondary small" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {!loading && !items.length ? (
         <div className="empty-state">
-          No saved backtests yet. <Link to="/">Run your first backtest</Link>.
+          <p style={{ margin: '0 0 0.75rem' }}>No saved backtests yet.</p>
+          <Link className="btn primary" to="/app">
+            Run your first backtest
+          </Link>
         </div>
       ) : null}
 
@@ -58,16 +79,16 @@ export function HistoryPage() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id}>
-                  <td>#{item.id}</td>
-                  <td>{item.created_at.slice(0, 19).replace('T', ' ')}</td>
+                  <td className="mono">#{item.id}</td>
+                  <td className="mono">{item.created_at.slice(0, 19).replace('T', ' ')}</td>
                   <td className="truncate">{item.strategy_description}</td>
-                  <td>{item.dataset_name}</td>
+                  <td className="mono">{item.dataset_name}</td>
                   <td className={(item.total_return ?? 0) >= 0 ? 'pos' : 'neg'}>
                     {pct(item.total_return)}
                   </td>
-                  <td>{item.sharpe_ratio?.toFixed(2) ?? '—'}</td>
+                  <td className="mono">{item.sharpe_ratio?.toFixed(2) ?? '—'}</td>
                   <td className="neg">{pct(item.max_drawdown)}</td>
-                  <td>{item.number_of_trades ?? '—'}</td>
+                  <td className="mono">{item.number_of_trades ?? '—'}</td>
                   <td>
                     <Link className="btn secondary small" to={`/results/${item.id}`}>
                       Open
