@@ -43,8 +43,8 @@ export function LandingPage() {
           <svg className="plane-equity" viewBox="0 0 1600 620" preserveAspectRatio="none">
             <defs>
               <linearGradient id="planeFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.22" />
-                <stop offset="45%" stopColor={ACCENT} stopOpacity="0.05" />
+                <stop offset="0%" stopColor={ACCENT} stopOpacity="0.32" />
+                <stop offset="40%" stopColor={ACCENT} stopOpacity="0.08" />
                 <stop offset="100%" stopColor={ACCENT} stopOpacity="0" />
               </linearGradient>
               <linearGradient id="planeStroke" x1="0" y1="0" x2="1" y2="0">

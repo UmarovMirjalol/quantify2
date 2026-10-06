@@ -911,10 +911,10 @@ h2 {
 
 .hero-theater {
   position: relative;
-  min-height: min(100vh, 980px);
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: space-between;
   overflow: hidden;
   isolation: isolate;
 }
@@ -942,7 +942,7 @@ h2 {
   right: 0;
   bottom: 0;
   width: 100%;
-  height: 68%;
+  height: 72%;
   z-index: 0;
 }
 
@@ -978,28 +978,21 @@ h2 {
 .hero-content {
   position: relative;
   z-index: 2;
-  width: min(720px, calc(100% - clamp(2rem, 6vw, 6rem)));
+  width: min(760px, calc(100% - clamp(2rem, 6vw, 6rem)));
   margin: 0;
-  padding: clamp(4.5rem, 12vh, 8rem) clamp(1.25rem, 3.5vw, 3rem) 2.5rem;
+  padding: clamp(2.5rem, 6vh, 4.5rem) clamp(1.25rem, 3.5vw, 3rem) 1.5rem;
   animation: rise-in 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .hero-content .wordmark {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.55rem;
   font-family: var(--display);
   font-weight: 800;
-  font-size: clamp(4.2rem, 12vw, 9.5rem);
+  font-size: clamp(3.8rem, 10.5vw, 8.2rem);
   letter-spacing: -0.075em;
   line-height: 0.86;
   color: var(--text);
