@@ -138,8 +138,9 @@ code,
   .pipeline li.active .step-icon,
   .interp-row.flash,
   .tab-pane,
-  .tab-glow,
-  .tabs button.active::after {
+  .tabs button.active::after,
+  .demo-chip,
+  .demo-status i {
     animation: none !important;
   }
 
@@ -149,15 +150,26 @@ code,
   .feature,
   .kpi-card,
   .workspace > *,
-  .feature-bar {
+  .feature-bar,
+  .exec-timeline li,
+  .invariant-grid article,
+  .metric-board > div,
+  .demo-kpi-row > div,
+  .blotter-row,
+  .demo-chip {
     opacity: 1 !important;
     animation: none !important;
     transform: none !important;
     transition: none !important;
   }
 
-  .landing-section .feature-bar {
+  .landing-section .feature-bar,
+  .exec-timeline::before {
     width: 42% !important;
+  }
+
+  .exec-section.in-view .exec-timeline::before {
+    width: 100% !important;
   }
 
   .hero-copy .wordmark {
