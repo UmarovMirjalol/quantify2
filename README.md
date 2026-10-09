@@ -138,17 +138,21 @@ cd frontend
 npm run dev
 ```
 
-Open http://127.0.0.1:43127 (or http://127.0.0.1:3000)
-
-> Cloud Agent tip: open these URLs via **Cursor Ports / the agent desktop browser**.
-> Pasting `127.0.0.1:43127` into Chrome on your laptop will show `ERR_CONNECTION_REFUSED`
-> because that localhost is the remote VM, not your machine.
-
-Quick start both servers:
+Open via **Cursor → Ports** (not laptop Chrome): http://127.0.0.1:43127
 
 ```bash
 ./scripts/start-dev.sh
 ```
+
+### Production preview (no Docker)
+
+```bash
+cd frontend && npm ci && npm run build
+# backend already on :8765
+node ../scripts/serve-prod.mjs 18080
+```
+
+Open http://127.0.0.1:18080 via Cursor Ports.
 
 ### Docker Compose (dev overlay)
 
@@ -157,7 +161,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 ## Built-in parser vs LLM
 
-QuantLLM is designed around an **LLM interpretation layer**:
+Quantify is designed around an **LLM interpretation layer**:
 
 ```
 natural language → LLM (OpenAI-compatible) → StrategySpec (Pydantic) → engine
