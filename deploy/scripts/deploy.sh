@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy QuantLLM with Docker Compose (production).
+# Deploy Quantify with Docker Compose (production).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

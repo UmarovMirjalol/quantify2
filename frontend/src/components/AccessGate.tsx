@@ -40,6 +40,10 @@ export function AccessGate({ onUnlocked }: Props) {
 
   return (
     <div className="access-gate">
+      <div className="access-atmosphere" aria-hidden="true">
+        <span className="beam beam-a" />
+        <span className="orbit orbit-a" />
+      </div>
       <div className="panel access-card">
         <div className="brand" style={{ padding: '0 0 1rem' }}>
           <span className="brand-mark">
@@ -58,6 +62,7 @@ export function AccessGate({ onUnlocked }: Props) {
             <span className="brand-tag">Secure access</span>
           </span>
         </div>
+        <p className="eyebrow">Production gate</p>
         <h1>Enter access token</h1>
         <p className="lede">
           Paste the shared access token from your administrator. Extra spaces or quotes are cleaned

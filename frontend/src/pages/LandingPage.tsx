@@ -499,6 +499,24 @@ export function LandingPage() {
           <Link className="btn secondary" to="/history">
             Browse saved runs
           </Link>
+          <a className="btn ghost" href="#demo">
+            Replay live demo
+          </a>
+        </div>
+      </section>
+
+      <section className="landing-section deploy-strip in-view">
+        <div className="deploy-strip-inner">
+          <div>
+            <p className="eyebrow">Ship it</p>
+            <h2>Built for one-command production deploy.</h2>
+            <p className="section-lede">
+              Docker Compose edge · SPA · API · SQLite volumes · access token gate · optional HTTPS.
+              Same UI you see here — production-ready.
+            </p>
+          </div>
+          <pre className="deploy-code mono">{`cp .env.production.example .env
+./deploy/scripts/deploy.sh`}</pre>
         </div>
       </section>
 

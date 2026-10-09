@@ -1,16 +1,17 @@
-# QuantLLM production stack
+# Quantify production stack
 #   cp .env.production.example .env && ./deploy/scripts/deploy.sh
+#   Users → edge :APP_PORT → SPA + /api
 
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    image: quantllm-backend:${IMAGE_TAG:-latest}
+    image: quantify-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       APP_ENV: production
-      APP_NAME: ${APP_NAME:-QuantLLM Backtester}
+      APP_NAME: ${APP_NAME:-Quantify}
       APP_ACCESS_TOKEN: ${APP_ACCESS_TOKEN:-}
       ENABLE_DOCS: ${ENABLE_DOCS:-false}
       ALLOW_RUNTIME_LLM_CONFIG: ${ALLOW_RUNTIME_LLM_CONFIG:-false}
@@ -34,7 +35,7 @@ services:
       retries: 5
       start_period: 25s
     networks:
-      - quantllm
+      - quantify
     expose:
       - "8765"
 
@@ -44,13 +45,13 @@ services:
       dockerfile: Dockerfile.frontend
       args:
         VITE_API_URL: ""
-    image: quantllm-frontend:${IMAGE_TAG:-latest}
+    image: quantify-frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     networks:
-      - quantllm
+      - quantify
     expose:
       - "80"
 
@@ -58,7 +59,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.edge
-    image: quantllm-edge:${IMAGE_TAG:-latest}
+    image: quantify-edge:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       backend:
@@ -68,12 +69,12 @@ services:
     ports:
       - "${APP_PORT:-80}:80"
     networks:
-      - quantllm
+      - quantify
 
 volumes:
   backtest-db:
   uploads-data:
 
 networks:
-  quantllm:
+  quantify:
     driver: bridge
