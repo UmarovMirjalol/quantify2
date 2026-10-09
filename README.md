@@ -138,7 +138,17 @@ cd frontend
 npm run dev
 ```
 
-Open http://127.0.0.1:43127
+Open http://127.0.0.1:43127 (or http://127.0.0.1:3000)
+
+> Cloud Agent tip: open these URLs via **Cursor Ports / the agent desktop browser**.
+> Pasting `127.0.0.1:43127` into Chrome on your laptop will show `ERR_CONNECTION_REFUSED`
+> because that localhost is the remote VM, not your machine.
+
+Quick start both servers:
+
+```bash
+./scripts/start-dev.sh
+```
 
 ### Docker Compose (dev overlay)
 
