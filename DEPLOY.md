@@ -71,7 +71,10 @@ APP_PORT=18080 DOMAIN=app.example.com EMAIL=ops@example.com \
 
 ```bash
 ./deploy/scripts/backup.sh
-docker compose cp ./backups/.../backtests.db backend:/data/backtests.db
+# → backups/quantify-YYYYMMDDTHHMMSSZ.tar.gz
+
+# Restore DB into the running backend container:
+docker compose cp ./backups/quantify-…/backtests.db backend:/data/backtests.db
 docker compose restart backend
 ```
 

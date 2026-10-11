@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { HealthStatus } from '../types';
 
@@ -32,6 +32,19 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
   const isLanding = location.pathname === '/';
   const llmOn = Boolean(health?.llm_enabled);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
   if (isLanding) {
     return <div className="app-shell landing-mode">{children}</div>;
   }
@@ -40,7 +53,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
     <div className="app-shell">
       {open ? <div className="backdrop" onClick={() => setOpen(false)} /> : null}
 
-      <aside className={`sidebar ${open ? 'open' : ''}`}>
+      <aside id="app-sidebar" className={`sidebar ${open ? 'open' : ''}`}>
         <Link to="/" className="brand" onClick={() => setOpen(false)}>
           <span className="brand-mark">
             <LogoMark />
@@ -77,7 +90,13 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
 
       <div>
         <div className="mobile-top">
-          <button type="button" className="btn ghost" onClick={() => setOpen(true)}>
+          <button
+            type="button"
+            className="btn ghost"
+            aria-expanded={open}
+            aria-controls="app-sidebar"
+            onClick={() => setOpen(true)}
+          >
             Menu
           </button>
           <Link to="/" className="brand" style={{ padding: 0 }}>

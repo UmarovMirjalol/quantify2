@@ -12,7 +12,7 @@ fi
 CLIENT_ARGS=(-H "X-Client-Id: smoke-client")
 
 echo "→ Health"
-curl -fsS "$BASE/api/health" | tee /tmp/quantllm-health.json
+curl -fsS "$BASE/api/health" | tee /tmp/quantify-health.json
 echo
 
 echo "→ Datasets"

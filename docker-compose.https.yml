@@ -23,7 +23,7 @@ services:
     depends_on:
       - edge
     networks:
-      - quantllm
+      - quantify
 
 volumes:
   caddy-data:

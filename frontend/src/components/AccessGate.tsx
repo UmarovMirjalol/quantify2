@@ -85,10 +85,17 @@ export function AccessGate({ onUnlocked }: Props) {
               required
               minLength={4}
               autoComplete="off"
+              autoFocus
               placeholder="Paste APP_ACCESS_TOKEN"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'access-error' : undefined}
             />
           </label>
-          {error ? <div className="banner error">{error}</div> : null}
+          {error ? (
+            <div className="banner error" id="access-error" role="alert">
+              {error}
+            </div>
+          ) : null}
           <button className="btn primary" type="submit" disabled={loading}>
             {loading ? 'Checking…' : 'Continue to workspace'}
           </button>

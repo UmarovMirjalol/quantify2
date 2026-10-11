@@ -37,13 +37,16 @@ router = APIRouter(prefix="/api")
 
 
 def _client_id(x_client_id: str | None = Header(default=None, alias="X-Client-Id")) -> str:
-    """Normalize per-browser client id for history isolation."""
+    """Normalize per-browser client id for history isolation.
+
+    Always returns a stable id. Missing headers get an anonymous sentinel so
+    list/get never leak another client's history.
+    """
     if not x_client_id:
-        return ""
+        return "_anonymous"
     value = x_client_id.strip()[:64]
-    # Allow only safe characters
     cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "-_")
-    return cleaned
+    return cleaned or "_anonymous"
 
 
 class BacktestRequest(BaseModel):
@@ -285,8 +288,9 @@ async def api_run_backtest(
         config_json=json.dumps(body.config.model_dump(mode="json")),
         metrics_json=json.dumps(metrics),
         results_json=json.dumps(result),
+        # demo_mode: 0 = LLM parser, 1 = builtin (legacy column; keep mapping consistent)
         demo_mode=0 if parser_used == "llm" else 1,
-        client_id=client_id,
+        client_id=client_id if client_id != "_anonymous" else "",
         created_at=datetime.now(timezone.utc),
         total_return=metrics.get("total_return"),
         sharpe_ratio=metrics.get("sharpe_ratio"),
@@ -309,14 +313,20 @@ async def api_run_backtest(
     }
 
 
+def _parser_label(demo_mode: int | bool | None) -> str:
+    """Map legacy demo_mode column → parser label (0=llm, nonzero=builtin)."""
+    return "llm" if demo_mode == 0 else "builtin"
+
+
 @router.get("/backtests", response_model=list[BacktestSummary])
 def api_list_backtests(
     db: Session = Depends(get_db),
     client_id: str = Depends(_client_id),
 ) -> list[BacktestSummary]:
     query = db.query(BacktestRecord)
-    if client_id:
-        query = query.filter(BacktestRecord.client_id == client_id)
+    # Always scope to this browser — never return the full table.
+    scope = "" if client_id == "_anonymous" else client_id
+    query = query.filter(BacktestRecord.client_id == scope)
     rows = query.order_by(BacktestRecord.created_at.desc()).limit(100).all()
     return [
         BacktestSummary(
@@ -324,7 +334,7 @@ def api_list_backtests(
             strategy_description=r.strategy_description,
             dataset_name=r.dataset_name,
             created_at=r.created_at.isoformat() if r.created_at else "",
-            parser="builtin" if r.demo_mode else "llm",
+            parser=_parser_label(r.demo_mode),
             total_return=r.total_return,
             sharpe_ratio=r.sharpe_ratio,
             max_drawdown=r.max_drawdown,
@@ -344,7 +354,9 @@ def api_get_backtest(
     record = db.query(BacktestRecord).filter(BacktestRecord.id == backtest_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Backtest not found")
-    if client_id and record.client_id and record.client_id != client_id:
+    scope = "" if client_id == "_anonymous" else client_id
+    # Deny cross-client reads; also deny when record has a client and caller is anonymous.
+    if (record.client_id or "") != scope:
         raise HTTPException(status_code=404, detail="Backtest not found")
     results = json.loads(record.results_json)
     return {
@@ -352,7 +364,7 @@ def api_get_backtest(
         "strategy_description": record.strategy_description,
         "dataset_name": record.dataset_name,
         "created_at": record.created_at.isoformat() if record.created_at else None,
-        "parser": "builtin" if record.demo_mode else "llm",
+        "parser": _parser_label(record.demo_mode),
         "config": json.loads(record.config_json),
         **results,
     }

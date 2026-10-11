@@ -49,6 +49,7 @@ export function HomePage({ health }: Props) {
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(-1);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<'run' | 'load' | 'upload' | 'form'>('run');
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,7 +60,10 @@ export function HomePage({ health }: Props) {
           setDatasetId(items[0].id);
         }
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        setErrorKind('load');
+        setError(err.message);
+      });
   }, []);
 
   useEffect(() => {
@@ -113,6 +117,7 @@ export function HomePage({ health }: Props) {
   async function onUpload(file: File | null) {
     if (!file) return;
     setError(null);
+    setErrorKind('upload');
     setUploadInfo(null);
     try {
       const res = await uploadDataset(file);
@@ -131,8 +136,10 @@ export function HomePage({ health }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setErrorKind('run');
     const cleanedStrategy = normalizeStrategyText(strategyText);
     if (cleanedStrategy.length < 5) {
+      setErrorKind('form');
       setError('Describe a complete strategy — entry, exit, and risk.');
       setLoading(false);
       setProgressStep(-1);
@@ -302,8 +309,17 @@ export function HomePage({ health }: Props) {
           </label>
 
           {error ? (
-            <div className="banner error">
-              <strong>Could not run backtest.</strong> {error}
+            <div className="banner error" role="alert">
+              <strong>
+                {errorKind === 'load'
+                  ? 'Could not load datasets.'
+                  : errorKind === 'upload'
+                    ? 'Upload failed.'
+                    : errorKind === 'form'
+                      ? 'Check your strategy.'
+                      : 'Could not run backtest.'}
+              </strong>{' '}
+              {error}
               <div style={{ marginTop: '0.5rem' }}>
                 <button
                   type="button"

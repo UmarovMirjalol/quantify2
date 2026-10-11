@@ -27,7 +27,10 @@ export function HistoryPage() {
         <div>
           <p className="eyebrow">Saved runs</p>
           <h1>Results</h1>
-          <p className="lede">Open a previous backtest to inspect metrics, charts, and trades.</p>
+          <p className="lede">
+            Runs saved for this browser (local client id). Open any row to inspect metrics, charts,
+            and trades.
+          </p>
         </div>
         <Link className="btn primary" to="/app">
           New Backtest
@@ -54,7 +57,7 @@ export function HistoryPage() {
       {!loading && !items.length ? (
         <div className="empty-state">
           <p style={{ margin: '0 0 0.75rem' }}>
-            No backtests in this browser session yet.
+            No saved runs for this browser yet.
           </p>
           <Link className="btn primary" to="/app">
             Run your first backtest

@@ -49,9 +49,11 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.openai.com/v1"
     database_url: str = f"sqlite:///{DB_PATH}"
     cors_origins: str = (
+        "http://localhost:43127,http://127.0.0.1:43127,"
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:18080,http://127.0.0.1:18080,"
         "http://localhost:4173,http://127.0.0.1:4173,"
         "http://localhost:5173,http://127.0.0.1:5173,"
-        "http://localhost:80,http://127.0.0.1:80,"
         "http://localhost:8080,http://127.0.0.1:8080"
     )
     max_upload_size_mb: int = 25

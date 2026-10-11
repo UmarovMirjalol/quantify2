@@ -1,5 +1,7 @@
-const ACCESS_TOKEN_KEY = 'quantllm_access_token';
-const CLIENT_ID_KEY = 'quantllm_client_id';
+const ACCESS_TOKEN_KEY = 'quantify_access_token';
+const CLIENT_ID_KEY = 'quantify_client_id';
+const LEGACY_ACCESS_TOKEN_KEY = 'quantllm_access_token';
+const LEGACY_CLIENT_ID_KEY = 'quantllm_client_id';
 
 /** Clean pasted secrets (tokens / API keys). */
 export function normalizeSecret(value: string): string {
@@ -29,24 +31,42 @@ export function normalizeStrategyText(value: string): string {
 }
 
 export function getAccessToken(): string {
-  return localStorage.getItem(ACCESS_TOKEN_KEY) ?? '';
+  const current = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (current) return current;
+  const legacy = localStorage.getItem(LEGACY_ACCESS_TOKEN_KEY);
+  if (legacy) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, legacy);
+    localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+    return legacy;
+  }
+  return '';
 }
 
 export function setAccessToken(token: string): void {
   const cleaned = normalizeSecret(token);
   if (cleaned) {
     localStorage.setItem(ACCESS_TOKEN_KEY, cleaned);
+    localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
   } else {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
   }
 }
 
 export function clearAccessToken(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 }
 
 export function getClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY);
+  if (!id) {
+    id = localStorage.getItem(LEGACY_CLIENT_ID_KEY);
+    if (id) {
+      localStorage.setItem(CLIENT_ID_KEY, id);
+      localStorage.removeItem(LEGACY_CLIENT_ID_KEY);
+    }
+  }
   if (!id) {
     id = crypto.randomUUID().replace(/-/g, '');
     localStorage.setItem(CLIENT_ID_KEY, id);

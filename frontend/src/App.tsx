@@ -16,12 +16,14 @@ export default function App() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [apiDown, setApiDown] = useState(false);
   const [authEpoch, setAuthEpoch] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
+      setApiDown(false);
       try {
         const h = await Promise.race([
           getHealth(),
@@ -67,7 +69,8 @@ export default function App() {
             llm_model: '',
             auth_required: false,
           });
-          setUnlocked(true);
+          setUnlocked(false);
+          setApiDown(true);
           setBootstrapped(true);
         }
       }
@@ -77,9 +80,16 @@ export default function App() {
     const id = window.setInterval(() => {
       getHealth()
         .then((h) => {
-          if (!cancelled) setHealth(h);
+          if (cancelled) return;
+          setHealth(h);
+          setApiDown(false);
+          if (h.auth_required && !getAccessToken()) {
+            setUnlocked(false);
+          }
         })
-        .catch(() => undefined);
+        .catch(() => {
+          if (!cancelled) setApiDown(true);
+        });
     }, 15000);
 
     return () => {
@@ -94,14 +104,43 @@ export default function App() {
       setUnlocked(false);
       setAuthEpoch((n) => n + 1);
     }
+    window.addEventListener('quantify:unauthorized', onUnauthorized);
     window.addEventListener('quantllm:unauthorized', onUnauthorized);
-    return () => window.removeEventListener('quantllm:unauthorized', onUnauthorized);
+    return () => {
+      window.removeEventListener('quantify:unauthorized', onUnauthorized);
+      window.removeEventListener('quantllm:unauthorized', onUnauthorized);
+    };
   }, []);
 
   if (!bootstrapped) {
     return (
       <div className="empty-state" style={{ margin: '2rem auto', maxWidth: 420 }}>
+        <div className="skeleton-line" style={{ width: '48%', margin: '0 auto 0.85rem' }} />
         Starting Quantify…
+      </div>
+    );
+  }
+
+  if (apiDown) {
+    return (
+      <div className="empty-state" style={{ margin: '2rem auto', maxWidth: 460 }}>
+        <p className="eyebrow">API unreachable</p>
+        <h1 style={{ fontSize: '1.35rem' }}>Can’t reach the Quantify backend</h1>
+        <p className="lede" style={{ margin: '0.75rem auto' }}>
+          Start the API on port 8765, then retry. Local tip:{' '}
+          <code className="mono">uvicorn app.main:app --port 8765</code>
+        </p>
+        <button
+          type="button"
+          className="btn primary"
+          style={{ marginTop: '1rem' }}
+          onClick={() => {
+            setBootstrapped(false);
+            setAuthEpoch((n) => n + 1);
+          }}
+        >
+          Retry connection
+        </button>
       </div>
     );
   }

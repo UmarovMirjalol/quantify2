@@ -5,6 +5,7 @@ import type { LLMStatus } from '../types';
 
 export function SettingsPage() {
   const [status, setStatus] = useState<LLMStatus | null>(null);
+  const [loading, setLoading] = useState(true);
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('gpt-4o-mini');
   const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1');
@@ -12,7 +13,7 @@ export function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const canEdit = status?.runtime_config_allowed !== false;
+  const canEdit = Boolean(status && status.runtime_config_allowed !== false);
 
   async function refresh() {
     const s = await getLLMStatus();
@@ -22,7 +23,10 @@ export function SettingsPage() {
   }
 
   useEffect(() => {
-    refresh().catch((err: Error) => setError(err.message));
+    setLoading(true);
+    refresh()
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   async function onSave(e: FormEvent) {
@@ -75,39 +79,71 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <section className="panel">
-        <h2>Parser status</h2>
-        <dl className="kv">
-          <div>
-            <dt>LLM enabled</dt>
-            <dd>{status?.enabled ? 'Yes' : 'No'}</dd>
-          </div>
-          <div>
-            <dt>Model</dt>
-            <dd className="mono">{status?.model ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>Base URL</dt>
-            <dd className="mono">{status?.base_url ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>API key</dt>
-            <dd>{status?.api_key_configured ? status.api_key_masked : 'Not configured'}</dd>
-          </div>
-          <div>
-            <dt>Provider</dt>
-            <dd>{status?.provider ?? 'openai-compatible'}</dd>
-          </div>
-        </dl>
-      </section>
+      {loading ? (
+        <div className="empty-state">
+          <div className="skeleton-line" style={{ width: '40%', margin: '0 auto 0.75rem' }} />
+          Loading settings…
+        </div>
+      ) : null}
 
-      {!canEdit ? (
+      {error ? (
+        <div className="banner error" role="alert">
+          {error}
+          <div style={{ marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              className="btn secondary small"
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                refresh()
+                  .catch((err: Error) => setError(err.message))
+                  .finally(() => setLoading(false));
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!loading ? (
+        <section className="panel">
+          <h2>Parser status</h2>
+          <dl className="kv">
+            <div>
+              <dt>LLM enabled</dt>
+              <dd>{status?.enabled ? 'Yes' : 'No'}</dd>
+            </div>
+            <div>
+              <dt>Model</dt>
+              <dd className="mono">{status?.model ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>Base URL</dt>
+              <dd className="mono">{status?.base_url ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>API key</dt>
+              <dd>{status?.api_key_configured ? status.api_key_masked : 'Not configured'}</dd>
+            </div>
+            <div>
+              <dt>Provider</dt>
+              <dd>{status?.provider ?? 'openai-compatible'}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
+
+      {!loading && status && !canEdit ? (
         <div className="banner info">
           Runtime key editing is disabled on this server. An administrator must set{' '}
           <code>LLM_API_KEY</code> / <code>LLM_MODEL</code> / <code>LLM_BASE_URL</code> in the
           deployment environment.
         </div>
-      ) : (
+      ) : null}
+
+      {!loading && canEdit ? (
         <form className="panel form-panel" onSubmit={onSave}>
           <h2>Connect LLM</h2>
           <label className="field">
@@ -141,7 +177,6 @@ export function SettingsPage() {
             Works with OpenAI, Groq, OpenRouter, and other OpenAI-compatible endpoints. Keys stay on
             the server in <code>.llm_runtime.json</code>.
           </p>
-          {error ? <div className="banner error">{error}</div> : null}
           {message ? <div className="banner ok">{message}</div> : null}
           <div className="btn-row">
             <button className="btn primary" type="submit" disabled={saving}>
@@ -152,7 +187,7 @@ export function SettingsPage() {
             </button>
           </div>
         </form>
-      )}
+      ) : null}
     </div>
   );
 }
