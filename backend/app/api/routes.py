@@ -32,8 +32,22 @@ from app.llm.schemas import (
     StrategySpec,
 )
 from app.models.backtest import BacktestRecord
+from app.models.stats import Visitor
 
 router = APIRouter(prefix="/api")
+
+
+def _touch_visitor(db: Session, client_id: str) -> None:
+    """Upsert a visitor row so the users counter grows with real traffic."""
+    if not client_id or client_id == "_anonymous":
+        return
+    now = datetime.now(timezone.utc)
+    row = db.get(Visitor, client_id)
+    if row is None:
+        db.add(Visitor(client_id=client_id, first_seen=now, last_seen=now))
+    else:
+        row.last_seen = now
+    db.commit()
 
 
 def _client_id(x_client_id: str | None = Header(default=None, alias="X-Client-Id")) -> str:
@@ -103,6 +117,51 @@ def health() -> StatusResponse:
         auth_required=settings.auth_required,
         runtime_llm_config_allowed=settings.runtime_llm_config_allowed,
     )
+
+
+class PublicStats(BaseModel):
+    users: int
+    backtests: int
+    releases: int
+    users_live: int
+    backtests_live: int
+    updated_at: str
+
+
+@router.get("/stats", response_model=PublicStats)
+def public_stats(db: Session = Depends(get_db)) -> PublicStats:
+    """Live counters for the landing page (baseline + real activity)."""
+    settings = get_settings()
+    users_live = db.query(Visitor).count()
+    # Also count distinct clients from backtests that never pinged the landing.
+    from sqlalchemy import distinct, func
+
+    bt_clients = (
+        db.query(func.count(distinct(BacktestRecord.client_id)))
+        .filter(BacktestRecord.client_id != "")
+        .scalar()
+        or 0
+    )
+    users_live = max(users_live, int(bt_clients))
+    backtests_live = db.query(BacktestRecord).count()
+    return PublicStats(
+        users=settings.stats_baseline_users + users_live,
+        backtests=settings.stats_baseline_backtests + backtests_live,
+        releases=settings.stats_releases,
+        users_live=users_live,
+        backtests_live=backtests_live,
+        updated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post("/stats/ping")
+def stats_ping(
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Register this browser as a visitor — bumps the users counter."""
+    _touch_visitor(db, client_id)
+    return {"ok": True, "client_id": client_id if client_id != "_anonymous" else None}
 
 
 @router.get("/llm/status")
@@ -301,6 +360,7 @@ async def api_run_backtest(
     db.add(record)
     db.commit()
     db.refresh(record)
+    _touch_visitor(db, client_id)
 
     return {
         "id": record.id,

@@ -14,6 +14,7 @@ AI-powered quantitative research platform. Describe a trading strategy in plain 
 - Full performance metrics (Sharpe, Sortino, CAGR, max drawdown, profit factor, …)
 - Equity / drawdown / price-with-markers charts
 - SQLite backtest history
+- Live landing counters (users / backtests / releases) that update as people visit and run tests
 
 ## Architecture
 

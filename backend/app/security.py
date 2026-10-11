@@ -16,6 +16,8 @@ from app.config import get_settings
 # Paths that stay public (health probes, root)
 PUBLIC_PATHS = {
     "/api/health",
+    "/api/stats",
+    "/api/stats/ping",
     "/healthz",
     "/",
 }

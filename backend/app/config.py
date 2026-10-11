@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     force_builtin_parser: bool = False
     data_dir: str = str(DEFAULT_DATA_DIR)
     upload_dir: str = str(DEFAULT_UPLOAD_DIR)
+    # Public live counters = baseline + real activity
+    stats_baseline_users: int = 112
+    stats_baseline_backtests: int = 525
+    stats_releases: int = 3
 
     @property
     def is_production(self) -> bool:

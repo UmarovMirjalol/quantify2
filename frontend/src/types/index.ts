@@ -133,3 +133,12 @@ export interface LLMStatus {
   provider: string;
   runtime_config_allowed?: boolean;
 }
+
+export interface PublicStats {
+  users: number;
+  backtests: number;
+  releases: number;
+  users_live: number;
+  backtests_live: number;
+  updated_at: string;
+}

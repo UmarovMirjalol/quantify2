@@ -25,6 +25,7 @@ def init_db() -> None:
     from sqlalchemy import text
 
     from app.models import backtest  # noqa: F401
+    from app.models import stats  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:

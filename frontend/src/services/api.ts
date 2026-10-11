@@ -4,6 +4,7 @@ import type {
   DatasetInfo,
   HealthStatus,
   LLMStatus,
+  PublicStats,
   StrategySpec,
 } from '../types';
 import { authHeaders } from './session';
@@ -48,6 +49,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export async function getHealth(): Promise<HealthStatus> {
   return request('/api/health');
+}
+
+export async function getPublicStats(): Promise<PublicStats> {
+  return request('/api/stats');
+}
+
+export async function pingStats(): Promise<{ ok: boolean; client_id: string | null }> {
+  return request('/api/stats/ping', { method: 'POST' });
 }
 
 export async function listDatasets(): Promise<DatasetInfo[]> {

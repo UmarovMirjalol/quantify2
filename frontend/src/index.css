@@ -140,7 +140,8 @@ code,
   .tab-pane,
   .tabs button.active::after,
   .demo-chip,
-  .demo-status i {
+  .demo-status i,
+  .live-pulse {
     animation: none !important;
   }
 
@@ -156,7 +157,8 @@ code,
   .metric-board > div,
   .demo-kpi-row > div,
   .blotter-row,
-  .demo-chip {
+  .demo-chip,
+  .live-stat {
     opacity: 1 !important;
     animation: none !important;
     transform: none !important;

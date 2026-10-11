@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LandingDemo } from '../components/LandingDemo';
+import { LiveStats } from '../components/LiveStats';
 import { useCountUp } from '../hooks/useCountUp';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
@@ -382,6 +383,8 @@ export function LandingPage() {
       </section>
 
       <LandingDemo />
+
+      <LiveStats />
 
       <section
         className={`landing-section exec-section ${exec.inView ? 'in-view' : ''}`}
