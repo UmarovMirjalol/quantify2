@@ -15,6 +15,13 @@ echo "→ Health"
 curl -fsS "$BASE/api/health" | tee /tmp/quantify-health.json
 echo
 
+echo "→ Public surface (stats / pulse / playbook / releases)"
+curl -fsS "$BASE/api/stats" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["users"]>=112 and d["backtests"]>=525 and d["releases"]>=3; print("stats ok", d["users"], d["backtests"], d["releases"])'
+curl -fsS "$BASE/api/pulse" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["items"])>=1; print("pulse ok", len(d["items"]), "items")'
+curl -fsS "$BASE/api/playbook" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["count"]>=4; print("playbook ok", d["count"])'
+curl -fsS "$BASE/api/releases" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["count"]>=3; print("releases ok", d["count"])'
+echo
+
 echo "→ Datasets"
 curl -fsS "${AUTH_ARGS[@]}" "${CLIENT_ARGS[@]}" "$BASE/api/datasets" | head -c 400
 echo

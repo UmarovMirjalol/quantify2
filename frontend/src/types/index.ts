@@ -142,3 +142,30 @@ export interface PublicStats {
   backtests_live: number;
   updated_at: string;
 }
+
+export interface PlaybookItem {
+  id: string;
+  title: string;
+  tag: string;
+  blurb: string;
+  text: string;
+  indicators: string[];
+}
+
+export interface PulseItem {
+  strategy: string;
+  dataset: string;
+  parser: string;
+  total_return: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+  number_of_trades: number | null;
+  created_at: string;
+  sample: boolean;
+}
+
+export interface ReleaseItem {
+  version: string;
+  title: string;
+  body: string;
+}

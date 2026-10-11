@@ -4,7 +4,10 @@ import type {
   DatasetInfo,
   HealthStatus,
   LLMStatus,
+  PlaybookItem,
   PublicStats,
+  PulseItem,
+  ReleaseItem,
   StrategySpec,
 } from '../types';
 import { authHeaders } from './session';
@@ -57,6 +60,18 @@ export async function getPublicStats(): Promise<PublicStats> {
 
 export async function pingStats(): Promise<{ ok: boolean; client_id: string | null }> {
   return request('/api/stats/ping', { method: 'POST' });
+}
+
+export async function getPulse(): Promise<{ items: PulseItem[]; updated_at: string }> {
+  return request('/api/pulse');
+}
+
+export async function getPlaybook(): Promise<{ items: PlaybookItem[]; count: number }> {
+  return request('/api/playbook');
+}
+
+export async function getReleases(): Promise<{ items: ReleaseItem[]; count: number }> {
+  return request('/api/releases');
 }
 
 export async function listDatasets(): Promise<DatasetInfo[]> {

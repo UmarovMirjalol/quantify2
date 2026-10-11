@@ -15,6 +15,9 @@ AI-powered quantitative research platform. Describe a trading strategy in plain 
 - Equity / drawdown / price-with-markers charts
 - SQLite backtest history
 - Live landing counters (users / backtests / releases) that update as people visit and run tests
+- Strategy playbook gallery with deep-links into the workspace
+- Public research pulse (anonymized recent runs) so the landing never looks empty
+- Releases changelog + FAQ on the marketing surface
 
 ## Architecture
 

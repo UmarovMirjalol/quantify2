@@ -33,8 +33,16 @@ from app.llm.schemas import (
 )
 from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
+from app.playbook import PLAYBOOK, RELEASES
 
 router = APIRouter(prefix="/api")
+
+
+def _truncate_strategy(text: str, limit: int = 96) -> str:
+    cleaned = " ".join((text or "").split())
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
 
 
 def _touch_visitor(db: Session, client_id: str) -> None:
@@ -162,6 +170,89 @@ def stats_ping(
     """Register this browser as a visitor — bumps the users counter."""
     _touch_visitor(db, client_id)
     return {"ok": True, "client_id": client_id if client_id != "_anonymous" else None}
+
+
+class PulseItem(BaseModel):
+    strategy: str
+    dataset: str
+    parser: str
+    total_return: float | None
+    sharpe_ratio: float | None
+    max_drawdown: float | None
+    number_of_trades: int | None
+    created_at: str
+    sample: bool = False
+
+
+class PulseResponse(BaseModel):
+    items: list[PulseItem]
+    updated_at: str
+
+
+@router.get("/pulse", response_model=PulseResponse)
+def public_pulse(db: Session = Depends(get_db)) -> PulseResponse:
+    """Anonymized recent backtests so the landing never looks empty."""
+    rows = (
+        db.query(BacktestRecord)
+        .order_by(BacktestRecord.created_at.desc())
+        .limit(12)
+        .all()
+    )
+    items: list[PulseItem] = [
+        PulseItem(
+            strategy=_truncate_strategy(r.strategy_description),
+            dataset=r.dataset_name or "sample",
+            parser=_parser_label(r.demo_mode),
+            total_return=r.total_return,
+            sharpe_ratio=r.sharpe_ratio,
+            max_drawdown=r.max_drawdown,
+            number_of_trades=r.number_of_trades,
+            created_at=r.created_at.isoformat() if r.created_at else "",
+            sample=False,
+        )
+        for r in rows
+    ]
+    if not items:
+        # Seeded samples when the DB is fresh — replaced by real runs as people test.
+        items = [
+            PulseItem(
+                strategy=_truncate_strategy(p["text"]),
+                dataset="sample_data.csv",
+                parser="builtin",
+                total_return=vals[0],
+                sharpe_ratio=vals[1],
+                max_drawdown=vals[2],
+                number_of_trades=vals[3],
+                created_at=datetime.now(timezone.utc).isoformat(),
+                sample=True,
+            )
+            for p, vals in zip(
+                PLAYBOOK[:4],
+                [
+                    (0.084, 1.12, -0.062, 36),
+                    (0.041, 0.78, -0.048, 52),
+                    (0.113, 1.34, -0.091, 28),
+                    (0.027, 0.55, -0.039, 44),
+                ],
+                strict=True,
+            )
+        ]
+    return PulseResponse(
+        items=items,
+        updated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.get("/playbook")
+def strategy_playbook() -> dict[str, Any]:
+    """Curated strategies for the gallery / workspace presets."""
+    return {"items": PLAYBOOK, "count": len(PLAYBOOK)}
+
+
+@router.get("/releases")
+def product_releases() -> dict[str, Any]:
+    settings = get_settings()
+    return {"items": RELEASES, "count": settings.stats_releases}
 
 
 @router.get("/llm/status")

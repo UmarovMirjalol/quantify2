@@ -158,7 +158,11 @@ code,
   .demo-kpi-row > div,
   .blotter-row,
   .demo-chip,
-  .live-stat {
+  .live-stat,
+  .gallery-grid article,
+  .pulse-row,
+  .release-list li,
+  .faq-item {
     opacity: 1 !important;
     animation: none !important;
     transform: none !important;

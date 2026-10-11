@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { HistoryPage } from './pages/HistoryPage';
 import { HomePage } from './pages/HomePage';
 import { LandingPage } from './pages/LandingPage';
+import { PlaybookPage } from './pages/PlaybookPage';
 import { ResultsLoader } from './pages/ResultsLoader';
 import { SettingsPage } from './pages/SettingsPage';
 import { getHealth, listDatasets } from './services/api';
@@ -161,6 +162,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/app" element={<HomePage health={health} />} />
+        <Route path="/playbook" element={<PlaybookPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/results/:id" element={<ResultsLoader />} />
         <Route path="/settings" element={<SettingsPage />} />

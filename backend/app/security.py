@@ -18,6 +18,9 @@ PUBLIC_PATHS = {
     "/api/health",
     "/api/stats",
     "/api/stats/ping",
+    "/api/pulse",
+    "/api/playbook",
+    "/api/releases",
     "/healthz",
     "/",
 }

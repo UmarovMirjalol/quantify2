@@ -1,23 +1,27 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { listDatasets, runBacktest, uploadDataset } from '../services/api';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { getPlaybook, listDatasets, runBacktest, uploadDataset } from '../services/api';
 import { normalizeStrategyText } from '../services/session';
-import type { DatasetInfo, HealthStatus } from '../types';
+import type { DatasetInfo, HealthStatus, PlaybookItem } from '../types';
 
 const EXAMPLE_STRATEGIES = [
   {
+    id: 'sma-cross',
     label: 'SMA crossover',
     text: 'Buy SPY when the 20-day moving average crosses above the 50-day moving average. Risk 1% per trade and exit when RSI exceeds 70.',
   },
   {
+    id: 'rsi-reversion',
     label: 'RSI mean reversion',
     text: 'Buy when RSI falls below 30 and sell when RSI rises above 70. Risk 1% per trade.',
   },
   {
+    id: 'ema-stops',
     label: 'EMA + stops',
     text: 'Buy when the 12-day EMA crosses above the 26-day EMA and sell when it crosses below. Use a 2% stop-loss and 5% take-profit.',
   },
   {
+    id: 'bollinger-bounce',
     label: 'Bollinger bounce',
     text: 'Buy when price closes below the lower Bollinger Band and sell when it crosses above the middle band. Risk 1% per trade.',
   },
@@ -39,6 +43,8 @@ type StepState = 'pending' | 'active' | 'done';
 
 export function HomePage({ health }: Props) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [presets, setPresets] = useState(EXAMPLE_STRATEGIES);
   const [strategyText, setStrategyText] = useState(EXAMPLE_STRATEGIES[0].text);
   const [datasets, setDatasets] = useState<DatasetInfo[]>([]);
   const [datasetId, setDatasetId] = useState('sample_data.csv');
@@ -64,6 +70,40 @@ export function HomePage({ health }: Props) {
         setErrorKind('load');
         setError(err.message);
       });
+  }, []);
+
+  useEffect(() => {
+    const applyStrategy = (list: { id: string; text: string }[]) => {
+      const wanted = searchParams.get('strategy');
+      if (!wanted) return;
+      const hit = list.find((p) => p.id === wanted);
+      if (!hit) return;
+      setStrategyText(hit.text);
+      const next = new URLSearchParams(searchParams);
+      next.delete('strategy');
+      setSearchParams(next, { replace: true });
+    };
+
+    applyStrategy(EXAMPLE_STRATEGIES);
+
+    let cancelled = false;
+    getPlaybook()
+      .then((data) => {
+        if (cancelled || !data.items?.length) return;
+        const mapped = data.items.map((item: PlaybookItem) => ({
+          id: item.id,
+          label: item.title,
+          text: item.text,
+        }));
+        setPresets(mapped);
+        applyStrategy(mapped);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+    // Deep-link ?strategy= applied once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -204,10 +244,10 @@ export function HomePage({ health }: Props) {
           </label>
 
           <div className="example-row">
-            <span>Examples</span>
-            {EXAMPLE_STRATEGIES.map((ex) => (
+            <span>Playbook</span>
+            {presets.slice(0, 6).map((ex) => (
               <button
-                key={ex.label}
+                key={ex.id}
                 type="button"
                 className="chip"
                 disabled={loading}
@@ -216,6 +256,9 @@ export function HomePage({ health }: Props) {
                 {ex.label}
               </button>
             ))}
+            <Link className="chip" to="/playbook">
+              All →
+            </Link>
           </div>
 
           <div className="param-grid">

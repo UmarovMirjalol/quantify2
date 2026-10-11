@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ActivityPulse } from '../components/ActivityPulse';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
+import { ReleasesFaq } from '../components/ReleasesFaq';
+import { StrategyGallery } from '../components/StrategyGallery';
 import { useCountUp } from '../hooks/useCountUp';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
@@ -204,9 +207,12 @@ export function LandingPage() {
           <a className="btn ghost" href="#demo">
             Demo
           </a>
-          <Link className="btn ghost" to="/history">
-            Results
-          </Link>
+          <a className="btn ghost" href="#playbook">
+            Playbook
+          </a>
+          <a className="btn ghost" href="#pulse">
+            Pulse
+          </a>
           <Link className="btn primary" to="/app">
             Open workspace
           </Link>
@@ -386,6 +392,10 @@ export function LandingPage() {
 
       <LiveStats />
 
+      <StrategyGallery />
+
+      <ActivityPulse />
+
       <section
         className={`landing-section exec-section ${exec.inView ? 'in-view' : ''}`}
         ref={exec.ref}
@@ -499,14 +509,16 @@ export function LandingPage() {
           <Link className="btn primary" to="/app">
             Open research workspace
           </Link>
-          <Link className="btn secondary" to="/history">
-            Browse saved runs
+          <Link className="btn secondary" to="/playbook">
+            Open strategy playbook
           </Link>
           <a className="btn ghost" href="#demo">
             Replay live demo
           </a>
         </div>
       </section>
+
+      <ReleasesFaq />
 
       <section className="landing-section deploy-strip in-view">
         <div className="deploy-strip-inner">

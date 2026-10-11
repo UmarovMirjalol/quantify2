@@ -57,11 +57,16 @@ export function HistoryPage() {
       {!loading && !items.length ? (
         <div className="empty-state">
           <p style={{ margin: '0 0 0.75rem' }}>
-            No saved runs for this browser yet.
+            No saved runs for this browser yet. Pick a playbook strategy or open a blank workspace.
           </p>
-          <Link className="btn primary" to="/app">
-            Run your first backtest
-          </Link>
+          <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link className="btn primary" to="/playbook">
+              Open playbook
+            </Link>
+            <Link className="btn secondary" to="/app">
+              Blank workspace
+            </Link>
+          </div>
         </div>
       ) : null}
 

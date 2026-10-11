@@ -27,12 +27,14 @@ The script:
 
 Users open `http://YOUR_HOST/` (or `https://DOMAIN/` with HTTPS), paste the access token once, then run backtests.
 
-Smoke test:
+Smoke test (health, public stats/pulse/playbook, authenticated backtest):
 
 ```bash
 export APP_ACCESS_TOKEN=$(grep APP_ACCESS_TOKEN .env | cut -d= -f2)
 ./deploy/scripts/smoke.sh http://127.0.0.1:${APP_PORT:-80}
 ```
+
+Public (no token) endpoints used by the landing page: `/api/health`, `/api/stats`, `/api/stats/ping`, `/api/pulse`, `/api/playbook`, `/api/releases`.
 
 ## Local production preview (no Docker)
 
