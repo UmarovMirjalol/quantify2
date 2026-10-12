@@ -370,11 +370,45 @@ h2 {
   color: var(--text-inverse);
   box-shadow: none;
   font-weight: 600;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease;
 }
 
 .btn.primary:hover {
   background: var(--accent-hover);
   color: var(--text-inverse);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(79, 214, 160, 0.22);
+}
+
+.btn-kick:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn-kick:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.copied-pop {
+  border-color: rgba(79, 214, 160, 0.45) !important;
+  color: var(--accent) !important;
+  animation: copied-pop 0.45s ease;
+}
+
+@keyframes copied-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .btn.primary:disabled {
@@ -2296,14 +2330,25 @@ h2 {
 
 @keyframes chip-pop {
   0% {
-    box-shadow: 0 0 0 0 rgba(79, 214, 160, 0.35);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(79, 214, 160, 0.45);
   }
-  40% {
-    box-shadow: 0 0 0 6px rgba(79, 214, 160, 0);
+  35% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 8px rgba(79, 214, 160, 0);
   }
   100% {
+    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(79, 214, 160, 0);
   }
+}
+
+.demo-chip:hover {
+  transform: translateY(-2px);
+}
+
+.demo-chip.active {
+  box-shadow: 0 0 0 1px rgba(79, 214, 160, 0.35), 0 8px 22px rgba(79, 214, 160, 0.12);
 }
 
 .demo-lab.in-view .demo-chip:nth-child(1) { animation-delay: 0.05s; }
@@ -2330,6 +2375,10 @@ h2 {
   transition: box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
+.demo-console {
+  position: relative;
+}
+
 .demo-console.phase-sim,
 .demo-console.phase-done {
   border-color: rgba(79, 214, 160, 0.22);
@@ -2337,6 +2386,32 @@ h2 {
     0 0 0 1px rgba(79, 214, 160, 0.1),
     0 28px 70px rgba(0, 0, 0, 0.45),
     0 0 48px rgba(79, 214, 160, 0.06);
+}
+
+.demo-console.impact,
+.hero-stage-float.impact {
+  animation: impact-shake 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes impact-shake {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  18% {
+    transform: translate3d(-3px, 1px, 0) scale(1.012);
+  }
+  36% {
+    transform: translate3d(3px, -1px, 0) scale(1.01);
+  }
+  54% {
+    transform: translate3d(-2px, 0, 0) scale(1.004);
+  }
+  72% {
+    transform: translate3d(2px, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .demo-console-top {
@@ -3537,5 +3612,211 @@ h2 {
 
   .landing-footer {
     padding: 1.2rem 1rem;
+  }
+}
+
+/* —— Landing spice —— */
+.landing {
+  position: relative;
+}
+
+.landing-sparks {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  overflow: hidden;
+}
+
+.landing-spark {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 214, 160, 0.85) 0%, rgba(79, 214, 160, 0) 70%);
+  box-shadow: 0 0 18px rgba(79, 214, 160, 0.45);
+  animation: landing-spark 0.6s ease-out forwards;
+}
+
+.landing-spark::before,
+.landing-spark::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(79, 214, 160, 0.45);
+  animation: landing-spark-ring 0.6s ease-out forwards;
+}
+
+.landing-spark::after {
+  inset: -14px;
+  animation-delay: 0.04s;
+  opacity: 0.55;
+}
+
+@keyframes landing-spark {
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes landing-spark-ring {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.mint-burst {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  background: rgba(79, 214, 160, 0.9);
+  box-shadow:
+    0 0 0 0 rgba(79, 214, 160, 0.5),
+    0 0 24px rgba(79, 214, 160, 0.55);
+  animation: mint-burst 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.mint-burst::before,
+.mint-burst::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow:
+    -28px -8px 0 rgba(79, 214, 160, 0.85),
+    26px -14px 0 rgba(79, 214, 160, 0.7),
+    -18px 22px 0 rgba(79, 214, 160, 0.75),
+    22px 18px 0 rgba(79, 214, 160, 0.65),
+    0 -30px 0 rgba(79, 214, 160, 0.55),
+    -32px 10px 0 rgba(79, 214, 160, 0.5),
+    34px 6px 0 rgba(79, 214, 160, 0.55);
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: mint-burst-dots 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.mint-burst::after {
+  box-shadow:
+    -14px -24px 0 rgba(110, 224, 178, 0.7),
+    16px 26px 0 rgba(110, 224, 178, 0.65),
+    30px -6px 0 rgba(110, 224, 178, 0.55),
+    -26px 16px 0 rgba(110, 224, 178, 0.5);
+  animation-delay: 0.04s;
+}
+
+.mint-burst-center {
+  left: 58%;
+  top: 46%;
+}
+
+@keyframes mint-burst {
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes mint-burst-dots {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0;
+  }
+}
+
+.side-kpis .in strong,
+.demo-kpi-row .in strong {
+  animation: value-slam 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes value-slam {
+  0% {
+    transform: scale(0.86);
+    filter: brightness(1.4);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.instant-form {
+  transition: transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+.instant-form.kick {
+  animation: form-kick 0.28s ease;
+}
+
+.instant-section .field textarea:focus {
+  border-color: rgba(79, 214, 160, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(79, 214, 160, 0.12),
+    0 0 28px rgba(79, 214, 160, 0.08);
+}
+
+@keyframes form-kick {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.985);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.hero-copy .wordmark {
+  animation-duration: 4.8s;
+}
+
+.product-frame.phase-results .side-kpis .in:nth-child(1) strong,
+.demo-console.phase-done .demo-kpi-row .in:nth-child(1) strong {
+  text-shadow: 0 0 18px rgba(79, 214, 160, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-spark,
+  .mint-burst,
+  .demo-console.impact,
+  .hero-stage-float.impact,
+  .btn-kick:hover,
+  .side-kpis .in strong,
+  .demo-kpi-row .in strong {
+    animation: none !important;
+    transform: none !important;
   }
 }

@@ -83,6 +83,9 @@ export function LandingPage() {
   const [interpVisible, setInterpVisible] = useState(reduced ? 4 : 0);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [impact, setImpact] = useState(false);
+  const [bursts, setBursts] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [sparks, setSparks] = useState<{ id: number; x: number; y: number }[]>([]);
   const exec = useInView<HTMLElement>(reduced);
   const invariants = useInView<HTMLElement>(reduced);
   const metrics = useInView<HTMLElement>(reduced);
@@ -168,8 +171,43 @@ export function LandingPage() {
     };
   }, [reduced]);
 
+  // Slam the frame when results land
+  useEffect(() => {
+    if (reduced || phase !== 'results') return;
+    setImpact(true);
+    const burstId = Date.now();
+    setBursts((prev) => [...prev.slice(-2), { id: burstId, x: 62, y: 48 }]);
+    const t = window.setTimeout(() => setImpact(false), 520);
+    const t2 = window.setTimeout(() => {
+      setBursts((prev) => prev.filter((b) => b.id !== burstId));
+    }, 900);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(t2);
+    };
+  }, [phase, reduced]);
+
   return (
-    <div className="landing">
+    <div
+      className="landing"
+      onPointerDown={(e) => {
+        if (reduced || e.button !== 0) return;
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('a, button, input, textarea, select, label')) return;
+        const id = Date.now() + Math.random();
+        const x = e.clientX;
+        const y = e.clientY;
+        setSparks((prev) => [...prev.slice(-10), { id, x, y }]);
+        window.setTimeout(() => {
+          setSparks((prev) => prev.filter((s) => s.id !== id));
+        }, 650);
+      }}
+    >
+      <div className="landing-sparks" aria-hidden="true">
+        {sparks.map((s) => (
+          <span key={s.id} className="landing-spark" style={{ left: s.x, top: s.y }} />
+        ))}
+      </div>
       <div className="landing-motion" aria-hidden="true">
         <span className="motion-grid" />
         <span className="beam beam-a" />
@@ -225,18 +263,18 @@ export function LandingPage() {
             Quantify
           </p>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
-            Turn trading ideas into backtests.
+            Ideas in. Numbers out. No excuses.
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Free to test — no signup, no API key. Plain-English strategies become look-ahead-safe
-            simulations with institutional metrics.
+            Free backtester — no signup, no API key. Plain English becomes a look-ahead-safe sim with
+            desk-grade metrics.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
-            <Link className="btn primary" to="/app">
-              Start a backtest
+            <Link className="btn primary btn-kick" to="/app">
+              Break a strategy
             </Link>
             <a className="btn secondary" href="#demo">
-              Watch the demo
+              Watch it cook
             </a>
           </div>
           <p className="hero-note mono reveal" style={{ ['--d' as string]: '300ms' }}>
@@ -245,7 +283,7 @@ export function LandingPage() {
         </div>
 
         <div className="hero-stage reveal" style={{ ['--d' as string]: '140ms' }} ref={stageRef}>
-          <div className="hero-stage-float">
+          <div className={`hero-stage-float ${impact ? 'impact' : ''}`}>
             <div
               className={`product-frame phase-${phase}`}
               style={
@@ -254,6 +292,14 @@ export function LandingPage() {
                   : { transform: `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }
               }
             >
+              {bursts.map((b) => (
+                <span
+                  key={b.id}
+                  className="mint-burst"
+                  style={{ left: `${b.x}%`, top: `${b.y}%` }}
+                  aria-hidden="true"
+                />
+              ))}
               <div className="product-top">
                 <span className="product-brand">
                   <LogoMark size={14} />
@@ -262,10 +308,12 @@ export function LandingPage() {
                 <span className="product-live">
                   <i />
                   {phase === 'sim'
-                    ? 'simulating'
+                    ? 'cooking fills'
                     : phase === 'parse' || phase === 'spec'
-                      ? 'parsing'
-                      : 'live'}
+                      ? 'chewing NL'
+                      : phase === 'results' || phase === 'hold'
+                        ? 'locked in'
+                        : 'live'}
                 </span>
               </div>
 
@@ -410,8 +458,8 @@ export function LandingPage() {
           <p className="eyebrow">Execution model</p>
           <h2>Look-ahead bias dies here.</h2>
           <p className="section-lede">
-            Every fill follows the same convention researchers actually trust: decide on the close,
-            trade on the next open, then charge costs on the fill.
+            No fantasy fills. Decide on the close, trade the next open, charge costs — the boring
+            rules that keep research honest.
           </p>
         </div>
 
@@ -455,7 +503,7 @@ export function LandingPage() {
       >
         <div className="section-head">
           <p className="eyebrow">Engine invariants</p>
-          <h2>What Quantify refuses to do.</h2>
+          <h2>Stuff we will not fake.</h2>
         </div>
         <div className="invariant-grid">
           {[

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const ROTATION = [
@@ -49,6 +49,7 @@ function dayIndex(): number {
 
 export function StrategyOfTheDay() {
   const pick = useMemo(() => ROTATION[dayIndex()], []);
+  const [copied, setCopied] = useState(false);
 
   return (
     <section className="landing-section sotd-section in-view" aria-label="Strategy of the day">
@@ -56,21 +57,25 @@ export function StrategyOfTheDay() {
         <div>
           <p className="eyebrow">
             <span className="live-pulse" aria-hidden="true" />
-            Strategy of the day
+            Strategy of the day · steal this
           </p>
           <h2>{pick.title}</h2>
           <p className="section-lede">{pick.hook}</p>
           <pre className="sotd-text mono">{pick.text}</pre>
           <div className="sotd-actions">
-            <Link className="btn primary" to={`/app?strategy=${encodeURIComponent(pick.id)}`}>
+            <Link className="btn primary btn-kick" to={`/app?strategy=${encodeURIComponent(pick.id)}`}>
               Backtest this free
             </Link>
             <button
               type="button"
-              className="btn secondary"
-              onClick={() => navigator.clipboard?.writeText(pick.text)}
+              className={`btn secondary ${copied ? 'copied-pop' : ''}`}
+              onClick={() => {
+                void navigator.clipboard?.writeText(pick.text);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1200);
+              }}
             >
-              Copy strategy
+              {copied ? 'Copied — go run it' : 'Copy strategy'}
             </button>
           </div>
         </div>

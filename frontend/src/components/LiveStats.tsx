@@ -145,7 +145,7 @@ export function LiveStats() {
           <span className="live-pulse" aria-hidden="true" />
           Live activity
         </p>
-        <h2>Numbers that move when people test.</h2>
+        <h2>These numbers twitch when people hit run.</h2>
         <p className="section-lede">
           Baselines plus real visitors and backtests — counters refresh as the platform gets used.
         </p>

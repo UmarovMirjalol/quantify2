@@ -143,6 +143,8 @@ export function LandingDemo() {
   const [runToken, setRunToken] = useState(0);
   const [ripples, setRipples] = useState<{ id: number; chip: string; x: number; y: number }[]>([]);
   const [clickFlash, setClickFlash] = useState<string | null>(null);
+  const [impact, setImpact] = useState(false);
+  const [burstKey, setBurstKey] = useState(0);
 
   const demo = useMemo(
     () => DEMOS.find((d) => d.id === activeId) ?? DEMOS[0],
@@ -242,6 +244,15 @@ export function LandingDemo() {
       }
 
       setPhase('done');
+      if (!cancelled && !reduced) {
+        setImpact(true);
+        setBurstKey((k) => k + 1);
+        timers.push(
+          window.setTimeout(() => {
+            if (!cancelled) setImpact(false);
+          }, 520),
+        );
+      }
       await wait(3800);
 
       if (!cancelled && auto) {
@@ -263,11 +274,10 @@ export function LandingDemo() {
     <section className="demo-lab in-view" id="demo">
       <div className="section-head demo-head">
         <p className="eyebrow">Live demo</p>
-        <h2>Watch a strategy become a backtest.</h2>
+        <h2>Click a chip. Watch it cook.</h2>
         <p className="section-lede">
-          Pick an example. Quantify types the idea, builds a validated spec, simulates fills with
-          next-open execution, then surfaces equity, risk, and a sample blotter — no chat, no code
-          sandbox.
+          No chat sandbox. Quantify types the idea, builds a validated spec, simulates next-open
+          fills, then drops equity, risk, and a blotter — live.
         </p>
       </div>
 
@@ -301,21 +311,24 @@ export function LandingDemo() {
           Replay
         </button>
       </div>
-      <p className="demo-click-hint mono">Click a strategy — the console reacts live</p>
+      <p className="demo-click-hint mono">Click hard — the console hits back</p>
 
-      <div className={`demo-console phase-${phase}`}>
+      <div className={`demo-console phase-${phase} ${impact ? 'impact' : ''}`}>
+        {burstKey > 0 && impact ? (
+          <span key={burstKey} className="mint-burst mint-burst-center" aria-hidden="true" />
+        ) : null}
         <div className="demo-console-top">
           <span className="mono">quantify · interactive demo</span>
           <span className="demo-status">
             <i />
             {phase === 'sim'
-              ? 'simulating fills'
+              ? 'cooking fills'
               : phase === 'parse' || phase === 'spec'
-                ? 'building spec'
+                ? 'building teeth'
                 : phase === 'type'
-                  ? 'capturing intent'
+                  ? 'eating the idea'
                   : phase === 'done'
-                    ? 'run complete'
+                    ? 'locked in'
                     : 'ready'}
           </span>
         </div>
@@ -466,8 +479,8 @@ export function LandingDemo() {
           <p className="mono">
             Deterministic engine · no arbitrary code execution · look-ahead safe
           </p>
-          <Link className="btn primary" to="/app">
-            Run this in workspace
+          <Link className="btn primary btn-kick" to="/app">
+            Run this for real →
           </Link>
         </div>
       </div>
