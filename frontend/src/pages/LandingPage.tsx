@@ -228,8 +228,8 @@ export function LandingPage() {
             Turn trading ideas into backtests.
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Plain-English strategies become look-ahead-safe simulations with institutional metrics —
-            not a chat toy.
+            Free to test — no signup, no API key. Plain-English strategies become look-ahead-safe
+            simulations with institutional metrics.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
             <Link className="btn primary" to="/app">
@@ -240,7 +240,7 @@ export function LandingPage() {
             </a>
           </div>
           <p className="hero-note mono reveal" style={{ ['--d' as string]: '300ms' }}>
-            Signal at close → execute next open
+            Free public testing · Signal at close → execute next open
           </p>
         </div>
 

@@ -22,19 +22,30 @@ if [[ ! -f "$ENV_FILE" ]]; then
   cp .env.production.example "$ENV_FILE"
 fi
 
-# Generate access token if missing / placeholder
-if ! grep -q '^APP_ACCESS_TOKEN=.\+' "$ENV_FILE" 2>/dev/null \
-  || grep -q '^APP_ACCESS_TOKEN=$' "$ENV_FILE" \
-  || grep -q 'APP_ACCESS_TOKEN=change-me' "$ENV_FILE" \
-  || grep -q 'APP_ACCESS_TOKEN=REPLACE' "$ENV_FILE"; then
-  TOKEN="$(openssl rand -hex 24 2>/dev/null || python3 -c 'import secrets; print(secrets.token_hex(24))')"
+# Public free mode: keep APP_ACCESS_TOKEN empty (no login gate).
+PUBLIC_ACCESS="$(grep -E '^PUBLIC_ACCESS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]' || true)"
+if [[ "$PUBLIC_ACCESS" == "true" || "$PUBLIC_ACCESS" == "1" || "$PUBLIC_ACCESS" == "yes" ]]; then
   if grep -q '^APP_ACCESS_TOKEN=' "$ENV_FILE"; then
-    sed -i.bak "s/^APP_ACCESS_TOKEN=.*/APP_ACCESS_TOKEN=${TOKEN}/" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
+    sed -i.bak 's/^APP_ACCESS_TOKEN=.*/APP_ACCESS_TOKEN=/' "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
   else
-    echo "APP_ACCESS_TOKEN=${TOKEN}" >> "$ENV_FILE"
+    echo "APP_ACCESS_TOKEN=" >> "$ENV_FILE"
   fi
-  echo "→ Generated APP_ACCESS_TOKEN (this is the key users paste on first visit):"
-  echo "   ${TOKEN}"
+  echo "→ PUBLIC_ACCESS=true — open free mode (no access gate, built-in parser)."
+else
+  # Generate access token if missing / placeholder
+  if ! grep -q '^APP_ACCESS_TOKEN=.\+' "$ENV_FILE" 2>/dev/null \
+    || grep -q '^APP_ACCESS_TOKEN=$' "$ENV_FILE" \
+    || grep -q 'APP_ACCESS_TOKEN=change-me' "$ENV_FILE" \
+    || grep -q 'APP_ACCESS_TOKEN=REPLACE' "$ENV_FILE"; then
+    TOKEN="$(openssl rand -hex 24 2>/dev/null || python3 -c 'import secrets; print(secrets.token_hex(24))')"
+    if grep -q '^APP_ACCESS_TOKEN=' "$ENV_FILE"; then
+      sed -i.bak "s/^APP_ACCESS_TOKEN=.*/APP_ACCESS_TOKEN=${TOKEN}/" "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
+    else
+      echo "APP_ACCESS_TOKEN=${TOKEN}" >> "$ENV_FILE"
+    fi
+    echo "→ Generated APP_ACCESS_TOKEN (this is the key users paste on first visit):"
+    echo "   ${TOKEN}"
+  fi
 fi
 
 # shellcheck disable=SC1091
@@ -81,18 +92,20 @@ for i in $(seq 1 60); do
     echo "════════════════════════════════════════════════════════"
     echo "✓ Quantify is live:  http://127.0.0.1:${APP_PORT}"
     echo
-    echo "ACCESS TOKEN (paste this on the first-visit gate):"
-    grep '^APP_ACCESS_TOKEN=' "$ENV_FILE" | sed 's/^APP_ACCESS_TOKEN=/  /'
+    if [[ "$PUBLIC_ACCESS" == "true" || "$PUBLIC_ACCESS" == "1" || "$PUBLIC_ACCESS" == "yes" ]]; then
+      echo "PUBLIC FREE MODE — users open the URL and test with no login / no API key."
+      echo "Supported free strategies: SMA/EMA cross, RSI, MACD, Bollinger (+ playbook)."
+    else
+      echo "ACCESS TOKEN (paste this on the first-visit gate):"
+      grep '^APP_ACCESS_TOKEN=' "$ENV_FILE" | sed 's/^APP_ACCESS_TOKEN=/  /'
+      echo
+      echo "Where to find it later:"
+      echo "  cat ${ENV_FILE} | grep APP_ACCESS_TOKEN"
+    fi
     echo
-    echo "Where to find it later:"
-    echo "  cat ${ENV_FILE} | grep APP_ACCESS_TOKEN"
-    echo
-    echo "Optional LLM key (not required — built-in parser works):"
-    echo "  Set LLM_API_KEY in ${ENV_FILE} from https://platform.openai.com/api-keys"
-    echo "  then: ${DOCKER[*]} compose --env-file ${ENV_FILE} up -d --force-recreate backend"
+    echo "LLM key is optional (costs money). Free mode uses FORCE_BUILTIN_PARSER=true."
     echo
     echo "Smoke:"
-    echo "  export APP_ACCESS_TOKEN=\$(grep APP_ACCESS_TOKEN ${ENV_FILE} | cut -d= -f2-)"
     echo "  ./deploy/scripts/smoke.sh http://127.0.0.1:${APP_PORT}"
     echo "════════════════════════════════════════════════════════"
     curl -fsS "http://127.0.0.1:${APP_PORT}/api/health" || true

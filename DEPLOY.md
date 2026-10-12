@@ -35,42 +35,44 @@ export APP_ACCESS_TOKEN=$(grep APP_ACCESS_TOKEN .env.production | cut -d= -f2-)
 
 Public (no token) landing endpoints: `/api/health`, `/api/stats`, `/api/stats/ping`, `/api/pulse`, `/api/playbook`, `/api/releases`.
 
-## Where do the keys come from?
+## Free public launch (recommended for end users)
 
-### 1) Access token — `APP_ACCESS_TOKEN` (required in production)
-
-This is the password on the first-visit gate. **It is generated for you by deploy** — you do not buy it.
+Default in `.env.production.example`:
 
 ```bash
-# printed at the end of deploy.sh, and stored here:
+PUBLIC_ACCESS=true
+APP_ACCESS_TOKEN=
+FORCE_BUILTIN_PARSER=true
+LLM_API_KEY=
+```
+
+Users open the URL and run backtests **with no login and no API key**.  
+Free strategies: SMA/EMA cross, RSI, MACD, Bollinger (+ the Playbook gallery).
+
+Rate limit still protects the server (`RATE_LIMIT_PER_MINUTE`).
+
+## Where do the keys come from?
+
+### 1) Access token — `APP_ACCESS_TOKEN` (optional)
+
+Only if you set `PUBLIC_ACCESS=false`. Then deploy generates a password for the Access Gate.
+
+```bash
 grep APP_ACCESS_TOKEN .env.production
 ```
 
-Share that value with anyone who should open the app. Paste it into the Access Gate once per browser.
+### 2) LLM API key — `LLM_API_KEY` (optional, costs money)
 
-### 2) LLM API key — `LLM_API_KEY` (optional)
-
-Only needed if you want the LLM parser instead of the built-in one. App works without it.
+Not needed for free public testing. Only if you want broader NLP than the built-in parser.
 
 1. Open [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 2. Create a secret key
-3. Put it in `.env.production`:
-
-```bash
-LLM_API_KEY=sk-...
-LLM_MODEL=gpt-4o-mini
-LLM_BASE_URL=https://api.openai.com/v1
-```
-
-4. Recreate the backend:
+3. Put it in `.env.production` and set `FORCE_BUILTIN_PARSER=false`
+4. Recreate backend:
 
 ```bash
 docker compose --env-file .env.production up -d --force-recreate backend
 ```
-
-Any OpenAI-compatible provider works — point `LLM_BASE_URL` at it (OpenRouter, Azure, local vLLM, etc.).
-
-In local/dev, Settings can also paste a key when `ALLOW_RUNTIME_LLM_CONFIG=true` (off in production by default).
 
 ## Environment
 

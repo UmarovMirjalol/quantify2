@@ -240,10 +240,10 @@ def parse_builtin(
     # --- ATR filter as standalone is uncommon; skip unless paired ---
     if entry is None:
         raise StrategyParseError(
-            "Could not interpret this strategy. Describe entry/exit using SMA, EMA, RSI, "
-            "MACD, or Bollinger Bands (for example: "
-            "'Buy when the 20-day SMA crosses above the 50-day SMA and sell when it crosses below'). "
-            "Or configure LLM_API_KEY for broader natural-language coverage."
+            "Could not interpret this strategy. Free mode understands SMA/EMA crossovers, "
+            "RSI thresholds, MACD crosses, and Bollinger Bands — try a Playbook preset, or write "
+            "something like: 'Buy when the 20-day SMA crosses above the 50-day SMA and sell when "
+            "it crosses below. Risk 1% per trade.'"
         )
 
     assert exit_ is not None

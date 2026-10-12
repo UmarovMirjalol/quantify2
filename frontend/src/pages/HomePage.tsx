@@ -215,8 +215,8 @@ export function HomePage({ health }: Props) {
           <p className="eyebrow">Research workspace</p>
           <h1>New Backtest</h1>
           <p className="lede">
-            Describe your strategy in plain English. Quantify interprets it, loads history, and runs
-            a look-ahead-safe simulation.
+            Free testing — pick a Playbook preset or describe SMA / EMA / RSI / MACD / Bollinger
+            rules in plain English. No API key required.
           </p>
         </div>
         {health?.llm_enabled ? (
