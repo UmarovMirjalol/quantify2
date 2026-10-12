@@ -448,9 +448,12 @@ def test_rsi_builtin_parse():
     assert parsed.strategy.entry_conditions[0].left.indicator == IndicatorType.RSI
 
 
-def test_builtin_rejects_unknown():
-    with pytest.raises(StrategyParseError):
-        parse_demo("Buy on full moon and sell on solar eclipse using quantum indicators.")
+def test_builtin_free_fallback_unknown():
+    """Free mode never hard-fails — unknown text gets a runnable SMA fallback."""
+    parsed = parse_demo("Buy on full moon and sell on solar eclipse using quantum indicators.")
+    assert parsed.parser == "builtin"
+    assert parsed.strategy.entry_conditions
+    assert any("Free parser" in w or "fallback" in w.lower() or "SMA" in w for w in parsed.warnings)
 
 
 # ---------------------------------------------------------------------------

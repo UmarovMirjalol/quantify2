@@ -237,13 +237,73 @@ def parse_builtin(
             }
         ]
 
-    # --- ATR filter as standalone is uncommon; skip unless paired ---
+    # --- Price vs moving average ---
     if entry is None:
-        raise StrategyParseError(
-            "Could not interpret this strategy. Free mode understands SMA/EMA crossovers, "
-            "RSI thresholds, MACD crosses, and Bollinger Bands — try a Playbook preset, or write "
-            "something like: 'Buy when the 20-day SMA crosses above the 50-day SMA and sell when "
-            "it crosses below. Risk 1% per trade.'"
+        px = re.search(
+            r"(?:price|close).*?(?:above|over|cross(?:es|ing)?\s+above).*?"
+            r"(\d+)\s*[-\s]?day\s*(sma|ema|ma|moving\s+average)",
+            text,
+            re.IGNORECASE,
+        )
+        if not px:
+            px = re.search(
+                r"(?:above|over).*?(\d+)\s*[-\s]?day\s*(sma|ema|ma|moving\s+average)",
+                text,
+                re.IGNORECASE,
+            )
+        if px:
+            period = int(px.group(1))
+            ind = px.group(2).upper().replace("MOVING AVERAGE", "SMA").replace(" ", "")
+            if ind in ("MA", "MOVINGAVERAGE"):
+                ind = "SMA"
+            if ind not in ("SMA", "EMA"):
+                ind = "SMA"
+            entry = [
+                {
+                    "indicator": "PRICE",
+                    "condition": "greater_than",
+                    "compare_indicator": ind,
+                    "compare_period": period,
+                }
+            ]
+            exit_ = [
+                {
+                    "indicator": "PRICE",
+                    "condition": "less_than",
+                    "compare_indicator": ind,
+                    "compare_period": period,
+                }
+            ]
+
+    # --- Golden / death cross shorthand ---
+    if entry is None and re.search(r"golden\s+cross|death\s+cross", text, re.IGNORECASE):
+        entry, exit_ = _ma_crossover("SMA", 50, 200)
+        warnings.append("Interpreted golden/death cross as SMA(50)/SMA(200).")
+
+    # --- Loose RSI language (oversold / overbought) ---
+    if entry is None and re.search(r"oversold|overbought", text, re.IGNORECASE):
+        entry = [
+            {"indicator": "RSI", "period": 14, "condition": "less_than", "threshold": 30.0}
+        ]
+        exit_ = [
+            {"indicator": "RSI", "period": 14, "condition": "greater_than", "threshold": 70.0}
+        ]
+        warnings.append("Interpreted oversold/overbought language as RSI 30/70.")
+
+    # --- Free-mode safety net: never block a runnable idea ---
+    # Any non-empty strategy text falls back to a classic SMA cross so users can
+    # always get a backtest without an API key.
+    if entry is None:
+        nums = [int(n) for n in re.findall(r"\b(\d{1,3})\b", text)]
+        fast, slow = 20, 50
+        if len(nums) >= 2:
+            a, b = nums[0], nums[1]
+            if 1 <= a < b <= 400:
+                fast, slow = a, b
+        entry, exit_ = _ma_crossover("SMA", fast, slow)
+        warnings.append(
+            f"Free parser could not match a specific pattern — ran SMA({fast})×SMA({slow}) "
+            "crossover instead. Tip: mention RSI, MACD, Bollinger, or SMA/EMA for a closer match."
         )
 
     assert exit_ is not None
