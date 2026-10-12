@@ -38,13 +38,15 @@
 }
 
 .brand-mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(79, 214, 160, 0.12), transparent 55%),
+    #0c1014;
+  border: 1px solid rgba(79, 214, 160, 0.22);
   box-shadow: none;
   flex-shrink: 0;
 }

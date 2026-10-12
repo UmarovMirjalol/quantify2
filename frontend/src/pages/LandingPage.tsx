@@ -7,6 +7,7 @@ import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
 import { ReleasesFaq } from '../components/ReleasesFaq';
 import { StrategyGallery } from '../components/StrategyGallery';
+import { LogoMark } from '../components/LogoMark';
 import { StrategyOfTheDay } from '../components/StrategyOfTheDay';
 import { useCountUp } from '../hooks/useCountUp';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -29,18 +30,6 @@ const INTERP = [
 ] as const;
 
 type Phase = 'boot' | 'type' | 'parse' | 'spec' | 'sim' | 'results' | 'hold';
-
-const LogoMark = ({ size = 16 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path
-      d="M2 12 L5.5 5 L9 9.5 L14 3"
-      stroke={ACCENT}
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 function phaseIndex(phase: Phase): number {
   switch (phase) {
@@ -204,7 +193,7 @@ export function LandingPage() {
       <header className="landing-nav">
         <Link to="/" className="brand" style={{ padding: 0 }}>
           <span className="brand-mark">
-            <LogoMark />
+            <LogoMark size={18} />
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
@@ -267,7 +256,7 @@ export function LandingPage() {
             >
               <div className="product-top">
                 <span className="product-brand">
-                  <LogoMark size={12} />
+                  <LogoMark size={14} />
                   quantify · workspace
                 </span>
                 <span className="product-live">

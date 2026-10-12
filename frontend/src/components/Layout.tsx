@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { HealthStatus } from '../types';
+import { LogoMark } from './LogoMark';
 
 interface Props {
   health: HealthStatus | null;
@@ -13,18 +14,6 @@ function Icon({ d }: { d: string }) {
     </svg>
   );
 }
-
-const LogoMark = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path
-      d="M2 12 L5.5 5 L9 9.5 L14 3"
-      stroke="#4fd6a0"
-      strokeWidth="1.85"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 export function Layout({ children, health }: React.PropsWithChildren<Props>) {
   const [open, setOpen] = useState(false);
@@ -56,7 +45,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
       <aside id="app-sidebar" className={`sidebar ${open ? 'open' : ''}`}>
         <Link to="/" className="brand" onClick={() => setOpen(false)}>
           <span className="brand-mark">
-            <LogoMark />
+            <LogoMark size={18} />
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
@@ -109,7 +98,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
           </button>
           <Link to="/" className="brand" style={{ padding: 0 }}>
             <span className="brand-mark">
-              <LogoMark />
+              <LogoMark size={18} />
             </span>
             <span className="brand-name">Quantify</span>
           </Link>
