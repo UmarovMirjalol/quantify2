@@ -40,14 +40,14 @@
 .brand-mark {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
   background:
-    radial-gradient(120% 120% at 30% 20%, rgba(79, 214, 160, 0.12), transparent 55%),
+    radial-gradient(130% 130% at 35% 25%, rgba(79, 214, 160, 0.16), transparent 58%),
     #0c1014;
-  border: 1px solid rgba(79, 214, 160, 0.22);
-  box-shadow: none;
+  border: 1px solid rgba(79, 214, 160, 0.28);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
   flex-shrink: 0;
 }
 

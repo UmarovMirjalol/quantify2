@@ -1,8 +1,8 @@
-/** Quantify mark — ascending sparkline in a soft squircle. */
+/** Quantify mark — geometric lightning bolt (Supabase-adjacent energy, own shape). */
 
 type Props = {
   size?: number;
-  /** When true, draws the dark tile behind the stroke (favicon / standalone). */
+  /** Dark tile behind the bolt (favicon / standalone). */
   withTile?: boolean;
   className?: string;
 };
@@ -18,27 +18,12 @@ export function LogoMark({ size = 16, withTile = false, className }: Props) {
       className={className}
       aria-hidden="true"
     >
-      {withTile ? (
-        <rect width="32" height="32" rx="8" fill="#0c1014" />
-      ) : null}
-      {/* Soft baseline */}
+      {withTile ? <rect width="32" height="32" rx="8" fill="#0c1014" /> : null}
+      {/* Bold geometric bolt — one solid glyph, reads at 16px */}
       <path
-        d="M7 22.5 H25"
-        stroke="#4fd6a0"
-        strokeOpacity="0.22"
-        strokeWidth="1.25"
-        strokeLinecap="round"
+        d="M18.6 4.2 L9.4 17.35 H15.1 L12.85 27.8 L23.35 13.9 H17.55 L18.6 4.2 Z"
+        fill="#4fd6a0"
       />
-      {/* Expressive equity path */}
-      <path
-        d="M7 20.5 L12.2 14.2 L16.4 17.6 L25 8.5"
-        stroke="#4fd6a0"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Terminal spark */}
-      <circle cx="25" cy="8.5" r="2.15" fill="#4fd6a0" />
     </svg>
   );
 }
