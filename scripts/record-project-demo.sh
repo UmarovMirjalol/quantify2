@@ -64,18 +64,21 @@ work = Path("$WORKDIR")
 k = Kokoro("$KOKORO_MODEL", "$KOKORO_VOICES")
 voice = "$KOKORO_VOICE"
 
-# Short punches — attitude, not brochure copy
+# Short punches — attitude, not brochure copy (~65–70s VO for ~75s cut)
 lines = [
     "This is Quantify.",
     "Free backtester. No signup. No API key. Ideas in — numbers out.",
     "Watch. Click a chip… and the console wakes up.",
     "Typing. Parsing. Spec. Fills. Equity. Boom — blotter.",
-    "SMA. RSI. EMA. Same engine. Different teeth.",
-    "Instant Try — paste anything. Hit run. Done.",
-    "Fact of the day. Strategy of the day. Steal it.",
+    "SMA crossover. That’s twelve percent on the curve — look at the blotter light up.",
+    "RSI mean reversion. Same engine. Sharper teeth.",
+    "EMA with stops. Bollinger bounce. Every chip rebuilds the whole run.",
+    "Instant Try — paste anything. Hit run. You’re in a backtest in seconds.",
+    "Fact of the day hits different. Strategy of the day? Steal it.",
     "Live counters. Real people testing. Not a brochure.",
-    "Playbook presets — one click into the workspace.",
-    "Edit. Run. Look-ahead safe fills. Desk metrics.",
+    "Playbook presets — SMA, RSI, MACD, Bollinger — one click into the workspace.",
+    "Edit the text. Set the risk. Hit run. Look-ahead safe fills. Desk metrics.",
+    "That’s the workspace. No chat toy. Real simulation.",
     "Quantify. Free for everyone. Go break something.",
 ]
 
@@ -83,7 +86,7 @@ wavs = []
 for i, text in enumerate(lines, 1):
     out = work / f"v{i}.wav"
     # Slightly faster = more energy, still human
-    samples, sr = k.create(text, voice=voice, speed=0.92)
+    samples, sr = k.create(text, voice=voice, speed=0.90)
     sf.write(str(out), samples, sr)
     wavs.append(out)
     print("ok", out.name, f"{len(samples)/sr:.1f}s")
@@ -432,11 +435,10 @@ voice = work / "voice.wav"
 beat = work / "beat.wav"
 final = out_dir / out_name
 fade = max(0.4, vdur - 1.1)
-# voice louder, beat under; apad both to video length
+# voice louder, beat under; video stream copied as-is
 fc = (
-    f"[0:v]format=yuv420p,setsar=1[v];"
-    f"[1:a]volume=1.0,apad,atrim=0:{vdur:.3f}[vo];"
-    f"[2:a]volume=0.55,apad,atrim=0:{vdur:.3f}[bd];"
+    f"[1:a]volume=1.05,apad,atrim=0:{vdur:.3f}[vo];"
+    f"[2:a]volume=0.60,apad,atrim=0:{vdur:.3f}[bd];"
     f"[vo][bd]amix=inputs=2:duration=first:dropout_transition=0,"
     f"alimiter=limit=0.95,afade=t=out:st={fade:.3f}:d=1.0[a]"
 )
@@ -446,9 +448,10 @@ subprocess.check_call([
     "-i", str(voice),
     "-i", str(beat),
     "-filter_complex", fc,
-    "-map", "[v]", "-map", "[a]",
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "18",
+    "-map", "0:v", "-map", "[a]",
+    "-c:v", "copy",
     "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
+    "-shortest",
     "-movflags", "+faststart",
     str(final),
 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
