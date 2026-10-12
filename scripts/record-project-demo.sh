@@ -1,25 +1,44 @@
 #!/usr/bin/env bash
-# Quantify product demo — neural voice, no subtitles, slower pacing.
+# Quantify product demo — Piper neural voice, no subtitles, slower pacing.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="${1:-/opt/cursor/artifacts}"
 WORKDIR="$(mktemp -d)"
 URL="${DEMO_URL:-http://127.0.0.1:18081/}"
 DISPLAY_NUM="${DISPLAY:-:1}"
-VOICE="${DEMO_VOICE:-en-US-AndrewNeural}"
 OUT_NAME="${DEMO_OUT:-quantify_product_demo_human.mp4}"
+PIPER_BIN="${PIPER_BIN:-/tmp/piper/piper/piper}"
+PIPER_MODEL="${PIPER_MODEL:-/tmp/piper/en_US-lessac-medium.onnx}"
 
 cleanup() { rm -rf "$WORKDIR"; }
 trap cleanup EXIT
 mkdir -p "$OUT_DIR"
 
-# Longer lines, natural pauses via SSML-ish commas / periods
+if [[ ! -x "$PIPER_BIN" || ! -f "$PIPER_MODEL" ]]; then
+  echo "Piper voice missing — bootstrapping…"
+  mkdir -p /tmp/piper
+  if [[ ! -x /tmp/piper/piper/piper ]]; then
+    curl -sL 'https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz' -o /tmp/piper.tgz
+    tar -xzf /tmp/piper.tgz -C /tmp/piper
+  fi
+  if [[ ! -f /tmp/piper/en_US-lessac-medium.onnx ]]; then
+    curl -sL 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx' \
+      -o /tmp/piper/en_US-lessac-medium.onnx
+    curl -sL 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json' \
+      -o /tmp/piper/en_US-lessac-medium.onnx.json
+  fi
+  PIPER_BIN=/tmp/piper/piper/piper
+  PIPER_MODEL=/tmp/piper/en_US-lessac-medium.onnx
+fi
+
 python3 - <<PY
-import asyncio, edge_tts, subprocess, wave
+import subprocess, wave
 from pathlib import Path
 
 work = Path("$WORKDIR")
-voice = "$VOICE"
+piper = "$PIPER_BIN"
+model = "$PIPER_MODEL"
+
 lines = [
     "Hey — this is Quantify. A free trading strategy backtester. No signup, and no API key.",
     "Here on the landing page, you can watch a live demo turn plain English into a real simulation.",
@@ -29,58 +48,44 @@ lines = [
     "That’s Quantify. Look-ahead safe fills. Free for everyone. Go try it.",
 ]
 
-async def synth():
-    paths = []
-    for i, text in enumerate(lines, 1):
-        # Slightly slower rate for a calmer demo
-        communicate = edge_tts.Communicate(text, voice, rate="-8%")
-        out = work / f"v{i}.mp3"
-        await communicate.save(str(out))
-        paths.append(out)
-        print("voice", out.name, "ok")
-    return paths
+wavs = []
+for i, text in enumerate(lines, 1):
+    out = work / f"v{i}.wav"
+    subprocess.run(
+        [piper, "--model", model, "--length_scale", "1.15", "--output_file", str(out)],
+        input=text.encode(),
+        check=True,
+    )
+    wavs.append(out)
+    print("ok", out.name)
 
-paths = asyncio.run(synth())
-
-# Convert + concat with gaps via ffmpeg
-parts = []
-for i, p in enumerate(paths, 1):
-    wav = work / f"c{i}.wav"
-    subprocess.check_call([
-        "ffmpeg", "-y", "-i", str(p), "-ar", "44100", "-ac", "1", str(wav)
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    parts.append(wav)
-
-# Build concat list with 0.7s silence between lines
+# silence gap
 silence = work / "silence.wav"
 subprocess.check_call([
-    "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "0.75", str(silence)
+    "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=22050:cl=mono", "-t", "0.85", str(silence)
 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 lst = work / "list.txt"
 with lst.open("w") as f:
-    for i, w in enumerate(parts):
-        f.write(f"file '{w}'\n")
-        if i < len(parts) - 1:
-            f.write(f"file '{silence}'\n")
+    for i, w in enumerate(wavs):
+        f.write(f"file '{w.resolve()}'\n")
+        if i < len(wavs) - 1:
+            f.write(f"file '{silence.resolve()}'\n")
 
 voice = work / "voice.wav"
 subprocess.check_call([
     "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(voice)
 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# duration
-import wave as W
-with W.open(str(voice), "rb") as w:
+with wave.open(str(voice), "rb") as w:
     dur = w.getnframes() / float(w.getframerate())
 print(f"VOICE_DURATION {dur:.1f}")
 (work / "duration.txt").write_text(str(dur))
 PY
 
 DUR=$(cat "$WORKDIR/duration.txt")
-# Pad video a bit longer than voice
-VID_SECS=$(python3 -c "print(int(float('$DUR') + 4))")
-echo "Recording ${VID_SECS}s of UI…"
+VID_SECS=$(python3 -c "print(max(36, int(float('$DUR') + 6)))")
+echo "Recording ${VID_SECS}s of UI (voice ${DUR}s)…"
 
 pkill -f 'user-data-dir=/tmp/chrome-project-demo' 2>/dev/null || true
 google-chrome --no-sandbox --disable-gpu --window-size=1440,900 \
@@ -100,51 +105,50 @@ RAW="$WORKDIR/raw.mp4"
 ffmpeg -y -video_size 1440x900 -framerate 30 -f x11grab -i "${DISPLAY_NUM}+40,40" \
   -t "$VID_SECS" -c:v libx264 -pix_fmt yuv420p -preset ultrafast "$RAW" >/tmp/demo-rec.log 2>&1 &
 REC_PID=$!
-sleep 1.5
+sleep 1.8
 
 run() { DISPLAY="$DISPLAY_NUM" xdotool "$@"; }
 
-# Slower UI choreography timed to narration
-sleep 2.5
-run key --delay 80 Page_Down
+# Slow choreography
 sleep 3.5
-run key --delay 80 Page_Down
-sleep 3.0
+run key --delay 100 Page_Down
+sleep 4.0
+run key --delay 100 Page_Down
+sleep 3.5
 run mousemove --sync 420 530 click 1
-sleep 3.8
+sleep 4.2
 run mousemove --sync 580 530 click 1
-sleep 3.8
+sleep 4.2
 run mousemove --sync 740 530 click 1
+sleep 4.0
+run key --delay 110 Page_Down
 sleep 3.5
-run key --delay 90 Page_Down
-sleep 3.0
-run key --delay 90 Page_Down
-sleep 2.8
+run key --delay 110 Page_Down
+sleep 3.2
 run mousemove --sync 400 660 click 1
-sleep 2.5
-run key --delay 60 ctrl+l
-sleep 0.4
-run type --delay 18 "${URL}playbook"
+sleep 3.0
+run key --delay 70 ctrl+l
+sleep 0.5
+run type --delay 22 "${URL}playbook"
 run key Return
-sleep 4.5
-run key --delay 60 ctrl+l
-sleep 0.4
-run type --delay 18 "${URL}app"
+sleep 5.0
+run key --delay 70 ctrl+l
+sleep 0.5
+run type --delay 22 "${URL}app"
 run key Return
-sleep 4.5
-run key --delay 60 ctrl+l
-sleep 0.4
-run type --delay 18 "$URL"
+sleep 5.0
+run key --delay 70 ctrl+l
+sleep 0.5
+run type --delay 22 "$URL"
 run key Return
-sleep 3.5
+sleep 4.0
 
 wait "$REC_PID" || true
 
 FINAL="$OUT_DIR/$OUT_NAME"
-# No subtitles — neural voice only
 ffmpeg -y -i "$RAW" -i "$WORKDIR/voice.wav" \
   -c:v libx264 -pix_fmt yuv420p -preset fast -crf 19 \
-  -c:a aac -b:a 160k -ar 44100 -shortest \
+  -c:a aac -b:a 192k -ar 44100 -shortest \
   "$FINAL" >/tmp/demo-mux.log 2>&1
 
 pkill -f 'user-data-dir=/tmp/chrome-project-demo' 2>/dev/null || true
