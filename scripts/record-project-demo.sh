@@ -1,43 +1,56 @@
 #!/usr/bin/env bash
-# Quantify product demo — Piper neural voice, no subtitles, slower pacing.
+# Quantify product demo — Kokoro human voice, Chrome kiosk (no browser UI), no subtitles.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="${1:-/opt/cursor/artifacts}"
 WORKDIR="$(mktemp -d)"
 URL="${DEMO_URL:-http://127.0.0.1:18081/}"
+# Normalize trailing slash for route joins
+URL_BASE="${URL%/}"
 DISPLAY_NUM="${DISPLAY:-:1}"
 OUT_NAME="${DEMO_OUT:-quantify_product_demo_human.mp4}"
-PIPER_BIN="${PIPER_BIN:-/tmp/piper/piper/piper}"
-PIPER_MODEL="${PIPER_MODEL:-/tmp/piper/en_US-lessac-medium.onnx}"
+KOKORO_MODEL="${KOKORO_MODEL:-/tmp/kokoro/kokoro-v1.0.onnx}"
+KOKORO_VOICES="${KOKORO_VOICES:-/tmp/kokoro/voices-v1.0.bin}"
+# am_michael = warm American male; closest to a real person among bundled voices
+KOKORO_VOICE="${KOKORO_VOICE:-am_michael}"
+CDP_PORT="${CDP_PORT:-9223}"
+# Capture full Xvfb framebuffer (kiosk fills it — zero Chrome chrome)
+W="${DEMO_W:-1920}"
+H="${DEMO_H:-1200}"
 
-cleanup() { rm -rf "$WORKDIR"; }
+cleanup() {
+  pkill -f "user-data-dir=/tmp/chrome-project-demo" 2>/dev/null || true
+  rm -rf "$WORKDIR"
+}
 trap cleanup EXIT
 mkdir -p "$OUT_DIR"
 
-if [[ ! -x "$PIPER_BIN" || ! -f "$PIPER_MODEL" ]]; then
-  echo "Piper voice missing — bootstrapping…"
-  mkdir -p /tmp/piper
-  if [[ ! -x /tmp/piper/piper/piper ]]; then
-    curl -sL 'https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz' -o /tmp/piper.tgz
-    tar -xzf /tmp/piper.tgz -C /tmp/piper
-  fi
-  if [[ ! -f /tmp/piper/en_US-lessac-medium.onnx ]]; then
-    curl -sL 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx' \
-      -o /tmp/piper/en_US-lessac-medium.onnx
-    curl -sL 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json' \
-      -o /tmp/piper/en_US-lessac-medium.onnx.json
-  fi
-  PIPER_BIN=/tmp/piper/piper/piper
-  PIPER_MODEL=/tmp/piper/en_US-lessac-medium.onnx
+if [[ ! -f "$KOKORO_MODEL" || ! -f "$KOKORO_VOICES" ]]; then
+  echo "Kokoro models missing — bootstrapping…"
+  mkdir -p /tmp/kokoro
+  [[ -f /tmp/kokoro/kokoro-v1.0.onnx ]] || curl -sL \
+    'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx' \
+    -o /tmp/kokoro/kokoro-v1.0.onnx
+  [[ -f /tmp/kokoro/voices-v1.0.bin ]] || curl -sL \
+    'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin' \
+    -o /tmp/kokoro/voices-v1.0.bin
+  KOKORO_MODEL=/tmp/kokoro/kokoro-v1.0.onnx
+  KOKORO_VOICES=/tmp/kokoro/voices-v1.0.bin
 fi
 
+python3 -m pip install --user -q kokoro-onnx soundfile numpy websocket-client >/dev/null
+
 python3 - <<PY
-import subprocess, wave
 from pathlib import Path
+import subprocess
+import wave
+import numpy as np
+import soundfile as sf
+from kokoro_onnx import Kokoro
 
 work = Path("$WORKDIR")
-piper = "$PIPER_BIN"
-model = "$PIPER_MODEL"
+kokoro = Kokoro("$KOKORO_MODEL", "$KOKORO_VOICES")
+voice_name = "$KOKORO_VOICE"
 
 lines = [
     "Hey — this is Quantify. A free trading strategy backtester. No signup, and no API key.",
@@ -51,19 +64,17 @@ lines = [
 wavs = []
 for i, text in enumerate(lines, 1):
     out = work / f"v{i}.wav"
-    subprocess.run(
-        [piper, "--model", model, "--length_scale", "1.15", "--output_file", str(out)],
-        input=text.encode(),
-        check=True,
-    )
+    # Slightly slow for natural pacing
+    samples, sample_rate = kokoro.create(text, voice=voice_name, speed=0.86)
+    sf.write(str(out), samples, sample_rate)
     wavs.append(out)
-    print("ok", out.name)
+    print("ok", out.name, f"{len(samples)/sample_rate:.1f}s")
 
-# silence gap
+with sf.SoundFile(str(wavs[0])) as f:
+    sr = f.samplerate
+
 silence = work / "silence.wav"
-subprocess.check_call([
-    "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=22050:cl=mono", "-t", "0.85", str(silence)
-], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+sf.write(str(silence), np.zeros(int(sr * 1.05), dtype=np.float32), sr)
 
 lst = work / "list.txt"
 with lst.open("w") as f:
@@ -84,64 +95,122 @@ print(f"VOICE_DURATION {dur:.1f}")
 PY
 
 DUR=$(cat "$WORKDIR/duration.txt")
-VID_SECS=$(python3 -c "print(max(36, int(float('$DUR') + 6)))")
-echo "Recording ${VID_SECS}s of UI (voice ${DUR}s)…"
+VID_SECS=$(python3 -c "print(max(42, int(float('$DUR') + 8)))")
+echo "Recording ${VID_SECS}s kiosk UI (voice ${DUR}s, ${KOKORO_VOICE})…"
 
 pkill -f 'user-data-dir=/tmp/chrome-project-demo' 2>/dev/null || true
-google-chrome --no-sandbox --disable-gpu --window-size=1440,900 \
-  --window-position=40,40 \
-  --user-data-dir=/tmp/chrome-project-demo \
-  "$URL" >/tmp/chrome-project-demo.log 2>&1 &
-sleep 5
+sleep 0.6
+rm -rf /tmp/chrome-project-demo
+mkdir -p /tmp/chrome-project-demo/Default
 
-WID=$(DISPLAY="$DISPLAY_NUM" xdotool search --name 'Quantify' | head -1 || true)
-if [[ -n "${WID:-}" ]]; then
-  DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "$WID"
-  DISPLAY="$DISPLAY_NUM" xdotool windowmove "$WID" 40 40
-  DISPLAY="$DISPLAY_NUM" xdotool windowsize "$WID" 1440 900
-fi
+# Prefs: no welcome, no default-browser nag, no notification prompts
+cat > /tmp/chrome-project-demo/Default/Preferences <<'JSON'
+{
+  "browser": {
+    "check_default_browser": false,
+    "has_seen_welcome_page": true
+  },
+  "distribution": {
+    "skip_first_run_ui": true,
+    "show_welcome_page": false
+  },
+  "profile": {
+    "default_content_setting_values": { "notifications": 2 }
+  }
+}
+JSON
+
+# True kiosk = no tabs, omnibox, title bar, or update bubbles in frame
+google-chrome \
+  --no-sandbox \
+  --disable-gpu \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-features=TranslateUI,ChromeWhatsNewUI,InfiniteSessionRestore \
+  --check-for-update-interval=31536000 \
+  --disable-component-update \
+  --no-first-run \
+  --no-default-browser-check \
+  --remote-debugging-port="$CDP_PORT" \
+  --user-data-dir=/tmp/chrome-project-demo \
+  --kiosk "${URL_BASE}/" \
+  >/tmp/chrome-project-demo.log 2>&1 &
+
+# Wait for CDP
+for i in $(seq 1 40); do
+  if curl -sf "http://127.0.0.1:${CDP_PORT}/json" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.25
+done
+sleep 2.5
+
+cdp_navigate() {
+  local target="$1"
+  python3 - <<PY
+import json, time, urllib.request
+import websocket
+base = "http://127.0.0.1:${CDP_PORT}"
+tabs = json.load(urllib.request.urlopen(base + "/json"))
+page = next(t for t in tabs if t.get("type") == "page")
+ws = websocket.create_connection(page["webSocketDebuggerUrl"], suppress_origin=True)
+mid = 1
+def send(method, params=None):
+    global mid
+    payload = {"id": mid, "method": method}
+    if params:
+        payload["params"] = params
+    ws.send(json.dumps(payload))
+    this_id = mid
+    mid += 1
+    while True:
+        resp = json.loads(ws.recv())
+        if resp.get("id") == this_id:
+            return resp
+send("Page.enable")
+send("Page.navigate", {"url": "$target"})
+time.sleep(0.4)
+ws.close()
+PY
+}
 
 RAW="$WORKDIR/raw.mp4"
-ffmpeg -y -video_size 1440x900 -framerate 30 -f x11grab -i "${DISPLAY_NUM}+40,40" \
-  -t "$VID_SECS" -c:v libx264 -pix_fmt yuv420p -preset ultrafast "$RAW" >/tmp/demo-rec.log 2>&1 &
+ffmpeg -y -video_size "${W}x${H}" -framerate 30 -f x11grab -i "${DISPLAY_NUM}+0,0" \
+  -t "$VID_SECS" -c:v libx264 -pix_fmt yuv420p -preset ultrafast "$RAW" \
+  >/tmp/demo-rec.log 2>&1 &
 REC_PID=$!
-sleep 1.8
+sleep 2.0
 
 run() { DISPLAY="$DISPLAY_NUM" xdotool "$@"; }
 
-# Slow choreography
-sleep 3.5
-run key --delay 100 Page_Down
-sleep 4.0
-run key --delay 100 Page_Down
-sleep 3.5
-run mousemove --sync 420 530 click 1
-sleep 4.2
-run mousemove --sync 580 530 click 1
-sleep 4.2
-run mousemove --sync 740 530 click 1
-sleep 4.0
-run key --delay 110 Page_Down
-sleep 3.5
-run key --delay 110 Page_Down
-sleep 3.2
-run mousemove --sync 400 660 click 1
-sleep 3.0
-run key --delay 70 ctrl+l
-sleep 0.5
-run type --delay 22 "${URL}playbook"
-run key Return
+# Slow choreography on landing
+sleep 4.5
+run key --delay 140 Page_Down
 sleep 5.0
-run key --delay 70 ctrl+l
-sleep 0.5
-run type --delay 22 "${URL}app"
-run key Return
+run key --delay 140 Page_Down
+sleep 4.5
+# Strategy chips (approx mid landing on 1920x1200)
+run mousemove --sync 560 620 click 1
 sleep 5.0
-run key --delay 70 ctrl+l
-sleep 0.5
-run type --delay 22 "$URL"
-run key Return
+run mousemove --sync 780 620 click 1
+sleep 5.0
+run mousemove --sync 1000 620 click 1
+sleep 5.0
+run key --delay 140 Page_Down
+sleep 4.5
+run key --delay 140 Page_Down
 sleep 4.0
+# Instant Try CTA area
+run mousemove --sync 520 780 click 1
+sleep 4.0
+
+# In-app routes via CDP — no omnibox, no Chrome chrome
+cdp_navigate "${URL_BASE}/playbook"
+sleep 6.0
+cdp_navigate "${URL_BASE}/app"
+sleep 6.0
+cdp_navigate "${URL_BASE}/"
+sleep 4.5
 
 wait "$REC_PID" || true
 
@@ -151,7 +220,6 @@ ffmpeg -y -i "$RAW" -i "$WORKDIR/voice.wav" \
   -c:a aac -b:a 192k -ar 44100 -shortest \
   "$FINAL" >/tmp/demo-mux.log 2>&1
 
-pkill -f 'user-data-dir=/tmp/chrome-project-demo' 2>/dev/null || true
 ls -lah "$FINAL"
-ffprobe -hide_banner "$FINAL" 2>&1 | head -14
+ffprobe -hide_banner "$FINAL" 2>&1 | head -16
 echo "DEMO_READY $FINAL"
