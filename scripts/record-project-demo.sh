@@ -180,13 +180,16 @@ for i in $(seq 1 40); do
 done
 sleep 2.0
 
-# Kill any leftover Chrome dialogs (update / restore / etc.)
-DISPLAY="$DISPLAY_NUM" xdotool search --name "Can't update" 2>/dev/null | while read -r wid; do
-  DISPLAY="$DISPLAY_NUM" xdotool windowkill "$wid" 2>/dev/null || true
-done
-DISPLAY="$DISPLAY_NUM" xdotool search --name "update Chrome" 2>/dev/null | while read -r wid; do
-  DISPLAY="$DISPLAY_NUM" xdotool windowkill "$wid" 2>/dev/null || true
-done
+# Close update dialogs only (never match the main kiosk window title)
+while read -r wid; do
+  [[ -n "$wid" ]] || continue
+  name=$(DISPLAY="$DISPLAY_NUM" xdotool getwindowname "$wid" 2>/dev/null || true)
+  case "$name" in
+    *update*|*Update*|*Reinstall*)
+      DISPLAY="$DISPLAY_NUM" xdotool windowkill "$wid" 2>/dev/null || true
+      ;;
+  esac
+done < <(DISPLAY="$DISPLAY_NUM" xdotool search --class 'Google-chrome' 2>/dev/null || true)
 sleep 0.5
 
 cdp_navigate() {
