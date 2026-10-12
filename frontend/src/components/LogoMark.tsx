@@ -1,8 +1,7 @@
-/** Quantify mark — geometric lightning bolt (Supabase-adjacent energy, own shape). */
+/** Quantify mark — big simple bolt, close to the original zigzag energy. */
 
 type Props = {
   size?: number;
-  /** Dark tile behind the bolt (favicon / standalone). */
   withTile?: boolean;
   className?: string;
 };
@@ -19,9 +18,9 @@ export function LogoMark({ size = 16, withTile = false, className }: Props) {
       aria-hidden="true"
     >
       {withTile ? <rect width="32" height="32" rx="8" fill="#0c1014" /> : null}
-      {/* Bold geometric bolt — one solid glyph, reads at 16px */}
+      {/* Larger, simpler bolt — original zigzag vibe, just bolder */}
       <path
-        d="M18.6 4.2 L9.4 17.35 H15.1 L12.85 27.8 L23.35 13.9 H17.55 L18.6 4.2 Z"
+        d="M19 5 L10 16.5 H15.4 L13 27 L23.2 14.2 H17.6 L19 5 Z"
         fill="#4fd6a0"
       />
     </svg>
