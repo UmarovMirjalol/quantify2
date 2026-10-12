@@ -1,0 +1,11 @@
+# Quantify — free public backtesting
+User-agent: *
+Allow: /
+Allow: /playbook
+Allow: /guide
+Allow: /app
+Disallow: /settings
+Disallow: /results/
+Disallow: /api/
+
+Sitemap: /sitemap.xml

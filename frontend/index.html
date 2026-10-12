@@ -2,24 +2,112 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0c0f'/><path d='M7 22 L13 9 L18 17 L25 7' stroke='%234fd6a0' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Quantify — turn plain-English trading ideas into look-ahead-safe backtests with institutional metrics." />
+    <title>Quantify — Free Trading Strategy Backtester (No API Key)</title>
+    <meta
+      name="description"
+      content="Free online backtesting for trading strategies. Describe SMA, EMA, RSI, MACD or Bollinger ideas in plain English and get look-ahead-safe results — no signup, no API key."
+    />
+    <meta
+      name="keywords"
+      content="free backtesting, trading strategy backtester, RSI strategy, SMA crossover, MACD backtest, Bollinger bands, quant research, look-ahead bias free"
+    />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="author" content="Quantify" />
     <meta name="theme-color" content="#0a0c0f" />
     <meta name="application-name" content="Quantify" />
-    <meta property="og:title" content="Quantify — Quant research" />
-    <meta property="og:description" content="Natural language strategies → validated specs → look-ahead-safe simulation → institutional results." />
+
+    <meta property="og:title" content="Quantify — Free Trading Strategy Backtester" />
+    <meta
+      property="og:description"
+      content="Turn plain-English trading ideas into institutional backtests. Free, no API key, look-ahead-safe."
+    />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Quantify" />
+    <meta property="og:image" content="og.svg" />
+    <meta property="og:locale" content="en_US" />
+
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Quantify — Quant research" />
-    <meta name="twitter:description" content="Turn trading ideas into backtests. Signal at close → execute next open." />
-    <title>Quantify · Quant research</title>
+    <meta name="twitter:title" content="Quantify — Free Trading Strategy Backtester" />
+    <meta
+      name="twitter:description"
+      content="Backtest SMA, RSI, MACD and Bollinger strategies free. No signup. No API key."
+    />
+    <meta name="twitter:image" content="og.svg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Quantify",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Free trading strategy backtester. Plain-English strategies become look-ahead-safe simulations with institutional metrics.",
+        "featureList": [
+          "Free public backtesting",
+          "No API key required",
+          "SMA EMA RSI MACD Bollinger strategies",
+          "Look-ahead-safe execution model",
+          "Strategy playbook gallery"
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Quantify free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Public testing needs no signup and no API key. The built-in parser runs SMA, EMA, RSI, MACD, and Bollinger strategies for free."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need an AI or OpenAI key?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Quantify uses a free built-in strategy parser. An LLM key is optional and only for broader natural-language coverage."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do you avoid look-ahead bias?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Signals form on the bar close and orders execute on the next open. Commission and slippage are applied on every fill."
+            }
+          }
+        ]
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
+    <noscript>
+      <main style="max-width: 40rem; margin: 2rem auto; font-family: sans-serif; color: #eef1f3; background: #0a0c0f; padding: 2rem">
+        <h1>Quantify — Free Trading Strategy Backtester</h1>
+        <p>
+          Turn plain-English trading ideas into look-ahead-safe backtests. Free, no API key. Enable
+          JavaScript to open the workspace, or browse the playbook after enabling JS.
+        </p>
+      </main>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

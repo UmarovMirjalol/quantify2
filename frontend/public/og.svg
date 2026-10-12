@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0c0f"/>
+      <stop offset="100%" stop-color="#12181f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="980" cy="140" r="220" fill="#4fd6a0" fill-opacity="0.08"/>
+  <circle cx="200" cy="520" r="180" fill="#4fd6a0" fill-opacity="0.05"/>
+  <path d="M120 420 L260 300 L380 360 L560 180 L720 240 L900 120 L1040 160" fill="none" stroke="#4fd6a0" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="120" y="180" fill="#eef1f3" font-family="IBM Plex Sans, Arial, sans-serif" font-size="72" font-weight="700">Quantify</text>
+  <text x="120" y="250" fill="#98a2ac" font-family="IBM Plex Sans, Arial, sans-serif" font-size="34">Free trading strategy backtester</text>
+  <text x="120" y="320" fill="#4fd6a0" font-family="IBM Plex Mono, monospace" font-size="22">Plain English ’ look-ahead-safe simulation</text>
+</svg>

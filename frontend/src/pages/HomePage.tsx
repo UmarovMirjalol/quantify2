@@ -84,6 +84,18 @@ export function HomePage({ health }: Props) {
       setSearchParams(next, { replace: true });
     };
 
+    // Instant Try from landing — any free-form text.
+    if (searchParams.get('instant') === '1') {
+      const draft = sessionStorage.getItem('quantify_instant_strategy');
+      if (draft && draft.trim().length >= 5) {
+        setStrategyText(draft.trim());
+        sessionStorage.removeItem('quantify_instant_strategy');
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete('instant');
+      setSearchParams(next, { replace: true });
+    }
+
     applyStrategy(EXAMPLE_STRATEGIES);
 
     let cancelled = false;
@@ -102,7 +114,7 @@ export function HomePage({ health }: Props) {
     return () => {
       cancelled = true;
     };
-    // Deep-link ?strategy= applied once on mount.
+    // Deep-link ?strategy= / ?instant= applied once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

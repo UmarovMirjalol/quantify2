@@ -35,6 +35,19 @@ export APP_ACCESS_TOKEN=$(grep APP_ACCESS_TOKEN .env.production | cut -d= -f2-)
 
 Public (no token) landing endpoints: `/api/health`, `/api/stats`, `/api/stats/ping`, `/api/pulse`, `/api/playbook`, `/api/releases`.
 
+## Google Search / Search Console
+
+After you put Quantify on a public domain:
+
+1. Confirm these return 200 (not the SPA HTML shell):
+   - `https://YOUR_DOMAIN/robots.txt`
+   - `https://YOUR_DOMAIN/sitemap.xml`
+2. In [Google Search Console](https://search.google.com/search-console) → add property → submit sitemap `https://YOUR_DOMAIN/sitemap.xml`
+3. Optional: edit `frontend/public/sitemap.xml` and replace paths with absolute `https://YOUR_DOMAIN/...` URLs before rebuild
+4. Landing includes FAQ + WebApplication JSON-LD, Strategy of the Day, Instant Try, and `/guide` for crawlable copy
+
+Public free mode (`PUBLIC_ACCESS=true`) is what you want indexed — no login wall.
+
 ## Free public launch (recommended for end users)
 
 Default in `.env.production.example`:

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ActivityPulse } from '../components/ActivityPulse';
+import { InstantTry } from '../components/InstantTry';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
 import { ReleasesFaq } from '../components/ReleasesFaq';
 import { StrategyGallery } from '../components/StrategyGallery';
+import { StrategyOfTheDay } from '../components/StrategyOfTheDay';
 import { useCountUp } from '../hooks/useCountUp';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 const ACCENT = '#4fd6a0';
@@ -78,6 +81,10 @@ function useInView<T extends HTMLElement>(reduced: boolean) {
 }
 
 export function LandingPage() {
+  usePageMeta(
+    'Quantify — Free Trading Strategy Backtester (No API Key)',
+    'Free online backtesting for SMA, EMA, RSI, MACD and Bollinger strategies. No signup, no API key, look-ahead-safe fills.',
+  );
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>(reduced ? 'hold' : 'boot');
   const [typed, setTyped] = useState(reduced ? STRATEGY : '');
@@ -210,9 +217,12 @@ export function LandingPage() {
           <a className="btn ghost" href="#playbook">
             Playbook
           </a>
-          <a className="btn ghost" href="#pulse">
-            Pulse
+          <a className="btn ghost" href="#try">
+            Try free
           </a>
+          <Link className="btn ghost" to="/guide">
+            Guide
+          </Link>
           <Link className="btn primary" to="/app">
             Open workspace
           </Link>
@@ -390,6 +400,10 @@ export function LandingPage() {
 
       <LandingDemo />
 
+      <StrategyOfTheDay />
+
+      <InstantTry />
+
       <LiveStats />
 
       <StrategyGallery />
@@ -535,9 +549,27 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="landing-section seo-copy in-view">
+        <div className="section-head">
+          <p className="eyebrow">Free backtesting software</p>
+          <h2>Built for Google-found researchers.</h2>
+          <p className="section-lede">
+            Searching for a free trading strategy backtester? Quantify lets you test SMA crossovers,
+            RSI mean reversion, MACD momentum, and Bollinger band ideas without paying for an API
+            key. Index the playbook, read the guide, then run a simulation in the workspace.
+          </p>
+        </div>
+        <div className="seo-links">
+          <Link to="/guide">How to backtest free →</Link>
+          <Link to="/playbook">Strategy playbook →</Link>
+          <a href="/robots.txt">robots.txt</a>
+          <a href="/sitemap.xml">sitemap.xml</a>
+        </div>
+      </section>
+
       <footer className="landing-footer">
-        <span>Quantify · Quantitative research terminal</span>
-        <span className="mono">Signal at close → execute next open</span>
+        <span>Quantify · Free quant research terminal</span>
+        <span className="mono">No API key · Signal at close → execute next open</span>
       </footer>
     </div>
   );

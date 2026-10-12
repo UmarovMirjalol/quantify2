@@ -2627,6 +2627,121 @@ h2 {
   margin-top: 1.75rem;
 }
 
+/* —— Strategy of the day —— */
+.sotd-inner {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 1.75rem;
+  padding: 1.5rem 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.sotd-text {
+  margin: 1rem 0 1.15rem;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.sotd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.sotd-aside {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(79, 214, 160, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(79, 214, 160, 0.07), transparent 55%);
+}
+
+.sotd-aside p {
+  margin: 0 0 0.85rem;
+  color: var(--accent);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sotd-aside ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sotd-aside li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.sotd-aside li:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 860px) {
+  .sotd-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* —— Instant try —— */
+.instant-form {
+  margin-top: 1.5rem;
+  max-width: 46rem;
+}
+
+.instant-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.seo-copy .seo-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin-top: 1.25rem;
+}
+
+.seo-copy .seo-links a {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.seo-copy .seo-links a:hover {
+  color: var(--accent);
+}
+
+.guide-article {
+  padding: 1.4rem 1.5rem 1.6rem;
+  max-width: 48rem;
+}
+
+.guide-article h2 {
+  margin: 1.4rem 0 0.45rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.guide-article p,
+.guide-article li {
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.guide-article ul {
+  padding-left: 1.2rem;
+}
+
 /* —— Strategy gallery —— */
 .gallery-grid {
   display: grid;

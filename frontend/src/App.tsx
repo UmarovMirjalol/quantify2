@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AccessGate } from './components/AccessGate';
 import { Layout } from './components/Layout';
+import { GuidePage } from './pages/GuidePage';
 import { HistoryPage } from './pages/HistoryPage';
 import { HomePage } from './pages/HomePage';
 import { LandingPage } from './pages/LandingPage';
@@ -163,6 +164,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/app" element={<HomePage health={health} />} />
         <Route path="/playbook" element={<PlaybookPage />} />
+        <Route path="/guide" element={<GuidePage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/results/:id" element={<ResultsLoader />} />
         <Route path="/settings" element={<SettingsPage />} />

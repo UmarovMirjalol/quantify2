@@ -73,6 +73,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             <Icon d="M4 5h16v14H4zM8 9h8M8 13h5" />
             Playbook
           </NavLink>
+          <NavLink to="/guide">
+            <Icon d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4" />
+            Guide
+          </NavLink>
           <NavLink to="/history">
             <Icon d="M4 6h16M4 12h16M4 18h10" />
             Results

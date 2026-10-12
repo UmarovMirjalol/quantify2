@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { getPlaybook } from '../services/api';
 import type { PlaybookItem } from '../types';
 
 export function PlaybookPage() {
+  usePageMeta(
+    'Trading Strategy Playbook — Free Backtest Presets | Quantify',
+    'Browse free SMA, RSI, MACD and Bollinger strategy presets and run look-ahead-safe backtests with no API key.',
+  );
   const [items, setItems] = useState<PlaybookItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
