@@ -74,17 +74,20 @@ work = Path("$WORKDIR")
 kokoro = Kokoro("$KOKORO_MODEL", "$KOKORO_VOICES")
 voice_name = "$KOKORO_VOICE"
 
-# Longer beats — each line is a montage chapter
+# Longer beats — each line is a montage chapter (~110s VO for ~2 min cut)
 lines = [
     "Hey — this is Quantify. A free trading strategy backtester. No signup. No API key. Just ideas to numbers.",
     "Here’s the landing. Brand up front, and a live workspace preview that actually types and parses a strategy.",
     "Scroll into the live demo — this is the fun part. Click any strategy chip, and the console reacts right away.",
     "SMA crossover… watch it type, build the spec, simulate fills, then drop an equity curve and blotter.",
     "RSI mean reversion… same loop, new numbers. EMA with stops… again — every chip rebuilds the whole run.",
+    "Bollinger bounce too — fade the band, watch the fills. This is the bit people replay.",
     "Drop further for Instant Try. Paste any idea you want — SMA, MACD, Bollinger — and run a free backtest in seconds.",
     "Fact of the day keeps it sharp. Strategy of the day gives you something stealable when you blank.",
+    "Live counters move when people test — users, backtests, releases. It’s not a static brochure.",
     "Open the playbook. Ready-made presets — SMA, RSI, Bollinger, MACD — one click into the workspace.",
     "Inside the workspace you edit the text, pick your data, and hit run. Look-ahead safe fills. Real desk metrics.",
+    "Need the rules of the road? The guide covers execution, costs, and what Quantify refuses to fake.",
     "That’s Quantify. Free for everyone. Go break a strategy — on purpose.",
 ]
 
