@@ -1,5 +1,8 @@
 .PHONY: help build up down logs smoke test deploy restart ps
 
+ENV_FILE ?= $(shell if [ -f .env.production ]; then echo .env.production; elif [ -f .env ]; then echo .env; else echo .env.production; fi)
+COMPOSE = docker compose --env-file $(ENV_FILE)
+
 help:
 	@echo "Quantify make targets:"
 	@echo "  make deploy   - build + start production stack"
@@ -14,10 +17,10 @@ deploy:
 	bash deploy/scripts/deploy.sh
 
 build:
-	docker compose build
+	$(COMPOSE) build
 
 up:
-	docker compose up -d
+	$(COMPOSE) up -d
 
 down:
 	bash deploy/scripts/down.sh
@@ -26,16 +29,17 @@ purge:
 	bash deploy/scripts/down.sh --purge
 
 logs:
-	docker compose logs -f --tail=200
+	$(COMPOSE) logs -f --tail=200
 
 ps:
-	docker compose ps
+	$(COMPOSE) ps
 
 smoke:
-	bash deploy/scripts/smoke.sh
+	@export APP_ACCESS_TOKEN=$$(grep '^APP_ACCESS_TOKEN=' $(ENV_FILE) 2>/dev/null | cut -d= -f2-); \
+	bash deploy/scripts/smoke.sh http://127.0.0.1:$${APP_PORT:-80}
 
 test:
 	cd backend && PYTHONPATH=. pytest -q
 
 restart:
-	docker compose restart
+	$(COMPOSE) restart

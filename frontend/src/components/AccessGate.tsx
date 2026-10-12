@@ -65,7 +65,9 @@ export function AccessGate({ onUnlocked }: Props) {
         <p className="eyebrow">Production gate</p>
         <h1>Enter access token</h1>
         <p className="lede">
-          Paste the shared access token from your administrator. Extra spaces or quotes are cleaned
+          Paste <code className="mono">APP_ACCESS_TOKEN</code> from the server{' '}
+          <code className="mono">.env.production</code> (printed by{' '}
+          <code className="mono">./deploy/scripts/deploy.sh</code>). Spaces and quotes are cleaned
           automatically.
         </p>
         <form className="form-panel" onSubmit={onSubmit} style={{ marginTop: '1.25rem' }}>

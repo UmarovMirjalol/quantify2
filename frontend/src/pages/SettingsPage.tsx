@@ -74,7 +74,11 @@ export function SettingsPage() {
           <h1>Settings</h1>
           <p className="lede">
             Connect an OpenAI-compatible LLM for broader natural-language parsing. Without a key,
-            the built-in parser still runs backtests.
+            the built-in parser still runs backtests. Get an OpenAI key at{' '}
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">
+              platform.openai.com/api-keys
+            </a>
+            .
           </p>
         </div>
       </div>

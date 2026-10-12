@@ -16,6 +16,8 @@ uploads/**
 !uploads/.gitkeep
 *.db
 .env
+.env.production
+.env.local
 backups/
 *.tar.gz
 
