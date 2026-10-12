@@ -17,13 +17,43 @@ CDP_PORT="${CDP_PORT:-9223}"
 # Capture full Xvfb framebuffer (kiosk fills it — zero Chrome chrome)
 W="${DEMO_W:-1920}"
 H="${DEMO_H:-1200}"
+PANEL_WAS_RUNNING=0
 
 cleanup() {
   pkill -f "user-data-dir=/tmp/chrome-project-demo" 2>/dev/null || true
+  # Restore desktop panel if we hid it
+  if [[ "$PANEL_WAS_RUNNING" -eq 1 ]] && ! pgrep -x xfce4-panel >/dev/null; then
+    DISPLAY="$DISPLAY_NUM" xfce4-panel >/dev/null 2>&1 &
+  fi
   rm -rf "$WORKDIR"
 }
 trap cleanup EXIT
 mkdir -p "$OUT_DIR"
+
+# Hide XFCE panel (clock / tray) so it never overlays the kiosk frame
+if pgrep -x xfce4-panel >/dev/null; then
+  PANEL_WAS_RUNNING=1
+  DISPLAY="$DISPLAY_NUM" xfce4-panel -q 2>/dev/null || killall xfce4-panel 2>/dev/null || true
+  sleep 0.5
+fi
+
+# Managed policy: no update / promo bubbles
+POLICY_JSON='{
+  "ComponentUpdatesEnabled": false,
+  "DefaultBrowserSettingEnabled": false,
+  "BrowserSignin": 0,
+  "PromotionalTabsEnabled": false,
+  "TranslateEnabled": false,
+  "SuppressUnsupportedOSWarning": true,
+  "UserFeedbackAllowed": false,
+  "MetricsReportingEnabled": false
+}'
+if sudo mkdir -p /etc/opt/chrome/policies/managed 2>/dev/null; then
+  printf '%s\n' "$POLICY_JSON" | sudo tee /etc/opt/chrome/policies/managed/quantify-demo.json >/dev/null
+else
+  mkdir -p /tmp/chrome-policies/managed
+  printf '%s\n' "$POLICY_JSON" > /tmp/chrome-policies/managed/quantify-demo.json
+fi
 
 if [[ ! -f "$KOKORO_MODEL" || ! -f "$KOKORO_VOICES" ]]; then
   echo "Kokoro models missing — bootstrapping…"
@@ -120,7 +150,7 @@ cat > /tmp/chrome-project-demo/Default/Preferences <<'JSON'
 }
 JSON
 
-# True kiosk = no tabs, omnibox, title bar, or update bubbles in frame
+# True kiosk = no tabs, omnibox, title bar. Extra flags kill update / promo chrome.
 google-chrome \
   --no-sandbox \
   --disable-gpu \
@@ -129,6 +159,11 @@ google-chrome \
   --disable-features=TranslateUI,ChromeWhatsNewUI,InfiniteSessionRestore \
   --check-for-update-interval=31536000 \
   --disable-component-update \
+  --disable-background-networking \
+  --disable-client-side-phishing-detection \
+  --disable-default-apps \
+  --disable-sync \
+  --disable-extensions \
   --no-first-run \
   --no-default-browser-check \
   --remote-debugging-port="$CDP_PORT" \
@@ -143,7 +178,16 @@ for i in $(seq 1 40); do
   fi
   sleep 0.25
 done
-sleep 2.5
+sleep 2.0
+
+# Kill any leftover Chrome dialogs (update / restore / etc.)
+DISPLAY="$DISPLAY_NUM" xdotool search --name "Can't update" 2>/dev/null | while read -r wid; do
+  DISPLAY="$DISPLAY_NUM" xdotool windowkill "$wid" 2>/dev/null || true
+done
+DISPLAY="$DISPLAY_NUM" xdotool search --name "update Chrome" 2>/dev/null | while read -r wid; do
+  DISPLAY="$DISPLAY_NUM" xdotool windowkill "$wid" 2>/dev/null || true
+done
+sleep 0.5
 
 cdp_navigate() {
   local target="$1"
