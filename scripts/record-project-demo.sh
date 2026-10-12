@@ -1,92 +1,94 @@
 #!/usr/bin/env bash
-# Scripted Quantify product demo → artifacts with voice + subtitles.
+# Quantify product demo — neural voice, no subtitles, slower pacing.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="${1:-/opt/cursor/artifacts}"
 WORKDIR="$(mktemp -d)"
 URL="${DEMO_URL:-http://127.0.0.1:18081/}"
 DISPLAY_NUM="${DISPLAY:-:1}"
+VOICE="${DEMO_VOICE:-en-US-AndrewNeural}"
+OUT_NAME="${DEMO_OUT:-quantify_product_demo_human.mp4}"
 
 cleanup() { rm -rf "$WORKDIR"; }
 trap cleanup EXIT
-
 mkdir -p "$OUT_DIR"
 
-# --- Voice lines ---
-cat >"$WORKDIR/lines.txt" <<'EOF'
-Welcome to Quantify — free trading strategy backtests, no API key.
-Watch the live demo turn plain English into a simulation.
-Click any strategy chip — the console reacts instantly.
-Open Instant Try, paste any idea, and run a free backtest.
-Browse the playbook, or jump straight into the workspace.
-Quantify. Look-ahead safe. Free for everyone.
-EOF
-
-i=1
-while IFS= read -r line; do
-  espeak-ng -v en-us -s 145 -a 140 -w "$WORKDIR/v$i.wav" "$line"
-  i=$((i + 1))
-done <"$WORKDIR/lines.txt"
-
-# Concat voice with short gaps
+# Longer lines, natural pauses via SSML-ish commas / periods
 python3 - <<PY
+import asyncio, edge_tts, subprocess, wave
 from pathlib import Path
-import wave, struct
+
 work = Path("$WORKDIR")
-parts = sorted(work.glob("v*.wav"), key=lambda p: int(p.stem[1:]))
-gap_ms = 380
-frames = []
-params = None
-for p in parts:
-    with wave.open(str(p), "rb") as w:
-        params = w.getparams()
-        frames.append(w.readframes(w.getnframes()))
-    n = int(params.framerate * gap_ms / 1000)
-    frames.append(b"\x00\x00" * n * params.nchannels)
-with wave.open(str(work / "voice.wav"), "wb") as out:
-    out.setparams(params)
-    for f in frames:
-        out.writeframes(f)
-print("voice ok", work / "voice.wav")
+voice = "$VOICE"
+lines = [
+    "Hey — this is Quantify. A free trading strategy backtester. No signup, and no API key.",
+    "Here on the landing page, you can watch a live demo turn plain English into a real simulation.",
+    "Click any strategy chip… and the console reacts right away — typing, parsing, then results.",
+    "Or jump into Instant Try. Paste any idea you want, and run a free backtest in seconds.",
+    "Browse the playbook for ready-made strategies… or open the workspace and start from scratch.",
+    "That’s Quantify. Look-ahead safe fills. Free for everyone. Go try it.",
+]
+
+async def synth():
+    paths = []
+    for i, text in enumerate(lines, 1):
+        # Slightly slower rate for a calmer demo
+        communicate = edge_tts.Communicate(text, voice, rate="-8%")
+        out = work / f"v{i}.mp3"
+        await communicate.save(str(out))
+        paths.append(out)
+        print("voice", out.name, "ok")
+    return paths
+
+paths = asyncio.run(synth())
+
+# Convert + concat with gaps via ffmpeg
+parts = []
+for i, p in enumerate(paths, 1):
+    wav = work / f"c{i}.wav"
+    subprocess.check_call([
+        "ffmpeg", "-y", "-i", str(p), "-ar", "44100", "-ac", "1", str(wav)
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    parts.append(wav)
+
+# Build concat list with 0.7s silence between lines
+silence = work / "silence.wav"
+subprocess.check_call([
+    "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "0.75", str(silence)
+], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+lst = work / "list.txt"
+with lst.open("w") as f:
+    for i, w in enumerate(parts):
+        f.write(f"file '{w}'\n")
+        if i < len(parts) - 1:
+            f.write(f"file '{silence}'\n")
+
+voice = work / "voice.wav"
+subprocess.check_call([
+    "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(voice)
+], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+# duration
+import wave as W
+with W.open(str(voice), "rb") as w:
+    dur = w.getnframes() / float(w.getframerate())
+print(f"VOICE_DURATION {dur:.1f}")
+(work / "duration.txt").write_text(str(dur))
 PY
 
-# Subtitles (approx timings matching speech)
-cat >"$WORKDIR/demo.srt" <<'EOF'
-1
-00:00:00,200 --> 00:00:04,200
-Welcome to Quantify — free backtests, no API key.
+DUR=$(cat "$WORKDIR/duration.txt")
+# Pad video a bit longer than voice
+VID_SECS=$(python3 -c "print(int(float('$DUR') + 4))")
+echo "Recording ${VID_SECS}s of UI…"
 
-2
-00:00:04,500 --> 00:00:08,400
-Watch the live demo turn plain English into a simulation.
-
-3
-00:00:08,700 --> 00:00:12,600
-Click any strategy chip — the console reacts instantly.
-
-4
-00:00:12,900 --> 00:00:17,200
-Open Instant Try, paste any idea, and run a free backtest.
-
-5
-00:00:17,500 --> 00:00:21,400
-Browse the playbook, or jump into the workspace.
-
-6
-00:00:21,700 --> 00:00:25,800
-Quantify. Look-ahead safe. Free for everyone.
-EOF
-
-# Launch Chrome
 pkill -f 'user-data-dir=/tmp/chrome-project-demo' 2>/dev/null || true
 google-chrome --no-sandbox --disable-gpu --window-size=1440,900 \
   --window-position=40,40 \
   --user-data-dir=/tmp/chrome-project-demo \
   "$URL" >/tmp/chrome-project-demo.log 2>&1 &
-CHROME_PID=$!
-sleep 4
+sleep 5
 
-# Focus window
 WID=$(DISPLAY="$DISPLAY_NUM" xdotool search --name 'Quantify' | head -1 || true)
 if [[ -n "${WID:-}" ]]; then
   DISPLAY="$DISPLAY_NUM" xdotool windowactivate --sync "$WID"
@@ -94,67 +96,58 @@ if [[ -n "${WID:-}" ]]; then
   DISPLAY="$DISPLAY_NUM" xdotool windowsize "$WID" 1440 900
 fi
 
-# Record screen (X11) for ~26s while driving UI
 RAW="$WORKDIR/raw.mp4"
 ffmpeg -y -video_size 1440x900 -framerate 30 -f x11grab -i "${DISPLAY_NUM}+40,40" \
-  -t 27 -c:v libx264 -pix_fmt yuv420p -preset ultrafast "$RAW" >/tmp/demo-rec.log 2>&1 &
+  -t "$VID_SECS" -c:v libx264 -pix_fmt yuv420p -preset ultrafast "$RAW" >/tmp/demo-rec.log 2>&1 &
 REC_PID=$!
-sleep 1.2
-
-# Drive clicks
-run_keys() {
-  DISPLAY="$DISPLAY_NUM" xdotool "$@"
-}
-
-run_keys key --delay 40 Page_Down
-sleep 1.4
-run_keys key --delay 40 Page_Down
-sleep 1.6
-# click around demo chips area (approx)
-run_keys mousemove --sync 420 520 click 1
-sleep 2.2
-run_keys mousemove --sync 560 520 click 1
-sleep 2.4
-run_keys mousemove --sync 720 520 click 1
-sleep 2.0
-run_keys key --delay 50 Page_Down
-sleep 1.8
-run_keys key --delay 50 Page_Down
-sleep 1.8
-# Instant try / CTA area
-run_keys mousemove --sync 380 640 click 1
 sleep 1.5
-run_keys key --delay 40 ctrl+l
-sleep 0.3
-run_keys type --delay 12 "${URL}playbook"
-run_keys key Return
-sleep 3.2
-run_keys key --delay 40 ctrl+l
-sleep 0.3
-run_keys type --delay 12 "${URL}app"
-run_keys key Return
-sleep 3.5
-run_keys key --delay 40 ctrl+l
-sleep 0.3
-run_keys type --delay 12 "$URL"
-run_keys key Return
+
+run() { DISPLAY="$DISPLAY_NUM" xdotool "$@"; }
+
+# Slower UI choreography timed to narration
 sleep 2.5
+run key --delay 80 Page_Down
+sleep 3.5
+run key --delay 80 Page_Down
+sleep 3.0
+run mousemove --sync 420 530 click 1
+sleep 3.8
+run mousemove --sync 580 530 click 1
+sleep 3.8
+run mousemove --sync 740 530 click 1
+sleep 3.5
+run key --delay 90 Page_Down
+sleep 3.0
+run key --delay 90 Page_Down
+sleep 2.8
+run mousemove --sync 400 660 click 1
+sleep 2.5
+run key --delay 60 ctrl+l
+sleep 0.4
+run type --delay 18 "${URL}playbook"
+run key Return
+sleep 4.5
+run key --delay 60 ctrl+l
+sleep 0.4
+run type --delay 18 "${URL}app"
+run key Return
+sleep 4.5
+run key --delay 60 ctrl+l
+sleep 0.4
+run type --delay 18 "$URL"
+run key Return
+sleep 3.5
 
 wait "$REC_PID" || true
 
-# Mix voice + burn subtitles
-FINAL="$OUT_DIR/quantify_product_demo.mp4"
+FINAL="$OUT_DIR/$OUT_NAME"
+# No subtitles — neural voice only
 ffmpeg -y -i "$RAW" -i "$WORKDIR/voice.wav" \
-  -vf "subtitles=$WORKDIR/demo.srt:force_style='FontName=DejaVu Sans,FontSize=18,PrimaryColour=&H00E8FFF4&,OutlineColour=&H00101010&,BorderStyle=3,Outline=1,Shadow=0,MarginV=36'" \
-  -c:v libx264 -pix_fmt yuv420p -preset fast -crf 20 \
-  -c:a aac -b:a 128k -shortest \
+  -c:v libx264 -pix_fmt yuv420p -preset fast -crf 19 \
+  -c:a aac -b:a 160k -ar 44100 -shortest \
   "$FINAL" >/tmp/demo-mux.log 2>&1
-
-# Lightweight no-voice copy if mux failed
-if [[ ! -s "$FINAL" ]]; then
-  ffmpeg -y -i "$RAW" -vf "subtitles=$WORKDIR/demo.srt" -c:v libx264 -pix_fmt yuv420p -an "$FINAL"
-fi
 
 pkill -f 'user-data-dir=/tmp/chrome-project-demo' 2>/dev/null || true
 ls -lah "$FINAL"
+ffprobe -hide_banner "$FINAL" 2>&1 | head -14
 echo "DEMO_READY $FINAL"
