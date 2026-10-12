@@ -260,18 +260,16 @@ def parse_builtin(
                 ind = "SMA"
             entry = [
                 {
-                    "indicator": "PRICE",
-                    "condition": "greater_than",
-                    "compare_indicator": ind,
-                    "compare_period": period,
+                    "left": {"indicator": "PRICE", "component": "close"},
+                    "operator": "greater_than",
+                    "right": {"indicator": ind, "period": period},
                 }
             ]
             exit_ = [
                 {
-                    "indicator": "PRICE",
-                    "condition": "less_than",
-                    "compare_indicator": ind,
-                    "compare_period": period,
+                    "left": {"indicator": "PRICE", "component": "close"},
+                    "operator": "less_than",
+                    "right": {"indicator": ind, "period": period},
                 }
             ]
 
