@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ActivityPulse } from '../components/ActivityPulse';
+import { DailyFact } from '../components/DailyFact';
 import { InstantTry } from '../components/InstantTry';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
@@ -399,6 +400,8 @@ export function LandingPage() {
       </section>
 
       <LandingDemo />
+
+      <DailyFact />
 
       <StrategyOfTheDay />
 
