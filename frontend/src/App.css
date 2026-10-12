@@ -2247,9 +2247,63 @@ h2 {
 }
 
 .demo-chip {
+  position: relative;
+  overflow: hidden;
   opacity: 0;
   transform: translateY(8px);
   animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.demo-chip:active {
+  transform: translateY(8px) scale(0.96);
+}
+
+.demo-chip.flash-click {
+  animation:
+    rise 0.01s forwards,
+    chip-pop 0.45s ease;
+}
+
+.chip-ripple {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: rgba(79, 214, 160, 0.55);
+  pointer-events: none;
+  animation: chip-ripple 0.55s ease-out forwards;
+  z-index: 1;
+}
+
+.demo-click-hint {
+  margin: 0.55rem 0 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+@keyframes chip-ripple {
+  to {
+    transform: scale(18);
+    opacity: 0;
+  }
+}
+
+@keyframes chip-pop {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 214, 160, 0.35);
+  }
+  40% {
+    box-shadow: 0 0 0 6px rgba(79, 214, 160, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 214, 160, 0);
+  }
 }
 
 .demo-lab.in-view .demo-chip:nth-child(1) { animation-delay: 0.05s; }

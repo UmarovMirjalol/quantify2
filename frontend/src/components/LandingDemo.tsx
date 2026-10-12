@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useCountUp } from '../hooks/useCountUp';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
@@ -141,6 +141,8 @@ export function LandingDemo() {
   const [blotterN, setBlotterN] = useState(reduced ? 4 : 0);
   const [auto, setAuto] = useState(!reduced);
   const [runToken, setRunToken] = useState(0);
+  const [ripples, setRipples] = useState<{ id: number; chip: string; x: number; y: number }[]>([]);
+  const [clickFlash, setClickFlash] = useState<string | null>(null);
 
   const demo = useMemo(
     () => DEMOS.find((d) => d.id === activeId) ?? DEMOS[0],
@@ -154,13 +156,32 @@ export function LandingDemo() {
   const win = useCountUp(demo.win, { active: done, duration: 900, reduced });
   const flow = phaseFlow(phase);
 
-  const startRun = useCallback(
-    (id: string, fromUser = false) => {
-      setActiveId(id);
-      setAuto(!fromUser);
-      setRunToken((t) => t + 1);
+  const startRun = useCallback((id: string, fromUser = false) => {
+    setActiveId(id);
+    setAuto(!fromUser);
+    setRunToken((t) => t + 1);
+    if (fromUser) {
+      setClickFlash(id);
+      window.setTimeout(() => setClickFlash(null), 450);
+    }
+  }, []);
+
+  const onChipClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>, id: string) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const ripple = {
+        id: Date.now() + Math.random(),
+        chip: id,
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+      setRipples((prev) => [...prev.slice(-4), ripple]);
+      window.setTimeout(() => {
+        setRipples((prev) => prev.filter((r) => r.id !== ripple.id));
+      }, 600);
+      startRun(id, true);
     },
-    [],
+    [startRun],
   );
 
   useEffect(() => {
@@ -257,16 +278,30 @@ export function LandingDemo() {
             type="button"
             role="tab"
             aria-selected={d.id === activeId}
-            className={`chip demo-chip ${d.id === activeId ? 'active' : ''}`}
-            onClick={() => startRun(d.id, true)}
+            className={`chip demo-chip ${d.id === activeId ? 'active' : ''} ${clickFlash === d.id ? 'flash-click' : ''}`}
+            onClick={(e) => onChipClick(e, d.id)}
           >
+            {ripples
+              .filter((r) => r.chip === d.id)
+              .map((r) => (
+                <span
+                  key={r.id}
+                  className="chip-ripple"
+                  style={{ left: r.x, top: r.y }}
+                />
+              ))}
             {d.label}
           </button>
         ))}
-        <button type="button" className="chip demo-chip ghost-chip" onClick={() => startRun(activeId, true)}>
+        <button
+          type="button"
+          className={`chip demo-chip ghost-chip ${clickFlash === activeId ? 'flash-click' : ''}`}
+          onClick={(e) => onChipClick(e, activeId)}
+        >
           Replay
         </button>
       </div>
+      <p className="demo-click-hint mono">Click a strategy — the console reacts live</p>
 
       <div className={`demo-console phase-${phase}`}>
         <div className="demo-console-top">
