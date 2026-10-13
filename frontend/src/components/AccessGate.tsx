@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { listDatasets } from '../services/api';
 import { getAccessToken, normalizeSecret, setAccessToken } from '../services/session';
-import { LogoMark } from './LogoMark';
 
 interface Props {
   onUnlocked: () => void;
@@ -47,8 +46,8 @@ export function AccessGate({ onUnlocked }: Props) {
       </div>
       <div className="panel access-card">
         <div className="brand" style={{ padding: '0 0 1rem' }}>
-          <span className="brand-mark">
-            <LogoMark size={18} />
+          <span className="brand-mark brand-mark-lg" aria-hidden="true">
+            <img src="/logo.svg" width={28} height={28} alt="" />
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>

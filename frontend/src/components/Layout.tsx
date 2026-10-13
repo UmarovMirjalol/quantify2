@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { HealthStatus } from '../types';
-import { LogoMark } from './LogoMark';
 
 interface Props {
   health: HealthStatus | null;
@@ -44,8 +43,8 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
 
       <aside id="app-sidebar" className={`sidebar ${open ? 'open' : ''}`}>
         <Link to="/" className="brand" onClick={() => setOpen(false)}>
-          <span className="brand-mark">
-            <LogoMark size={18} />
+          <span className="brand-mark brand-mark-lg" aria-hidden="true">
+            <img src="/logo.svg" width={28} height={28} alt="" />
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
@@ -97,8 +96,8 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             Menu
           </button>
           <Link to="/" className="brand" style={{ padding: 0 }}>
-            <span className="brand-mark">
-              <LogoMark size={18} />
+            <span className="brand-mark brand-mark-lg" aria-hidden="true">
+              <img src="/logo.svg" width={28} height={28} alt="" />
             </span>
             <span className="brand-name">Quantify</span>
           </Link>

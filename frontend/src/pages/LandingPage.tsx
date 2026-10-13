@@ -230,8 +230,8 @@ export function LandingPage() {
 
       <header className="landing-nav">
         <Link to="/" className="brand" style={{ padding: 0 }}>
-          <span className="brand-mark">
-            <LogoMark size={18} />
+          <span className="brand-mark brand-mark-lg" aria-hidden="true">
+            <img src="/logo.svg" width={28} height={28} alt="" />
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
