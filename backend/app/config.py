@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     # Public live counters = baseline + real activity
     stats_baseline_users: int = 425
     stats_baseline_backtests: int = 1195
-    stats_releases: int = 10
+    stats_releases: int = 11
 
     @property
     def is_production(self) -> bool:

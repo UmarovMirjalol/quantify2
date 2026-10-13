@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { getPlaybook, listDatasets, runBacktest, uploadDataset } from '../services/api';
+import {
+  getPlaybook,
+  listDatasets,
+  parseStrategy,
+  runBacktest,
+  uploadDataset,
+} from '../services/api';
 import { normalizeStrategyText } from '../services/session';
-import type { DatasetInfo, HealthStatus, PlaybookItem } from '../types';
+import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
+import { formatConditions } from '../utils/formatStrategy';
 
 const EXAMPLE_STRATEGIES = [
   {
@@ -41,6 +48,14 @@ interface Props {
 
 type StepState = 'pending' | 'active' | 'done';
 
+type ParseState = {
+  status: 'idle' | 'loading' | 'ok' | 'error';
+  strategy: StrategySpec | null;
+  parser: string | null;
+  warnings: string[];
+  error: string | null;
+};
+
 export function HomePage({ health }: Props) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +72,13 @@ export function HomePage({ health }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [errorKind, setErrorKind] = useState<'run' | 'load' | 'upload' | 'form'>('run');
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
+  const [parse, setParse] = useState<ParseState>({
+    status: 'idle',
+    strategy: null,
+    parser: null,
+    warnings: [],
+    error: null,
+  });
 
   useEffect(() => {
     listDatasets()
@@ -84,7 +106,6 @@ export function HomePage({ health }: Props) {
       setSearchParams(next, { replace: true });
     };
 
-    // Instant Try from landing — any free-form text.
     if (searchParams.get('instant') === '1') {
       const draft = sessionStorage.getItem('quantify_instant_strategy');
       if (draft && draft.trim().length >= 5) {
@@ -93,6 +114,34 @@ export function HomePage({ health }: Props) {
       }
       const next = new URLSearchParams(searchParams);
       next.delete('instant');
+      setSearchParams(next, { replace: true });
+    }
+
+    if (searchParams.get('rerun') === '1') {
+      try {
+        const raw = sessionStorage.getItem('quantify_rerun');
+        if (raw) {
+          const draft = JSON.parse(raw) as {
+            strategy_text?: string;
+            dataset_id?: string;
+            initial_capital?: number;
+            risk_per_trade?: number;
+            commission?: number;
+            slippage?: number;
+          };
+          if (draft.strategy_text) setStrategyText(draft.strategy_text);
+          if (draft.dataset_id) setDatasetId(draft.dataset_id);
+          if (typeof draft.initial_capital === 'number') setInitialCapital(draft.initial_capital);
+          if (typeof draft.risk_per_trade === 'number') setRiskPerTrade(draft.risk_per_trade);
+          if (typeof draft.commission === 'number') setCommission(draft.commission);
+          if (typeof draft.slippage === 'number') setSlippage(draft.slippage);
+          sessionStorage.removeItem('quantify_rerun');
+        }
+      } catch {
+        // ignore bad draft
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete('rerun');
       setSearchParams(next, { replace: true });
     }
 
@@ -114,7 +163,6 @@ export function HomePage({ health }: Props) {
     return () => {
       cancelled = true;
     };
-    // Deep-link ?strategy= / ?instant= applied once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,6 +178,50 @@ export function HomePage({ health }: Props) {
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [loading]);
 
+  // Debounced real parse preview
+  useEffect(() => {
+    const cleaned = normalizeStrategyText(strategyText);
+    if (cleaned.length < 5) {
+      setParse({ status: 'idle', strategy: null, parser: null, warnings: [], error: null });
+      return;
+    }
+    let cancelled = false;
+    setParse((prev) => ({ ...prev, status: 'loading', error: null }));
+    const timer = window.setTimeout(() => {
+      parseStrategy({
+        text: cleaned,
+        initial_capital: initialCapital,
+        risk_per_trade: riskPerTrade,
+        commission,
+        slippage,
+      })
+        .then((res) => {
+          if (cancelled) return;
+          setParse({
+            status: 'ok',
+            strategy: res.strategy,
+            parser: res.parser,
+            warnings: res.warnings ?? [],
+            error: null,
+          });
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setParse({
+            status: 'error',
+            strategy: null,
+            parser: null,
+            warnings: [],
+            error: err.message,
+          });
+        });
+    }, 700);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [strategyText, initialCapital, riskPerTrade, commission, slippage]);
+
   const stepStates: StepState[] = useMemo(() => {
     return PIPELINE_STEPS.map((_, i) => {
       if (!loading && progressStep < 0) return 'pending';
@@ -142,29 +234,11 @@ export function HomePage({ health }: Props) {
     });
   }, [loading, progressStep]);
 
-  const previewInterpretation = useMemo(() => {
-    const text = strategyText.toLowerCase();
-    const known = text.match(/\b(spy|qqq|iwm|dia|aapl|msft|nvda|tsla|amzn|meta|googl|btc|eth)\b/i);
-    const afterBuy = strategyText.match(/\bbuy\s+([A-Za-z]{1,6})\b/i);
-    const asset = (known?.[1] ?? afterBuy?.[1] ?? '—').toUpperCase();
-    const riskMatch = text.match(/risk\s+(\d+(?:\.\d+)?)\s*%/i);
-    return {
-      asset,
-      entry: text.includes('cross')
-        ? 'Crossover / signal rule'
-        : text.includes('rsi')
-          ? 'RSI threshold'
-          : 'Parsed from description',
-      exit: text.includes('rsi')
-        ? 'RSI / reverse signal'
-        : text.includes('stop')
-          ? 'Stop / take-profit'
-          : 'Exit rule from description',
-      risk: riskMatch ? `${riskMatch[1]}%` : `${(riskPerTrade * 100).toFixed(2)}%`,
-      sizing: 'Risk-based position size',
-      frequency: 'Daily',
-    };
-  }, [strategyText, riskPerTrade]);
+  const entryLines = formatConditions(
+    parse.strategy?.entry_conditions,
+    parse.strategy?.entry_logic,
+  );
+  const exitLines = formatConditions(parse.strategy?.exit_conditions, parse.strategy?.exit_logic);
 
   async function onUpload(file: File | null) {
     if (!file) return;
@@ -202,6 +276,7 @@ export function HomePage({ health }: Props) {
       const result = await runBacktest({
         strategy_text: cleanedStrategy,
         dataset_id: datasetId,
+        strategy: parse.status === 'ok' && parse.strategy ? parse.strategy : undefined,
         config: {
           initial_capital: initialCapital,
           commission,
@@ -227,8 +302,8 @@ export function HomePage({ health }: Props) {
           <p className="eyebrow">Research workspace</p>
           <h1>New Backtest</h1>
           <p className="lede">
-            Free testing — pick a Playbook preset or describe SMA / EMA / RSI / MACD / Bollinger
-            rules in plain English. No API key required.
+            Describe SMA / EMA / RSI / MACD / Bollinger rules in plain English. Preview the parsed
+            spec before you run.
           </p>
         </div>
         {health?.llm_enabled ? (
@@ -358,7 +433,9 @@ export function HomePage({ health }: Props) {
               onChange={(e) => onUpload(e.target.files?.[0] ?? null)}
               disabled={loading}
             />
-            {uploadInfo ? <small className="hint ok-text">{uploadInfo}</small> : (
+            {uploadInfo ? (
+              <small className="hint ok-text">{uploadInfo}</small>
+            ) : (
               <small className="hint">Columns: date, open, high, low, close, volume</small>
             )}
           </label>
@@ -376,11 +453,7 @@ export function HomePage({ health }: Props) {
               </strong>{' '}
               {error}
               <div style={{ marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="btn secondary small"
-                  onClick={() => setError(null)}
-                >
+                <button type="button" className="btn secondary small" onClick={() => setError(null)}>
                   Dismiss
                 </button>
               </div>
@@ -388,19 +461,19 @@ export function HomePage({ health }: Props) {
           ) : null}
 
           <div className="btn-row">
-            <button className="btn primary" type="submit" disabled={loading}>
+            <button className="btn primary" type="submit" disabled={loading || parse.status === 'error'}>
               {loading ? 'Running backtest…' : 'Run Backtest'}
             </button>
-            {!strategyText.trim() ? (
-              <span className="hint">Describe a strategy to start your first backtest.</span>
+            {parse.status === 'error' ? (
+              <span className="hint">Fix the parse error before running.</span>
             ) : null}
           </div>
         </form>
 
         <aside className={`panel panel-tight status-panel${loading ? ' running' : ''}`}>
-          <h2>Strategy interpretation</h2>
+          <h2>Parsed specification</h2>
           <p className="hint" style={{ marginBottom: '0.85rem' }}>
-            Research copilot — assumptions before execution
+            Live preview from <code className="mono">/api/parse-strategy</code>
           </p>
 
           <ul className="pipeline" aria-live="polite">
@@ -419,41 +492,77 @@ export function HomePage({ health }: Props) {
             ))}
           </ul>
 
-          <div className="interp-block" key={strategyText}>
-            <div className="interp-row flash">
-              <span>Universe</span>
-              <span>{previewInterpretation.asset}</span>
-            </div>
-            <div className="interp-row flash" style={{ animationDelay: '40ms' }}>
-              <span>Entry</span>
-              <span>{previewInterpretation.entry}</span>
-            </div>
-            <div className="interp-row flash" style={{ animationDelay: '80ms' }}>
-              <span>Exit</span>
-              <span>{previewInterpretation.exit}</span>
-            </div>
-            <div className="interp-row flash" style={{ animationDelay: '120ms' }}>
-              <span>Position size</span>
-              <span>{previewInterpretation.sizing}</span>
-            </div>
-            <div className="interp-row flash" style={{ animationDelay: '160ms' }}>
-              <span>Risk / trade</span>
-              <span>{previewInterpretation.risk}</span>
-            </div>
-            <div className="interp-row flash" style={{ animationDelay: '200ms' }}>
-              <span>Data frequency</span>
-              <span>{previewInterpretation.frequency}</span>
-            </div>
+          <div className="parse-meta">
+            {parse.status === 'loading' ? <span>Parsing…</span> : null}
+            {parse.status === 'ok' && parse.parser ? (
+              <span className="tag">{parse.parser === 'llm' ? 'LLM parser' : 'Built-in parser'}</span>
+            ) : null}
+            {parse.status === 'idle' ? <span>Type a strategy to preview</span> : null}
           </div>
+
+          {parse.status === 'error' ? (
+            <div className="banner error" style={{ marginTop: '0.5rem' }}>
+              {parse.error}
+            </div>
+          ) : null}
+
+          {parse.status === 'ok' && parse.strategy ? (
+            <div className="interp-block">
+              <div className="interp-row">
+                <span>Asset</span>
+                <span>{parse.strategy.asset}</span>
+              </div>
+              <div className="interp-row">
+                <span>Sizing</span>
+                <span>{parse.strategy.position_sizing}</span>
+              </div>
+              <div className="interp-row">
+                <span>Risk / trade</span>
+                <span>{((parse.strategy.risk.risk_per_trade ?? 0) * 100).toFixed(2)}%</span>
+              </div>
+              <div className="interp-row">
+                <span>Stop / TP</span>
+                <span>
+                  {parse.strategy.stop_loss == null
+                    ? '—'
+                    : `${(parse.strategy.stop_loss * 100).toFixed(2)}%`}
+                  {' / '}
+                  {parse.strategy.take_profit == null
+                    ? '—'
+                    : `${(parse.strategy.take_profit * 100).toFixed(2)}%`}
+                </span>
+              </div>
+              <div style={{ marginTop: '0.75rem' }}>
+                <small className="hint">Entry</small>
+                <ul className="cond-list">
+                  {entryLines.map((line) => (
+                    <li key={`e-${line}`}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+              <div style={{ marginTop: '0.65rem' }}>
+                <small className="hint">Exit</small>
+                <ul className="cond-list">
+                  {exitLines.map((line) => (
+                    <li key={`x-${line}`}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+
+          {parse.warnings.length ? (
+            <div className="banner warn" style={{ marginTop: '0.75rem' }}>
+              {parse.warnings.join(' ')}
+            </div>
+          ) : null}
 
           {loading ? (
             <div className="banner info" style={{ marginTop: '0.85rem' }}>
-              Parsing strategy… loading history… running simulation…
+              Loading history and running simulation…
             </div>
           ) : (
-            <p className="note">
-              Signal at close → execute next open. Edit parameters above, then run.
-            </p>
+            <p className="note">Signal at close → execute next open. Edit parameters, then run.</p>
           )}
         </aside>
       </div>

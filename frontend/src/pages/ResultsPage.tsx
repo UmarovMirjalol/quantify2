@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   DrawdownChart,
   EquityChart,
@@ -11,6 +11,8 @@ import {
 import { KpiCard } from '../components/KpiCard';
 import { TradeTable } from '../components/TradeTable';
 import type { BacktestResult } from '../types';
+import { buildBuyAndHold } from '../utils/buyAndHold';
+import { downloadText, toCsv } from '../utils/download';
 
 type Tab = 'overview' | 'risk' | 'trades' | 'statistics';
 
@@ -47,12 +49,125 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function ResultsView({ result }: { result: BacktestResult }) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('overview');
   const m = result.metrics;
   const strategyJson = useMemo(
     () => JSON.stringify(result.strategy, null, 2),
     [result.strategy],
   );
+
+  const buyHold = useMemo(
+    () => buildBuyAndHold(result.price_series, m.initial_capital ?? result.strategy.initial_capital),
+    [result.price_series, m.initial_capital, result.strategy.initial_capital],
+  );
+
+  const vsHold =
+    m.total_return != null && buyHold.totalReturn != null
+      ? m.total_return - buyHold.totalReturn
+      : null;
+
+  function exportTradesCsv() {
+    const rows: (string | number)[][] = [
+      [
+        'entry_date',
+        'exit_date',
+        'side',
+        'entry_price',
+        'exit_price',
+        'quantity',
+        'pnl',
+        'return_pct',
+        'commission',
+        'bars_held',
+        'entry_reason',
+        'exit_reason',
+      ],
+      ...result.trades.map((t) => [
+        t.entry_date,
+        t.exit_date,
+        t.side,
+        t.entry_price,
+        t.exit_price,
+        t.quantity,
+        t.pnl,
+        t.return_pct,
+        t.commission,
+        t.bars_held,
+        t.entry_reason,
+        t.exit_reason,
+      ]),
+    ];
+    downloadText(`quantify-trades-${result.id}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
+  }
+
+  function exportEquityCsv() {
+    const rows: (string | number | null)[][] = [
+      ['date', 'strategy_equity', 'buy_hold_equity', 'drawdown'],
+      ...result.equity_curve.map((pt, i) => [
+        pt.date,
+        pt.equity,
+        buyHold.equity[i]?.equity ?? '',
+        pt.drawdown,
+      ]),
+    ];
+    downloadText(`quantify-equity-${result.id}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
+  }
+
+  function exportMetricsJson() {
+    downloadText(
+      `quantify-result-${result.id}.json`,
+      JSON.stringify(
+        {
+          id: result.id,
+          strategy_description: result.strategy_description,
+          dataset_name: result.dataset_name,
+          parser: result.parser,
+          created_at: result.created_at,
+          metrics: result.metrics,
+          strategy: result.strategy,
+          buy_and_hold: {
+            total_return: buyHold.totalReturn,
+            final_capital: buyHold.finalCapital,
+          },
+          vs_buy_and_hold: vsHold,
+          trade_count: result.trades.length,
+        },
+        null,
+        2,
+      ),
+      'application/json;charset=utf-8',
+    );
+  }
+
+  function rerunInWorkspace() {
+    let config: {
+      initial_capital?: number;
+      risk_per_trade?: number;
+      commission?: number;
+      slippage?: number;
+    } = {};
+    try {
+      // config is not always on the result payload; fall back to strategy fields
+      config = {
+        initial_capital: result.strategy.initial_capital,
+        risk_per_trade: result.strategy.risk.risk_per_trade,
+        commission: result.strategy.commission,
+        slippage: result.strategy.slippage,
+      };
+    } catch {
+      // ignore
+    }
+    sessionStorage.setItem(
+      'quantify_rerun',
+      JSON.stringify({
+        strategy_text: result.strategy_description,
+        dataset_id: result.dataset_name,
+        ...config,
+      }),
+    );
+    navigate('/app?rerun=1');
+  }
 
   return (
     <div className="results">
@@ -71,9 +186,23 @@ export function ResultsView({ result }: { result: BacktestResult }) {
             )}
           </div>
         </div>
-        <Link className="btn secondary" to="/app">
-          New Backtest
-        </Link>
+        <div className="results-actions">
+          <button type="button" className="btn secondary small" onClick={exportTradesCsv}>
+            Export trades CSV
+          </button>
+          <button type="button" className="btn secondary small" onClick={exportEquityCsv}>
+            Export equity CSV
+          </button>
+          <button type="button" className="btn secondary small" onClick={exportMetricsJson}>
+            Export JSON
+          </button>
+          <button type="button" className="btn secondary" onClick={rerunInWorkspace}>
+            Edit & re-run
+          </button>
+          <Link className="btn primary" to="/app">
+            New Backtest
+          </Link>
+        </div>
       </div>
 
       {result.warnings && result.warnings.length > 0 ? (
@@ -82,12 +211,21 @@ export function ResultsView({ result }: { result: BacktestResult }) {
 
       <section className="kpi-grid">
         <KpiCard label="Total Return" value={pct(m.total_return)} tone={toneFor(m.total_return)} />
+        <KpiCard
+          label="Buy & hold"
+          value={pct(buyHold.totalReturn)}
+          tone={toneFor(buyHold.totalReturn)}
+          hint="Same bars, no costs"
+        />
+        <KpiCard
+          label="vs Buy & hold"
+          value={vsHold == null ? '—' : `${vsHold >= 0 ? '+' : ''}${(vsHold * 100).toFixed(2)}%`}
+          tone={toneFor(vsHold)}
+        />
         <KpiCard label="CAGR" value={pct(m.cagr)} tone={toneFor(m.cagr)} />
         <KpiCard label="Sharpe Ratio" value={num(m.sharpe_ratio)} />
         <KpiCard label="Sortino Ratio" value={num(m.sortino_ratio)} />
         <KpiCard label="Max Drawdown" value={pct(m.max_drawdown)} tone="negative" />
-        <KpiCard label="Win Rate" value={pct(m.win_rate)} />
-        <KpiCard label="Profit Factor" value={num(m.profit_factor)} />
         <KpiCard
           label="Trades"
           value={String(m.number_of_trades)}
@@ -113,8 +251,8 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       {tab === 'overview' ? (
         <div className="tab-pane" key="overview">
           <section className="panel">
-            <h2>Portfolio equity</h2>
-            <EquityChart data={result.equity_curve} />
+            <h2>Portfolio equity vs buy & hold</h2>
+            <EquityChart data={result.equity_curve} benchmark={buyHold.equity} />
           </section>
           <div className="split">
             <section className="panel">
@@ -199,7 +337,12 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       {tab === 'trades' ? (
         <div className="tab-pane" key="trades">
           <section className="panel">
-            <h2>Trade ledger</h2>
+            <div className="page-header" style={{ marginBottom: '0.75rem' }}>
+              <h2 style={{ margin: 0 }}>Trade ledger</h2>
+              <button type="button" className="btn secondary small" onClick={exportTradesCsv}>
+                Download CSV
+              </button>
+            </div>
             <TradeTable trades={result.trades} asset={result.strategy.asset} />
           </section>
         </div>

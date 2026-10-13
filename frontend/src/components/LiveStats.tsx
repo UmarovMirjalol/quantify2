@@ -7,7 +7,7 @@ import type { PublicStats } from '../types';
 const FALLBACK: PublicStats = {
   users: 425,
   backtests: 1195,
-  releases: 10,
+  releases: 11,
   users_live: 0,
   backtests_live: 0,
   updated_at: '',

@@ -35,26 +35,53 @@ const layoutBase = {
   },
 };
 
-export function EquityChart({ data }: { data: EquityPoint[] }) {
+export function EquityChart({
+  data,
+  benchmark,
+  benchmarkName = 'Buy & hold',
+}: {
+  data: EquityPoint[];
+  benchmark?: EquityPoint[];
+  benchmarkName?: string;
+}) {
+  const traces: Record<string, unknown>[] = [
+    {
+      x: data.map((d) => d.date),
+      y: data.map((d) => d.equity),
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#4fd6a0', width: 1.85 },
+      fill: benchmark?.length ? undefined : 'tozeroy',
+      fillcolor: 'rgba(79,214,160,0.08)',
+      name: 'Strategy',
+      hovertemplate: '%{x}<br>$%{y:,.0f}<extra>Strategy</extra>',
+    },
+  ];
+  if (benchmark?.length) {
+    traces.push({
+      x: benchmark.map((d) => d.date),
+      y: benchmark.map((d) => d.equity),
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#8b93a1', width: 1.4, dash: 'dot' },
+      name: benchmarkName,
+      hovertemplate: `%{x}<br>$%{y:,.0f}<extra>${benchmarkName}</extra>`,
+    });
+  }
   return (
     <Plot
-      data={[
-        {
-          x: data.map((d) => d.date),
-          y: data.map((d) => d.equity),
-          type: 'scatter',
-          mode: 'lines',
-          line: { color: '#4fd6a0', width: 1.85 },
-          fill: 'tozeroy',
-          fillcolor: 'rgba(79,214,160,0.08)',
-          name: 'Equity',
-          hovertemplate: '%{x}<br>$%{y:,.0f}<extra></extra>',
-        },
-      ]}
+      data={traces}
       layout={{
         ...layoutBase,
         yaxis: { ...layoutBase.yaxis, tickprefix: '$', tickformat: ',.0f' },
         height: 340,
+        showlegend: Boolean(benchmark?.length),
+        legend: {
+          orientation: 'h',
+          y: 1.12,
+          x: 0,
+          font: { size: 11, color: '#9098a3' },
+        },
       }}
       config={{ displayModeBar: false, responsive: true }}
       style={{ width: '100%' }}

@@ -77,6 +77,11 @@ PLAYBOOK: list[dict[str, Any]] = [
 
 RELEASES: list[dict[str, str]] = [
     {
+        "version": "0.11",
+        "title": "Parse preview & exports",
+        "body": "Live parsed-spec preview, buy-and-hold overlay, CSV/JSON export, history search, edit & re-run.",
+    },
+    {
         "version": "0.10",
         "title": "Public free mode",
         "body": "Open landing with built-in parser, no signup, no API key required for core strategies.",
