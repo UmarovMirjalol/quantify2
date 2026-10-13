@@ -18,7 +18,6 @@ export function LogoMark({ size = 16, withTile = false, className }: Props) {
       aria-hidden="true"
     >
       {withTile ? <rect width="32" height="32" rx="8" fill="#0c1014" /> : null}
-      {/* Larger, simpler bolt — original zigzag vibe, just bolder */}
       <path
         d="M19 5 L10 16.5 H15.4 L13 27 L23.2 14.2 H17.6 L19 5 Z"
         fill="#4fd6a0"

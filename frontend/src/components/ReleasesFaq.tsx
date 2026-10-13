@@ -7,17 +7,17 @@ const FALLBACK_RELEASES: ReleaseItem[] = [
   {
     version: '0.3',
     title: 'Live pulse & playbook',
-    body: 'Public activity feed, strategy gallery, live counters, and denser landing surface.',
+    body: 'Public activity feed, strategy gallery, and live counters on the landing page.',
   },
   {
     version: '0.2',
     title: 'Production edge',
-    body: 'Docker Compose deploy, access token gate, rate limits, and one-command smoke tests.',
+    body: 'Docker Compose deploy, optional access gate, rate limits, and smoke tests.',
   },
   {
     version: '0.1',
     title: 'Research core',
-    body: 'NL strategies → look-ahead-safe engine, risk sizing, institutional metrics, SQLite history.',
+    body: 'Plain-English strategies, look-ahead-safe engine, risk sizing, metrics, SQLite history.',
   },
 ];
 
@@ -82,10 +82,9 @@ export function ReleasesFaq() {
         <div>
           <div className="section-head">
             <p className="eyebrow">Releases</p>
-            <h2>Three shipped slices.</h2>
+            <h2>Version history.</h2>
             <p className="section-lede">
-              The releases counter on this page tracks these milestones — core, deploy, and live
-              research surface.
+              Core engine, deploy stack, then the public research surface.
             </p>
           </div>
           <ol className="release-list">
@@ -104,7 +103,7 @@ export function ReleasesFaq() {
         <div>
           <div className="section-head">
             <p className="eyebrow">FAQ</p>
-            <h2>Straight answers.</h2>
+            <h2>FAQ</h2>
           </div>
           <div className="faq-list">
             {FAQ.map((item, i) => {

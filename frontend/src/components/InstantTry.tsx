@@ -32,15 +32,16 @@ export function InstantTry() {
   return (
     <section className="landing-section instant-section in-view" id="try">
       <div className="section-head">
-        <p className="eyebrow">Instant try</p>
-        <h2>Paste chaos. Get a backtest.</h2>
+        <p className="eyebrow">Try it</p>
+        <h2>Describe a strategy. Run it.</h2>
         <p className="section-lede">
-          SMA, EMA, RSI, MACD, Bollinger — or free-form nonsense. We still return a simulation.
+          Supports SMA, EMA, RSI, MACD, and Bollinger. Free-form text is parsed into a validated
+          spec when possible.
         </p>
       </div>
       <form className={`instant-form ${kick ? 'kick' : ''}`} onSubmit={onSubmit}>
         <label className="field">
-          <span>Your strategy</span>
+          <span>Strategy</span>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -62,8 +63,8 @@ export function InstantTry() {
             </button>
           ))}
         </div>
-        <button className="btn primary btn-kick" type="submit">
-          Fire free backtest →
+        <button className="btn primary" type="submit">
+          Run backtest →
         </button>
       </form>
     </section>

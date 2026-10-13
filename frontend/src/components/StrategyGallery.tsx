@@ -70,9 +70,9 @@ export function StrategyGallery() {
     >
       <div className="section-head">
         <p className="eyebrow">Strategy playbook</p>
-        <h2>Start from a researched preset.</h2>
+        <h2>Ready-made strategy presets.</h2>
         <p className="section-lede">
-          Six ready-to-run ideas — drop one into the workspace and get metrics in seconds.
+          Open one in the workspace and run it against sample or uploaded data.
         </p>
       </div>
 

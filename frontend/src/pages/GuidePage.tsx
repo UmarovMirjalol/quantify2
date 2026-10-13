@@ -11,15 +11,15 @@ export function GuidePage() {
     <div className="guide-page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">SEO guide</p>
+          <p className="eyebrow">Guide</p>
           <h1>How to backtest a trading strategy for free</h1>
           <p className="lede">
-            Quantify turns plain-English rules into look-ahead-safe simulations. No signup. No OpenAI
-            key. Start from a playbook idea or write your own.
+            Quantify parses plain-English rules into look-ahead-safe simulations. No signup. No API
+            key. Start from a playbook preset or write your own.
           </p>
         </div>
         <Link className="btn primary" to="/app">
-          Open free workspace
+          Open workspace
         </Link>
       </div>
 
@@ -33,20 +33,20 @@ export function GuidePage() {
 
         <h2>2. Run a look-ahead-safe backtest</h2>
         <p>
-          Signals form on the bar close; fills execute on the next open. Commission and slippage hit
-          every trade before equity updates — the same convention researchers trust.
+          Signals form on the bar close; fills execute on the next open. Commission and slippage are
+          applied on every trade before equity updates.
         </p>
 
-        <h2>3. Read institutional metrics</h2>
+        <h2>3. Read the metrics</h2>
         <p>
           Inspect total return, CAGR, Sharpe, Sortino, max drawdown, win rate, profit factor, and
-          the full trade blotter. Save runs in your browser history.
+          the full trade blotter. Runs are saved in your browser history.
         </p>
 
-        <h2>Do I need AI?</h2>
+        <h2>Do I need an LLM key?</h2>
         <p>
-          No. Quantify’s free built-in parser understands common quant patterns without an LLM. An
-          optional API key only expands freestyle natural language — it is not required.
+          No. The built-in parser covers common SMA, EMA, RSI, MACD, and Bollinger patterns without
+          an external model. An optional API key only expands freestyle phrasing.
         </p>
 
         <h2>Popular free strategy types</h2>
@@ -60,7 +60,7 @@ export function GuidePage() {
 
         <div className="landing-cta-row" style={{ marginTop: '1.5rem' }}>
           <Link className="btn primary" to="/app">
-            Start free backtest
+            Start a backtest
           </Link>
           <Link className="btn secondary" to="/playbook">
             Browse playbook

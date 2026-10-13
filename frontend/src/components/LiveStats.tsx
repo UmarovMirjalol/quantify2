@@ -145,16 +145,16 @@ export function LiveStats() {
           <span className="live-pulse" aria-hidden="true" />
           Live activity
         </p>
-        <h2>These numbers twitch when people hit run.</h2>
+        <h2>Usage counters.</h2>
         <p className="section-lede">
-          Baselines plus real visitors and backtests — counters refresh as the platform gets used.
+          Baseline totals plus live visitors and backtests. Refresh as the platform is used.
         </p>
       </div>
 
       <div className="live-stats-board" aria-live="polite">
         <StatCell
           value={stats.users}
-          label="пользователей"
+          label="users"
           active={ready && inView}
           flash={flash.users}
           reduced={reduced}

@@ -143,8 +143,6 @@ export function LandingDemo() {
   const [runToken, setRunToken] = useState(0);
   const [ripples, setRipples] = useState<{ id: number; chip: string; x: number; y: number }[]>([]);
   const [clickFlash, setClickFlash] = useState<string | null>(null);
-  const [impact, setImpact] = useState(false);
-  const [burstKey, setBurstKey] = useState(0);
 
   const demo = useMemo(
     () => DEMOS.find((d) => d.id === activeId) ?? DEMOS[0],
@@ -244,15 +242,6 @@ export function LandingDemo() {
       }
 
       setPhase('done');
-      if (!cancelled && !reduced) {
-        setImpact(true);
-        setBurstKey((k) => k + 1);
-        timers.push(
-          window.setTimeout(() => {
-            if (!cancelled) setImpact(false);
-          }, 520),
-        );
-      }
       await wait(3800);
 
       if (!cancelled && auto) {
@@ -273,11 +262,11 @@ export function LandingDemo() {
   return (
     <section className="demo-lab in-view" id="demo">
       <div className="section-head demo-head">
-        <p className="eyebrow">Live demo</p>
-        <h2>Click a chip. Watch it cook.</h2>
+        <p className="eyebrow">Demo</p>
+        <h2>Pick a strategy and watch the run.</h2>
         <p className="section-lede">
-          No chat sandbox. Quantify types the idea, builds a validated spec, simulates next-open
-          fills, then drops equity, risk, and a blotter — live.
+          The engine parses the idea, builds a validated spec, simulates next-open fills, then
+          returns equity, risk metrics, and a blotter.
         </p>
       </div>
 
@@ -311,24 +300,19 @@ export function LandingDemo() {
           Replay
         </button>
       </div>
-      <p className="demo-click-hint mono">Click hard — the console hits back</p>
-
-      <div className={`demo-console phase-${phase} ${impact ? 'impact' : ''}`}>
-        {burstKey > 0 && impact ? (
-          <span key={burstKey} className="mint-burst mint-burst-center" aria-hidden="true" />
-        ) : null}
+      <div className={`demo-console phase-${phase}`}>
         <div className="demo-console-top">
-          <span className="mono">quantify · interactive demo</span>
+          <span className="mono">quantify · demo</span>
           <span className="demo-status">
             <i />
             {phase === 'sim'
-              ? 'cooking fills'
+              ? 'simulating'
               : phase === 'parse' || phase === 'spec'
-                ? 'building teeth'
+                ? 'parsing'
                 : phase === 'type'
-                  ? 'eating the idea'
+                  ? 'typing'
                   : phase === 'done'
-                    ? 'locked in'
+                    ? 'complete'
                     : 'ready'}
           </span>
         </div>
@@ -479,8 +463,8 @@ export function LandingDemo() {
           <p className="mono">
             Deterministic engine · no arbitrary code execution · look-ahead safe
           </p>
-          <Link className="btn primary btn-kick" to="/app">
-            Run this for real →
+          <Link className="btn primary" to="/app">
+            Open workspace →
           </Link>
         </div>
       </div>

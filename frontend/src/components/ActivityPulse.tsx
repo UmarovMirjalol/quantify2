@@ -79,10 +79,9 @@ export function ActivityPulse() {
             <span className="live-pulse" aria-hidden="true" />
             Research pulse
           </p>
-          <h2>What people are testing right now.</h2>
+          <h2>Recent runs.</h2>
           <p className="section-lede">
-            Anonymized recent runs across the platform. Sample rows appear until the first real
-            backtests land.
+            Anonymized recent backtests. Sample rows show until real traffic arrives.
           </p>
         </div>
         <Link className="btn secondary" to="/playbook">

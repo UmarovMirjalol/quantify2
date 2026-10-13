@@ -5,7 +5,6 @@ import { DailyFact } from '../components/DailyFact';
 import { HeroDepthCanvas } from '../components/HeroDepthCanvas';
 import { HeroScene3D } from '../components/HeroScene3D';
 import { InstantTry } from '../components/InstantTry';
-import { SectionScene3D } from '../components/SectionScene3D';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
 import { MarketTicker } from '../components/MarketTicker';
@@ -76,8 +75,8 @@ function useInView<T extends HTMLElement>(reduced: boolean) {
 
 export function LandingPage() {
   usePageMeta(
-    'Quantify — Free Trading Strategy Backtester (No API Key)',
-    'Free online backtesting for SMA, EMA, RSI, MACD and Bollinger strategies. No signup, no API key, look-ahead-safe fills.',
+    'Quantify — Free Trading Strategy Backtester',
+    'Backtest SMA, EMA, RSI, MACD, and Bollinger strategies. No signup, no API key. Signals at close, fills at next open.',
   );
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>(reduced ? 'hold' : 'boot');
@@ -87,10 +86,6 @@ export function LandingPage() {
   const [interpVisible, setInterpVisible] = useState(reduced ? 4 : 0);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0, gx: 50, gy: 40 });
-  const [impact, setImpact] = useState(false);
-  const [bursts, setBursts] = useState<{ id: number; x: number; y: number }[]>([]);
-  const [sparks, setSparks] = useState<{ id: number; x: number; y: number }[]>([]);
-  const [spot, setSpot] = useState({ x: 72, y: 28 });
   const exec = useInView<HTMLElement>(reduced);
   const invariants = useInView<HTMLElement>(reduced);
   const metrics = useInView<HTMLElement>(reduced);
@@ -168,8 +163,8 @@ export function LandingPage() {
       const px = nx - 0.5;
       const py = ny - 0.5;
       setTilt({
-        x: py * -8,
-        y: px * 11,
+        x: py * -5,
+        y: px * 7,
         gx: nx * 100,
         gy: ny * 100,
       });
@@ -183,78 +178,11 @@ export function LandingPage() {
     };
   }, [reduced]);
 
-  useEffect(() => {
-    if (reduced) return;
-    const onMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth) * 100;
-      const y = (e.clientY / Math.max(window.innerHeight, 1)) * 100;
-      setSpot({ x, y: Math.min(y, 70) });
-    };
-    window.addEventListener('pointermove', onMove, { passive: true });
-    return () => window.removeEventListener('pointermove', onMove);
-  }, [reduced]);
-
-  // Slam the frame when results land
-  useEffect(() => {
-    if (reduced || phase !== 'results') return;
-    setImpact(true);
-    const burstId = Date.now();
-    setBursts((prev) => [...prev.slice(-2), { id: burstId, x: 62, y: 48 }]);
-    const t = window.setTimeout(() => setImpact(false), 520);
-    const t2 = window.setTimeout(() => {
-      setBursts((prev) => prev.filter((b) => b.id !== burstId));
-    }, 900);
-    return () => {
-      window.clearTimeout(t);
-      window.clearTimeout(t2);
-    };
-  }, [phase, reduced]);
-
   return (
-    <div
-      className="landing"
-      onPointerDown={(e) => {
-        if (reduced || e.button !== 0) return;
-        const target = e.target as HTMLElement | null;
-        if (target?.closest('a, button, input, textarea, select, label')) return;
-        const id = Date.now() + Math.random();
-        const x = e.clientX;
-        const y = e.clientY;
-        setSparks((prev) => [...prev.slice(-10), { id, x, y }]);
-        window.setTimeout(() => {
-          setSparks((prev) => prev.filter((s) => s.id !== id));
-        }, 650);
-      }}
-    >
-      <div className="landing-sparks" aria-hidden="true">
-        {sparks.map((s) => (
-          <span key={s.id} className="landing-spark" style={{ left: s.x, top: s.y }} />
-        ))}
-      </div>
-      <div
-        className="landing-motion"
-        aria-hidden="true"
-        style={{ ['--spot-x' as string]: `${spot.x}%`, ['--spot-y' as string]: `${spot.y}%` }}
-      >
+    <div className="landing">
+      <div className="landing-motion" aria-hidden="true">
         <HeroDepthCanvas />
         <span className="motion-grid" />
-        <span className="cursor-spot" />
-        <span className="beam beam-a" />
-        <span className="beam beam-b" />
-        <span className="orbit orbit-a" />
-        <span className="orbit orbit-b" />
-        <span className="orbit-dot" />
-        <span className="scanline" />
-        <span className="mote mote-a" />
-        <span className="mote mote-b" />
-        <span className="mote mote-c" />
-        <span className="mote mote-d" />
-        <span className="mote mote-e" />
-        <span className="mote mote-f" />
-        <span className="mote mote-g" />
-        <span className="spark spark-a" />
-        <span className="spark spark-b" />
-        <span className="spark spark-c" />
       </div>
 
       <header className="landing-nav">
@@ -275,13 +203,13 @@ export function LandingPage() {
             Playbook
           </a>
           <a className="btn ghost" href="#try">
-            Try free
+            Try
           </a>
           <Link className="btn ghost" to="/guide">
             Guide
           </Link>
           <Link className="btn primary" to="/app">
-            Open workspace
+            Workspace
           </Link>
         </div>
       </header>
@@ -292,22 +220,22 @@ export function LandingPage() {
             Quantify
           </p>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
-            Ideas in. Numbers out. No excuses.
+            Backtest strategies without the look-ahead.
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Free backtester — no signup, no API key. Plain English becomes a look-ahead-safe sim with
-            desk-grade metrics.
+            Describe an idea in plain English. Get a simulation with next-open fills, costs, and a
+            trade blotter. Free — no signup, no API key.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
-            <Link className="btn primary btn-kick" to="/app">
-              Break a strategy
+            <Link className="btn primary" to="/app">
+              Run a backtest
             </Link>
             <a className="btn secondary" href="#demo">
-              Watch it cook
+              See a demo
             </a>
           </div>
           <p className="hero-note mono reveal" style={{ ['--d' as string]: '300ms' }}>
-            Free public testing · Signal at close → execute next open
+            Signal at close · fill at next open · commission + slippage applied
           </p>
         </div>
 
@@ -319,7 +247,7 @@ export function LandingPage() {
             <span className="hero-pillar hero-pillar-a" />
             <span className="hero-pillar hero-pillar-b" />
           </div>
-          <div className={`hero-stage-float ${impact ? 'impact' : ''}`}>
+          <div className="hero-stage-float">
             <div
               className="product-ghost-shell"
               aria-hidden="true"
@@ -327,62 +255,7 @@ export function LandingPage() {
                 reduced
                   ? undefined
                   : {
-                      transform: `perspective(1400px) rotateX(${tilt.x * 0.7}deg) rotateY(${tilt.y * 0.7 - 8}deg) translateZ(-40px) translateX(28px) scale(0.94)`,
-                    }
-              }
-            />
-            <div
-              className="product-ghost-shell shell-b"
-              aria-hidden="true"
-              style={
-                reduced
-                  ? undefined
-                  : {
-                      transform: `perspective(1400px) rotateX(${tilt.x * 0.5}deg) rotateY(${tilt.y * 0.5 + 10}deg) translateZ(-70px) translateX(-18px) scale(0.88)`,
-                    }
-              }
-            />
-            <div
-              className="product-ghost-shell shell-c"
-              aria-hidden="true"
-              style={
-                reduced
-                  ? undefined
-                  : {
-                      transform: `perspective(1400px) rotateX(${tilt.x * 0.35}deg) rotateY(${tilt.y * 0.35 - 14}deg) translateZ(-110px) translateX(40px) scale(0.82)`,
-                    }
-              }
-            />
-            <span
-              className="hero-orb hero-orb-a"
-              aria-hidden="true"
-              style={
-                reduced
-                  ? undefined
-                  : {
-                      transform: `translate3d(${tilt.y * 1.2}px, ${tilt.x * -1.4}px, 80px)`,
-                    }
-              }
-            />
-            <span
-              className="hero-orb hero-orb-b"
-              aria-hidden="true"
-              style={
-                reduced
-                  ? undefined
-                  : {
-                      transform: `translate3d(${tilt.y * -1.6}px, ${tilt.x * 1.1}px, 40px)`,
-                    }
-              }
-            />
-            <span
-              className="hero-orb hero-orb-c"
-              aria-hidden="true"
-              style={
-                reduced
-                  ? undefined
-                  : {
-                      transform: `translate3d(${tilt.y * 0.8}px, ${tilt.x * 0.9}px, 120px)`,
+                      transform: `perspective(1400px) rotateX(${tilt.x * 0.5}deg) rotateY(${tilt.y * 0.5 - 6}deg) translateZ(-36px) translateX(20px) scale(0.96)`,
                     }
               }
             />
@@ -392,7 +265,7 @@ export function LandingPage() {
                 reduced
                   ? undefined
                   : {
-                      transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(48px)`,
+                      transform: `perspective(1400px) rotateX(${tilt.x * 0.7}deg) rotateY(${tilt.y * 0.7}deg) translateZ(24px)`,
                       ['--glare-x' as string]: `${tilt.gx}%`,
                       ['--glare-y' as string]: `${tilt.gy}%`,
                     }
@@ -400,14 +273,6 @@ export function LandingPage() {
             >
               <span className="glass-specular" aria-hidden="true" />
               <span className="glass-edge" aria-hidden="true" />
-              {bursts.map((b) => (
-                <span
-                  key={b.id}
-                  className="mint-burst"
-                  style={{ left: `${b.x}%`, top: `${b.y}%` }}
-                  aria-hidden="true"
-                />
-              ))}
               <div className="product-top">
                 <span className="product-brand">
                   <LogoMark size={14} />
@@ -416,12 +281,12 @@ export function LandingPage() {
                 <span className="product-live">
                   <i />
                   {phase === 'sim'
-                    ? 'cooking fills'
+                    ? 'simulating'
                     : phase === 'parse' || phase === 'spec'
-                      ? 'chewing NL'
+                      ? 'parsing'
                       : phase === 'results' || phase === 'hold'
-                        ? 'locked in'
-                        : 'live'}
+                        ? 'complete'
+                        : 'idle'}
                 </span>
               </div>
 
@@ -561,16 +426,15 @@ export function LandingPage() {
       <ActivityPulse />
 
       <section
-        className={`landing-section exec-section has-scene-3d ${exec.inView ? 'in-view' : ''}`}
+        className={`landing-section exec-section ${exec.inView ? 'in-view' : ''}`}
         ref={exec.ref}
       >
-        <SectionScene3D className="exec-scene-3d" />
         <div className="section-head">
           <p className="eyebrow">Execution model</p>
-          <h2>Look-ahead bias dies here.</h2>
+          <h2>How fills are timed.</h2>
           <p className="section-lede">
-            No fantasy fills. Decide on the close, trade the next open, charge costs — the boring
-            rules that keep research honest.
+            Signals form on the close. Orders fill on the next open. Commission and slippage are
+            deducted before equity updates.
           </p>
         </div>
 
@@ -579,22 +443,22 @@ export function LandingPage() {
             {
               t: 'T · Close',
               title: 'Signal forms',
-              body: 'Indicators settle on the closing bar. No future candles leak into the decision.',
+              body: 'Indicators settle on the closing bar. No future candles enter the decision.',
             },
             {
               t: 'T+1 · Open',
               title: 'Order executes',
-              body: 'Position opens or closes at the next session open — the earliest realistic fill.',
+              body: 'The position opens or closes at the next session open.',
             },
             {
               t: 'Fill',
               title: 'Costs applied',
-              body: 'Commission and slippage hit every trade before equity updates. No free lunch.',
+              body: 'Commission and slippage are applied on every trade before PnL.',
             },
             {
               t: 'Ledger',
-              title: 'Metrics locked',
-              body: 'Sharpe, drawdown, win rate, and the trade blotter come from that simulation — not a sketch.',
+              title: 'Metrics recorded',
+              body: 'Sharpe, drawdown, win rate, and the blotter come from that same simulation.',
             },
           ].map((step, i) => (
             <li key={step.t} style={{ ['--i' as string]: i }}>
@@ -613,26 +477,26 @@ export function LandingPage() {
         ref={invariants.ref}
       >
         <div className="section-head">
-          <p className="eyebrow">Engine invariants</p>
-          <h2>Stuff we will not fake.</h2>
+          <p className="eyebrow">Engine rules</p>
+          <h2>What the simulator will not do.</h2>
         </div>
         <div className="invariant-grid">
           {[
             {
               bad: 'Arbitrary code execution',
-              good: 'Validated strategy specs only — SMA, EMA, RSI, Bollinger, risk rules.',
+              good: 'Validated specs only: SMA, EMA, RSI, MACD, Bollinger, risk rules.',
             },
             {
-              bad: 'Same-bar fantasy fills',
-              good: 'Signal at close, execute next open. Hard-wired.',
+              bad: 'Same-bar fills',
+              good: 'Signal at close, execute next open.',
             },
             {
               bad: 'Zero-cost backtests',
-              good: 'Commission + slippage deducted on every fill before PnL.',
+              good: 'Commission and slippage deducted on every fill.',
             },
             {
-              bad: 'Chat-shaped research',
-              good: 'Workspace → interpretation → simulation → institutional results.',
+              bad: 'Opaque results',
+              good: 'Parsed JSON spec + full trade blotter for every run.',
             },
           ].map((item, i) => (
             <article key={item.bad} style={{ ['--i' as string]: i }}>
@@ -644,26 +508,24 @@ export function LandingPage() {
       </section>
 
       <section
-        className={`landing-section metrics-section has-scene-3d ${metrics.inView ? 'in-view' : ''}`}
+        className={`landing-section metrics-section ${metrics.inView ? 'in-view' : ''}`}
         ref={metrics.ref}
       >
-        <SectionScene3D className="metrics-scene-3d" />
         <div className="section-head">
-          <p className="eyebrow">Output surface</p>
-          <h2>Institutional readout, not vanity charts.</h2>
+          <p className="eyebrow">Results</p>
+          <h2>Metrics from the simulation, not a sketch.</h2>
           <p className="section-lede">
-            After a run you get the same family of numbers a desk expects — equity, risk, trades,
-            and the parsed specification you can audit.
+            Each run returns equity, risk, trades, and the parsed specification you can inspect.
           </p>
         </div>
         <div className="metric-board">
           {[
             { k: 'Total return / CAGR', d: 'Compounded path from simulated capital' },
-            { k: 'Sharpe / Sortino', d: 'Risk-adjusted return with downside focus' },
-            { k: 'Max drawdown', d: 'Peak-to-trough pain on the equity curve' },
-            { k: 'Win rate / profit factor', d: 'Trade quality, not just direction' },
+            { k: 'Sharpe / Sortino', d: 'Risk-adjusted return, including downside' },
+            { k: 'Max drawdown', d: 'Peak-to-trough decline on the equity curve' },
+            { k: 'Win rate / profit factor', d: 'Trade quality alongside direction' },
             { k: 'Trade ledger', d: 'Every fill with side, price, and PnL' },
-            { k: 'Parsed JSON spec', d: 'Audit what the engine actually ran' },
+            { k: 'Parsed JSON spec', d: 'Exact rules the engine ran' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>
@@ -673,13 +535,13 @@ export function LandingPage() {
         </div>
         <div className="landing-cta-row">
           <Link className="btn primary" to="/app">
-            Open research workspace
+            Open workspace
           </Link>
           <Link className="btn secondary" to="/playbook">
-            Open strategy playbook
+            Strategy playbook
           </Link>
           <a className="btn ghost" href="#demo">
-            Replay live demo
+            Demo
           </a>
         </div>
       </section>
@@ -689,11 +551,10 @@ export function LandingPage() {
       <section className="landing-section deploy-strip in-view">
         <div className="deploy-strip-inner">
           <div>
-            <p className="eyebrow">Ship it</p>
-            <h2>Built for one-command production deploy.</h2>
+            <p className="eyebrow">Deploy</p>
+            <h2>One-command production stack.</h2>
             <p className="section-lede">
-              Docker Compose edge · SPA · API · SQLite volumes · access token gate · optional HTTPS.
-              Same UI you see here — production-ready.
+              Docker Compose: edge, SPA, API, SQLite volumes, optional access gate and HTTPS.
             </p>
           </div>
           <pre className="deploy-code mono">{`cp .env.production.example .env
@@ -703,16 +564,15 @@ export function LandingPage() {
 
       <section className="landing-section seo-copy in-view">
         <div className="section-head">
-          <p className="eyebrow">Free backtesting software</p>
-          <h2>Built for Google-found researchers.</h2>
+          <p className="eyebrow">Free backtesting</p>
+          <h2>SMA, RSI, MACD, Bollinger — no API key.</h2>
           <p className="section-lede">
-            Searching for a free trading strategy backtester? Quantify lets you test SMA crossovers,
-            RSI mean reversion, MACD momentum, and Bollinger band ideas without paying for an API
-            key. Index the playbook, read the guide, then run a simulation in the workspace.
+            Quantify is a free trading strategy backtester. Start from the playbook or the guide,
+            then run a simulation in the workspace.
           </p>
         </div>
         <div className="seo-links">
-          <Link to="/guide">How to backtest free →</Link>
+          <Link to="/guide">How to backtest →</Link>
           <Link to="/playbook">Strategy playbook →</Link>
           <a href="/robots.txt">robots.txt</a>
           <a href="/sitemap.xml">sitemap.xml</a>
@@ -720,7 +580,7 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        <span>Quantify · Free quant research terminal</span>
+        <span>Quantify</span>
         <span className="mono">No API key · Signal at close → execute next open</span>
       </footer>
     </div>

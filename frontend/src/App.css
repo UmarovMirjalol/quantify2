@@ -1571,11 +1571,11 @@ h2 {
 
 .hero-scene-3d {
   position: absolute;
-  inset: -28% -40% -40% -28%;
+  inset: -12% -22% -22% -6%;
   z-index: 1;
   pointer-events: none;
-  opacity: 1;
-  mask-image: radial-gradient(ellipse 92% 88% at 55% 48%, #000 38%, transparent 90%);
+  opacity: 0.9;
+  mask-image: radial-gradient(ellipse 78% 72% at 62% 48%, #000 30%, transparent 80%);
 }
 
 .hero-scene-3d canvas {

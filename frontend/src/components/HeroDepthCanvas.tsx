@@ -36,22 +36,22 @@ export function HeroDepthCanvas() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       lanes.length = 0;
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 12; i++) {
         lanes.push({
-          x: (i / 19) * 1.45 - 0.22,
-          speed: 0.1 + (i % 5) * 0.025,
+          x: (i / 11) * 1.35 - 0.18,
+          speed: 0.08 + (i % 5) * 0.02,
           width: 1 + (i % 3),
-          alpha: 0.1 + (i % 4) * 0.035,
+          alpha: 0.07 + (i % 4) * 0.025,
         });
       }
       dots.length = 0;
-      for (let i = 0; i < 80; i++) {
+      for (let i = 0; i < 36; i++) {
         dots.push({
           x: Math.random() * 2 - 1,
           y: Math.random(),
           z: Math.random(),
-          vz: 0.002 + Math.random() * 0.004,
-          a: 0.3 + Math.random() * 0.6,
+          vz: 0.0015 + Math.random() * 0.003,
+          a: 0.22 + Math.random() * 0.45,
         });
       }
     };

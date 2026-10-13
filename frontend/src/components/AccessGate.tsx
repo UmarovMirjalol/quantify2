@@ -54,7 +54,7 @@ export function AccessGate({ onUnlocked }: Props) {
             <span className="brand-tag">Secure access</span>
           </span>
         </div>
-        <p className="eyebrow">Production gate</p>
+        <p className="eyebrow">Access</p>
         <h1>Enter access token</h1>
         <p className="lede">
           Paste <code className="mono">APP_ACCESS_TOKEN</code> from the server{' '}
