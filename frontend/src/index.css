@@ -34,8 +34,9 @@
   --radius: 7px;
   --radius-sm: 5px;
   --radius-lg: 10px;
-  --font: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --display: 'Unbounded', 'Manrope', var(--font);
+  /* IBM Plex stack — research terminal, not startup-AI grotesk */
+  --font: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --display: 'IBM Plex Serif', 'IBM Plex Sans', var(--font);
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --shadow: 0 0 0 1px var(--border), 0 24px 60px rgba(0, 0, 0, 0.5);
   --shadow-soft: 0 0 0 1px var(--border), 0 10px 28px rgba(0, 0, 0, 0.32);

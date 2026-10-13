@@ -9,7 +9,7 @@
   <circle cx="980" cy="160" r="240" fill="#4fd6a0" fill-opacity="0.08"/>
   <rect x="120" y="150" width="96" height="96" rx="24" fill="#0c1014" stroke="#4fd6a0" stroke-opacity="0.28"/>
   <path d="M177 165 L150 199.5 H166.2 L159 231 L189.6 192.6 H172.8 L177 165 Z" fill="#4fd6a0"/>
-  <text x="244" y="214" fill="#eef1f3" font-family="Unbounded, Manrope, Arial, sans-serif" font-size="64" font-weight="700">Quantify</text>
-  <text x="120" y="300" fill="#98a2ac" font-family="Manrope, Arial, sans-serif" font-size="34">Free trading strategy backtester</text>
+  <text x="244" y="214" fill="#eef1f3" font-family="IBM Plex Serif, Georgia, serif" font-size="64" font-weight="700">Quantify</text>
+  <text x="120" y="300" fill="#98a2ac" font-family="IBM Plex Sans, Arial, sans-serif" font-size="34">Free trading strategy backtester</text>
   <text x="120" y="360" fill="#4fd6a0" font-family="IBM Plex Mono, monospace" font-size="22">Plain English ? look-ahead-safe simulation</text>
 </svg>
