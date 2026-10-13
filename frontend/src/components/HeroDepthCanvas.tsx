@@ -36,22 +36,22 @@ export function HeroDepthCanvas() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       lanes.length = 0;
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 20; i++) {
         lanes.push({
-          x: (i / 13) * 1.4 - 0.2,
-          speed: 0.08 + (i % 5) * 0.02,
+          x: (i / 19) * 1.45 - 0.22,
+          speed: 0.1 + (i % 5) * 0.025,
           width: 1 + (i % 3),
-          alpha: 0.08 + (i % 4) * 0.03,
+          alpha: 0.1 + (i % 4) * 0.035,
         });
       }
       dots.length = 0;
-      for (let i = 0; i < 48; i++) {
+      for (let i = 0; i < 80; i++) {
         dots.push({
           x: Math.random() * 2 - 1,
           y: Math.random(),
           z: Math.random(),
-          vz: 0.0015 + Math.random() * 0.003,
-          a: 0.25 + Math.random() * 0.55,
+          vz: 0.002 + Math.random() * 0.004,
+          a: 0.3 + Math.random() * 0.6,
         });
       }
     };
@@ -117,8 +117,8 @@ export function HeroDepthCanvas() {
 
       // soft horizon glow
       const hg = ctx.createRadialGradient(vanishX, horizon, 10, vanishX, horizon, w * 0.35);
-      hg.addColorStop(0, 'rgba(79, 214, 160, 0.16)');
-      hg.addColorStop(0.4, 'rgba(79, 214, 160, 0.05)');
+      hg.addColorStop(0, 'rgba(79, 214, 160, 0.22)');
+      hg.addColorStop(0.4, 'rgba(79, 214, 160, 0.07)');
       hg.addColorStop(1, 'rgba(79, 214, 160, 0)');
       ctx.fillStyle = hg;
       ctx.fillRect(vanishX - w * 0.35, horizon - 80, w * 0.7, 160);

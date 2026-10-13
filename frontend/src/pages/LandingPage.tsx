@@ -5,6 +5,7 @@ import { DailyFact } from '../components/DailyFact';
 import { HeroDepthCanvas } from '../components/HeroDepthCanvas';
 import { HeroScene3D } from '../components/HeroScene3D';
 import { InstantTry } from '../components/InstantTry';
+import { SectionScene3D } from '../components/SectionScene3D';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
 import { MarketTicker } from '../components/MarketTicker';
@@ -342,12 +343,56 @@ export function LandingPage() {
               }
             />
             <div
+              className="product-ghost-shell shell-c"
+              aria-hidden="true"
+              style={
+                reduced
+                  ? undefined
+                  : {
+                      transform: `perspective(1400px) rotateX(${tilt.x * 0.35}deg) rotateY(${tilt.y * 0.35 - 14}deg) translateZ(-110px) translateX(40px) scale(0.82)`,
+                    }
+              }
+            />
+            <span
+              className="hero-orb hero-orb-a"
+              aria-hidden="true"
+              style={
+                reduced
+                  ? undefined
+                  : {
+                      transform: `translate3d(${tilt.y * 1.2}px, ${tilt.x * -1.4}px, 80px)`,
+                    }
+              }
+            />
+            <span
+              className="hero-orb hero-orb-b"
+              aria-hidden="true"
+              style={
+                reduced
+                  ? undefined
+                  : {
+                      transform: `translate3d(${tilt.y * -1.6}px, ${tilt.x * 1.1}px, 40px)`,
+                    }
+              }
+            />
+            <span
+              className="hero-orb hero-orb-c"
+              aria-hidden="true"
+              style={
+                reduced
+                  ? undefined
+                  : {
+                      transform: `translate3d(${tilt.y * 0.8}px, ${tilt.x * 0.9}px, 120px)`,
+                    }
+              }
+            />
+            <div
               className={`product-frame glass-3d phase-${phase}`}
               style={
                 reduced
                   ? undefined
                   : {
-                      transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(36px)`,
+                      transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(48px)`,
                       ['--glare-x' as string]: `${tilt.gx}%`,
                       ['--glare-y' as string]: `${tilt.gy}%`,
                     }
@@ -516,9 +561,10 @@ export function LandingPage() {
       <ActivityPulse />
 
       <section
-        className={`landing-section exec-section ${exec.inView ? 'in-view' : ''}`}
+        className={`landing-section exec-section has-scene-3d ${exec.inView ? 'in-view' : ''}`}
         ref={exec.ref}
       >
+        <SectionScene3D className="exec-scene-3d" />
         <div className="section-head">
           <p className="eyebrow">Execution model</p>
           <h2>Look-ahead bias dies here.</h2>
@@ -598,9 +644,10 @@ export function LandingPage() {
       </section>
 
       <section
-        className={`landing-section metrics-section ${metrics.inView ? 'in-view' : ''}`}
+        className={`landing-section metrics-section has-scene-3d ${metrics.inView ? 'in-view' : ''}`}
         ref={metrics.ref}
       >
+        <SectionScene3D className="metrics-scene-3d" />
         <div className="section-head">
           <p className="eyebrow">Output surface</p>
           <h2>Institutional readout, not vanity charts.</h2>
