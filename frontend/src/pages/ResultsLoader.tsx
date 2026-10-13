@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getBacktest } from '../services/api';
 import type { BacktestResult } from '../types';
-import { ResultsView } from './ResultsPage';
+
+const ResultsView = lazy(() =>
+  import('./ResultsPage').then((m) => ({ default: m.ResultsView })),
+);
 
 export function ResultsLoader() {
   const { id } = useParams();
@@ -55,5 +58,16 @@ export function ResultsLoader() {
       </div>
     );
   }
-  return <ResultsView result={result} />;
+  return (
+    <Suspense
+      fallback={
+        <div className="empty-state">
+          <div className="skeleton-line" style={{ width: '40%', margin: '0 auto 0.85rem' }} />
+          Loading charts…
+        </div>
+      }
+    >
+      <ResultsView result={result} />
+    </Suspense>
+  );
 }
