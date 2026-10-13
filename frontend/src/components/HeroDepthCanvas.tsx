@@ -161,19 +161,37 @@ export function HeroDepthCanvas() {
 
     const onVis = () => {
       if (document.hidden) {
+        running = false;
         cancelAnimationFrame(raf);
-      } else {
+      } else if (running) {
         raf = requestAnimationFrame(loop);
       }
     };
 
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const on = Boolean(entry?.isIntersecting) && !document.hidden;
+        if (on && !running) {
+          running = true;
+          raf = requestAnimationFrame(loop);
+        } else if (!on) {
+          running = false;
+          cancelAnimationFrame(raf);
+        }
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(canvas);
+
     resize();
+    running = true;
     raf = requestAnimationFrame(loop);
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', onVis);
     return () => {
       running = false;
       cancelAnimationFrame(raf);
+      io.disconnect();
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVis);
     };

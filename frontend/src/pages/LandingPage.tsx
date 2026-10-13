@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ActivityPulse } from '../components/ActivityPulse';
 import { DailyFact } from '../components/DailyFact';
 import { HeroDepthCanvas } from '../components/HeroDepthCanvas';
-import { HeroScene3D } from '../components/HeroScene3D';
 import { InstantTry } from '../components/InstantTry';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
@@ -15,6 +14,10 @@ import { StrategyOfTheDay } from '../components/StrategyOfTheDay';
 import { useCountUp } from '../hooks/useCountUp';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+
+const HeroScene3D = lazy(() =>
+  import('../components/HeroScene3D').then((m) => ({ default: m.HeroScene3D })),
+);
 
 const ACCENT = '#4fd6a0';
 
@@ -240,7 +243,9 @@ export function LandingPage() {
         </div>
 
         <div className="hero-stage reveal" style={{ ['--d' as string]: '140ms' }} ref={stageRef}>
-          <HeroScene3D />
+          <Suspense fallback={null}>
+            <HeroScene3D />
+          </Suspense>
           <div className="hero-stage-scene" aria-hidden="true">
             <span className="hero-floor" />
             <span className="hero-floor-glow" />

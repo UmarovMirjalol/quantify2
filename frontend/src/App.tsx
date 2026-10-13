@@ -1,18 +1,38 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AccessGate } from './components/AccessGate';
 import { Layout } from './components/Layout';
-import { GuidePage } from './pages/GuidePage';
-import { HistoryPage } from './pages/HistoryPage';
-import { HomePage } from './pages/HomePage';
-import { LandingPage } from './pages/LandingPage';
-import { PlaybookPage } from './pages/PlaybookPage';
-import { ResultsLoader } from './pages/ResultsLoader';
-import { SettingsPage } from './pages/SettingsPage';
 import { getHealth, listDatasets } from './services/api';
 import { clearAccessToken, getAccessToken } from './services/session';
 import type { HealthStatus } from './types';
 import './App.css';
+
+const LandingPage = lazy(() =>
+  import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
+);
+const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const PlaybookPage = lazy(() =>
+  import('./pages/PlaybookPage').then((m) => ({ default: m.PlaybookPage })),
+);
+const GuidePage = lazy(() => import('./pages/GuidePage').then((m) => ({ default: m.GuidePage })));
+const HistoryPage = lazy(() =>
+  import('./pages/HistoryPage').then((m) => ({ default: m.HistoryPage })),
+);
+const ResultsLoader = lazy(() =>
+  import('./pages/ResultsLoader').then((m) => ({ default: m.ResultsLoader })),
+);
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+
+function RouteFallback() {
+  return (
+    <div className="empty-state" style={{ margin: '2rem auto', maxWidth: 420 }}>
+      <div className="skeleton-line" style={{ width: '48%', margin: '0 auto 0.85rem' }} />
+      Loading…
+    </div>
+  );
+}
 
 export default function App() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -92,7 +112,7 @@ export default function App() {
         .catch(() => {
           if (!cancelled) setApiDown(true);
         });
-    }, 15000);
+    }, 30000);
 
     return () => {
       cancelled = true;
@@ -160,16 +180,18 @@ export default function App() {
 
   return (
     <Layout health={health}>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/app" element={<HomePage health={health} />} />
-        <Route path="/playbook" element={<PlaybookPage />} />
-        <Route path="/guide" element={<GuidePage />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/results/:id" element={<ResultsLoader />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/app" element={<HomePage health={health} />} />
+          <Route path="/playbook" element={<PlaybookPage />} />
+          <Route path="/guide" element={<GuidePage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/results/:id" element={<ResultsLoader />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }

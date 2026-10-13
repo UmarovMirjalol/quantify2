@@ -13,7 +13,7 @@ const FALLBACK: PublicStats = {
   updated_at: '',
 };
 
-const POLL_MS = 4000;
+const POLL_MS = 20000;
 
 function formatStat(n: number): string {
   return Math.round(n).toLocaleString('en-US');
@@ -119,8 +119,16 @@ export function LiveStats() {
       }
     }
 
-    tick(true);
-    timer = window.setInterval(() => tick(false), POLL_MS);
+    const start = () => {
+      window.clearInterval(timer);
+      tick(true);
+      timer = window.setInterval(() => {
+        if (document.hidden) return;
+        tick(false);
+      }, POLL_MS);
+    };
+
+    start();
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') tick(false);
