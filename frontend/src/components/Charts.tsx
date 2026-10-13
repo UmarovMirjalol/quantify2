@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import type { EquityPoint, Marker, PriceBar } from '../types';
 
-const FONT = 'IBM Plex Sans, system-ui, sans-serif';
+const FONT = 'Manrope, system-ui, sans-serif';
 const MONO = 'IBM Plex Mono, ui-monospace, monospace';
 
 const layoutBase = {
