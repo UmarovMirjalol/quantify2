@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ActivityPulse } from '../components/ActivityPulse';
 import { DailyFact } from '../components/DailyFact';
 import { HeroDepthCanvas } from '../components/HeroDepthCanvas';
+import { HeroScene3D } from '../components/HeroScene3D';
 import { InstantTry } from '../components/InstantTry';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
@@ -310,6 +311,7 @@ export function LandingPage() {
         </div>
 
         <div className="hero-stage reveal" style={{ ['--d' as string]: '140ms' }} ref={stageRef}>
+          <HeroScene3D />
           <div className="hero-stage-scene" aria-hidden="true">
             <span className="hero-floor" />
             <span className="hero-floor-glow" />
@@ -318,12 +320,34 @@ export function LandingPage() {
           </div>
           <div className={`hero-stage-float ${impact ? 'impact' : ''}`}>
             <div
+              className="product-ghost-shell"
+              aria-hidden="true"
+              style={
+                reduced
+                  ? undefined
+                  : {
+                      transform: `perspective(1400px) rotateX(${tilt.x * 0.7}deg) rotateY(${tilt.y * 0.7 - 8}deg) translateZ(-40px) translateX(28px) scale(0.94)`,
+                    }
+              }
+            />
+            <div
+              className="product-ghost-shell shell-b"
+              aria-hidden="true"
+              style={
+                reduced
+                  ? undefined
+                  : {
+                      transform: `perspective(1400px) rotateX(${tilt.x * 0.5}deg) rotateY(${tilt.y * 0.5 + 10}deg) translateZ(-70px) translateX(-18px) scale(0.88)`,
+                    }
+              }
+            />
+            <div
               className={`product-frame glass-3d phase-${phase}`}
               style={
                 reduced
                   ? undefined
                   : {
-                      transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(18px)`,
+                      transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(36px)`,
                       ['--glare-x' as string]: `${tilt.gx}%`,
                       ['--glare-y' as string]: `${tilt.gy}%`,
                     }

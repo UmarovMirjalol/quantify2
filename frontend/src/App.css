@@ -1566,7 +1566,45 @@ h2 {
   position: relative;
   perspective: 1600px;
   transform-style: preserve-3d;
-  min-height: 420px;
+  min-height: 480px;
+}
+
+.hero-scene-3d {
+  position: absolute;
+  inset: -8% -18% -22% -8%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.95;
+  mask-image: radial-gradient(ellipse 75% 70% at 58% 45%, #000 15%, transparent 78%);
+}
+
+.hero-scene-3d canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.product-ghost-shell {
+  position: absolute;
+  inset: 4% 2% 2% 6%;
+  border-radius: 18px;
+  border: 1px solid rgba(79, 214, 160, 0.18);
+  background:
+    linear-gradient(145deg, rgba(79, 214, 160, 0.06), transparent 40%),
+    rgba(14, 18, 24, 0.35);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.product-ghost-shell.shell-b {
+  inset: 8% 8% 6% 0;
+  opacity: 0.65;
+  border-color: rgba(79, 214, 160, 0.12);
 }
 
 .hero-stage-scene {
@@ -1640,6 +1678,7 @@ h2 {
   animation: frame-float 7.5s ease-in-out infinite;
   will-change: transform;
   transform-style: preserve-3d;
+  isolation: isolate;
 }
 
 .product-frame {
@@ -4050,6 +4089,8 @@ h2 {
   }
 
   .hero-depth-canvas,
+  .hero-scene-3d,
+  .product-ghost-shell,
   .cursor-spot {
     display: none !important;
   }
