@@ -69,8 +69,9 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(1000px 560px at 88% 18%, rgba(79, 214, 160, 0.07), transparent 58%),
-    radial-gradient(700px 420px at 8% 90%, rgba(79, 214, 160, 0.03), transparent 55%),
+    radial-gradient(1100px 620px at 82% 12%, rgba(79, 214, 160, 0.1), transparent 58%),
+    radial-gradient(800px 480px at 12% 88%, rgba(79, 214, 160, 0.045), transparent 55%),
+    radial-gradient(900px 500px at 50% 100%, rgba(20, 28, 34, 0.9), transparent 60%),
     var(--bg);
   background-attachment: fixed;
 }
@@ -112,6 +113,8 @@ code,
   .landing-motion,
   .landing-motion *,
   .hero-stage-float,
+  .hero-floor,
+  .market-ticker-track,
   .product-frame,
   .product-frame::before,
   .product-live i,

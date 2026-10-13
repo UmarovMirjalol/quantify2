@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ActivityPulse } from '../components/ActivityPulse';
 import { DailyFact } from '../components/DailyFact';
+import { HeroDepthCanvas } from '../components/HeroDepthCanvas';
 import { InstantTry } from '../components/InstantTry';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
+import { MarketTicker } from '../components/MarketTicker';
 import { ReleasesFaq } from '../components/ReleasesFaq';
 import { StrategyGallery } from '../components/StrategyGallery';
 import { LogoMark } from '../components/LogoMark';
@@ -82,10 +84,11 @@ export function LandingPage() {
   const [showChart, setShowChart] = useState(reduced);
   const [interpVisible, setInterpVisible] = useState(reduced ? 4 : 0);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [tilt, setTilt] = useState({ x: 0, y: 0, gx: 50, gy: 40 });
   const [impact, setImpact] = useState(false);
   const [bursts, setBursts] = useState<{ id: number; x: number; y: number }[]>([]);
   const [sparks, setSparks] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [spot, setSpot] = useState({ x: 72, y: 28 });
   const exec = useInView<HTMLElement>(reduced);
   const invariants = useInView<HTMLElement>(reduced);
   const metrics = useInView<HTMLElement>(reduced);
@@ -158,17 +161,35 @@ export function LandingPage() {
     if (!el) return;
     const onMove = (e: MouseEvent) => {
       const rect = el.getBoundingClientRect();
-      const px = (e.clientX - rect.left) / rect.width - 0.5;
-      const py = (e.clientY - rect.top) / rect.height - 0.5;
-      setTilt({ x: py * -5, y: px * 7 });
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+      const px = nx - 0.5;
+      const py = ny - 0.5;
+      setTilt({
+        x: py * -8,
+        y: px * 11,
+        gx: nx * 100,
+        gy: ny * 100,
+      });
     };
-    const onLeave = () => setTilt({ x: 0, y: 0 });
+    const onLeave = () => setTilt({ x: 0, y: 0, gx: 50, gy: 40 });
     el.addEventListener('mousemove', onMove);
     el.addEventListener('mouseleave', onLeave);
     return () => {
       el.removeEventListener('mousemove', onMove);
       el.removeEventListener('mouseleave', onLeave);
     };
+  }, [reduced]);
+
+  useEffect(() => {
+    if (reduced) return;
+    const onMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth) * 100;
+      const y = (e.clientY / Math.max(window.innerHeight, 1)) * 100;
+      setSpot({ x, y: Math.min(y, 70) });
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    return () => window.removeEventListener('pointermove', onMove);
   }, [reduced]);
 
   // Slam the frame when results land
@@ -208,8 +229,14 @@ export function LandingPage() {
           <span key={s.id} className="landing-spark" style={{ left: s.x, top: s.y }} />
         ))}
       </div>
-      <div className="landing-motion" aria-hidden="true">
+      <div
+        className="landing-motion"
+        aria-hidden="true"
+        style={{ ['--spot-x' as string]: `${spot.x}%`, ['--spot-y' as string]: `${spot.y}%` }}
+      >
+        <HeroDepthCanvas />
         <span className="motion-grid" />
+        <span className="cursor-spot" />
         <span className="beam beam-a" />
         <span className="beam beam-b" />
         <span className="orbit orbit-a" />
@@ -283,15 +310,27 @@ export function LandingPage() {
         </div>
 
         <div className="hero-stage reveal" style={{ ['--d' as string]: '140ms' }} ref={stageRef}>
+          <div className="hero-stage-scene" aria-hidden="true">
+            <span className="hero-floor" />
+            <span className="hero-floor-glow" />
+            <span className="hero-pillar hero-pillar-a" />
+            <span className="hero-pillar hero-pillar-b" />
+          </div>
           <div className={`hero-stage-float ${impact ? 'impact' : ''}`}>
             <div
-              className={`product-frame phase-${phase}`}
+              className={`product-frame glass-3d phase-${phase}`}
               style={
                 reduced
                   ? undefined
-                  : { transform: `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }
+                  : {
+                      transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(18px)`,
+                      ['--glare-x' as string]: `${tilt.gx}%`,
+                      ['--glare-y' as string]: `${tilt.gy}%`,
+                    }
               }
             >
+              <span className="glass-specular" aria-hidden="true" />
+              <span className="glass-edge" aria-hidden="true" />
               {bursts.map((b) => (
                 <span
                   key={b.id}
@@ -435,6 +474,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <MarketTicker />
 
       <LandingDemo />
 
