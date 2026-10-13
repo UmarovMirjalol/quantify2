@@ -77,18 +77,53 @@ PLAYBOOK: list[dict[str, Any]] = [
 
 RELEASES: list[dict[str, str]] = [
     {
+        "version": "0.10",
+        "title": "Public free mode",
+        "body": "Open landing with built-in parser, no signup, no API key required for core strategies.",
+    },
+    {
+        "version": "0.9",
+        "title": "Strategy of the day",
+        "body": "Daily rotating preset plus Instant Try handoff into the workspace.",
+    },
+    {
+        "version": "0.8",
+        "title": "Guide & SEO surface",
+        "body": "Crawlable guide, robots/sitemap, and FAQ structured data on the landing.",
+    },
+    {
+        "version": "0.7",
+        "title": "Daily fact",
+        "body": "Rotating quant research notes on the public landing page.",
+    },
+    {
+        "version": "0.6",
+        "title": "Live stats",
+        "body": "Public counters for users, backtests, and releases with visitor ping.",
+    },
+    {
+        "version": "0.5",
+        "title": "Activity pulse",
+        "body": "Anonymized recent-run feed for the landing page.",
+    },
+    {
+        "version": "0.4",
+        "title": "Interactive demo",
+        "body": "Chip-driven demo console with equity, metrics, and blotter.",
+    },
+    {
         "version": "0.3",
         "title": "Live pulse & playbook",
-        "body": "Public activity feed, strategy gallery, live counters, and denser landing surface.",
+        "body": "Public activity feed, strategy gallery, and playbook presets.",
     },
     {
         "version": "0.2",
         "title": "Production edge",
-        "body": "Docker Compose deploy, access token gate, rate limits, and one-command smoke tests.",
+        "body": "Docker Compose deploy, optional access gate, rate limits, smoke tests.",
     },
     {
         "version": "0.1",
         "title": "Research core",
-        "body": "NL strategies → look-ahead-safe engine, risk sizing, institutional metrics, SQLite history.",
+        "body": "Plain-English strategies, look-ahead-safe engine, risk sizing, metrics, SQLite history.",
     },
 ]

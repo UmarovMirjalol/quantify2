@@ -5,14 +5,49 @@ import type { ReleaseItem } from '../types';
 
 const FALLBACK_RELEASES: ReleaseItem[] = [
   {
+    version: '0.10',
+    title: 'Public free mode',
+    body: 'Open landing with built-in parser, no signup, no API key required for core strategies.',
+  },
+  {
+    version: '0.9',
+    title: 'Strategy of the day',
+    body: 'Daily rotating preset plus Instant Try handoff into the workspace.',
+  },
+  {
+    version: '0.8',
+    title: 'Guide & SEO surface',
+    body: 'Crawlable guide, robots/sitemap, and FAQ structured data on the landing.',
+  },
+  {
+    version: '0.7',
+    title: 'Daily fact',
+    body: 'Rotating quant research notes on the public landing page.',
+  },
+  {
+    version: '0.6',
+    title: 'Live stats',
+    body: 'Public counters for users, backtests, and releases with visitor ping.',
+  },
+  {
+    version: '0.5',
+    title: 'Activity pulse',
+    body: 'Anonymized recent-run feed for the landing page.',
+  },
+  {
+    version: '0.4',
+    title: 'Interactive demo',
+    body: 'Chip-driven demo console with equity, metrics, and blotter.',
+  },
+  {
     version: '0.3',
     title: 'Live pulse & playbook',
-    body: 'Public activity feed, strategy gallery, and live counters on the landing page.',
+    body: 'Public activity feed, strategy gallery, and playbook presets.',
   },
   {
     version: '0.2',
     title: 'Production edge',
-    body: 'Docker Compose deploy, optional access gate, rate limits, and smoke tests.',
+    body: 'Docker Compose deploy, optional access gate, rate limits, smoke tests.',
   },
   {
     version: '0.1',
@@ -84,7 +119,7 @@ export function ReleasesFaq() {
             <p className="eyebrow">Releases</p>
             <h2>Version history.</h2>
             <p className="section-lede">
-              Core engine, deploy stack, then the public research surface.
+              Ten shipped increments — from the research core to public free mode.
             </p>
           </div>
           <ol className="release-list">
@@ -103,7 +138,7 @@ export function ReleasesFaq() {
         <div>
           <div className="section-head">
             <p className="eyebrow">FAQ</p>
-            <h2>FAQ</h2>
+            <h2>Common questions.</h2>
           </div>
           <div className="faq-list">
             {FAQ.map((item, i) => {
@@ -117,9 +152,7 @@ export function ReleasesFaq() {
                     onClick={() => setOpen(isOpen ? -1 : i)}
                   >
                     <span>{item.q}</span>
-                    <span className="faq-icon mono" aria-hidden="true">
-                      {isOpen ? '−' : '+'}
-                    </span>
+                    <span aria-hidden="true">{isOpen ? '−' : '+'}</span>
                   </button>
                   {isOpen ? <p className="faq-a">{item.a}</p> : null}
                 </div>
