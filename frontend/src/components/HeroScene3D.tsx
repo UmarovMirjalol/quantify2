@@ -42,7 +42,7 @@ export function HeroScene3D() {
       display: 'block',
     });
 
-    const origin = new THREE.Vector3(0.48, 0.08, 0);
+    const origin = new THREE.Vector3(0.28, 0.08, 0);
 
     // Soft mint haze volumes
     const hazeGeo = new THREE.SphereGeometry(2.6, 28, 28);
