@@ -1,0 +1,8 @@
+[project]
+name = "quantify-api"
+version = "0.11.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.vercel]
+entrypoint = "app.main:app"

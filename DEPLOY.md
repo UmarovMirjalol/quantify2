@@ -1,5 +1,45 @@
 # Deploy Quantify
 
+## Vercel (recommended for quick public URL)
+
+Stack is already wired as **Vercel Services** (Vite SPA + FastAPI) via root [`vercel.json`](vercel.json).
+
+```
+Users → Vercel edge
+          ├─ /api/*  → api service (FastAPI, Fluid)
+          └─ /*      → web service (Vite SPA)
+```
+
+### One-time setup
+
+1. Push this repo to GitHub (already at `UmarovMirjalol/quantify2` if you use that remote).
+2. [vercel.com/new](https://vercel.com/new) → Import the repo.
+3. **Framework Preset: Services** (required when `services` is in `vercel.json`).
+4. Root Directory: leave as repo root (`.`).
+5. Add env vars from [`.env.vercel.example`](.env.vercel.example) (at least `APP_ENV=production`, `FORCE_BUILTIN_PARSER=true`, `CORS_ORIGINS=*`).
+6. Deploy.
+
+CLI alternative:
+
+```bash
+npm i -g vercel
+vercel link          # Framework: Services
+vercel env pull      # optional
+vercel --prod
+```
+
+Same-origin API: leave `VITE_API_URL` unset so the SPA calls `/api/...` and Vercel rewrites hit the FastAPI service.
+
+### Vercel caveats
+
+- SQLite + CSV uploads live under `/tmp` (ephemeral). History can reset on cold starts / new instances. Fine for demos; for durable history later attach Neon (Postgres) or keep Docker Compose.
+- Backtests are capped at **60s** (`maxDuration` in `vercel.json`). Huge CSVs may time out — use Docker for heavy jobs.
+- Free Hobby: enough for a public demo with the built-in parser (no OpenAI key).
+
+---
+
+## Docker Compose (full persistence)
+
 Production stack: Docker Compose + access token + optional HTTPS.
 
 ```

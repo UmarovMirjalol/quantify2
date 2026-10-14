@@ -64,12 +64,15 @@ Long-only in this release; short-selling can extend `PositionSide.SHORT`.
 
 ```
 backend/app/          # FastAPI, parsers, engine, risk, metrics, models
+backend/data/         # sample CSV bundled for Vercel + local API
 backend/tests/
 frontend/src/         # React UI
-data/sample_data.csv
+data/sample_data.csv  # same sample for Docker image
 uploads/              # runtime CSV uploads
 docker-compose.yml
+vercel.json           # Vercel Services: web (Vite) + api (FastAPI)
 .env.example
+.env.vercel.example
 ```
 
 ## Installation
@@ -112,6 +115,17 @@ npm install
 Never commit real secrets. `.env` / `.env.production` are gitignored. Full key guide: [DEPLOY.md](DEPLOY.md).
 
 ## Run
+
+### Vercel (public URL in a few clicks)
+
+Repo ships with [`vercel.json`](vercel.json) — **Services**: Vite frontend + FastAPI backend on one domain (`/api` → API, everything else → SPA).
+
+1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new)
+2. Set **Framework Preset → Services**
+3. Copy env from [`.env.vercel.example`](.env.vercel.example)
+4. Deploy
+
+Details and limits (ephemeral SQLite on `/tmp`): [DEPLOY.md](DEPLOY.md).
 
 ### Production (Docker) — ready for users
 

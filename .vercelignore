@@ -1,0 +1,15 @@
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+frontend/dist
+.venv
+venv
+backups
+*.db
+.env
+.env.production
+.git
+.github
+demo-screenshots
+uploads/**
+!uploads/.gitkeep

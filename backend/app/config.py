@@ -1,9 +1,17 @@
 """Application configuration loaded from environment variables."""
 
+from __future__ import annotations
+
+import os
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _on_vercel() -> bool:
+    """True when running inside a Vercel build or serverless/Fluid function."""
+    return bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
 
 
 def _detect_root() -> Path:
@@ -22,8 +30,15 @@ def _detect_root() -> Path:
 
 ROOT_DIR = _detect_root()
 DEFAULT_DATA_DIR = ROOT_DIR / "data"
-DEFAULT_UPLOAD_DIR = ROOT_DIR / "uploads"
-DB_PATH = ROOT_DIR / "backtests.db"
+
+# Vercel functions only have a writable filesystem under /tmp.
+if _on_vercel():
+    _EPHEMERAL = Path("/tmp/quantify")
+    DEFAULT_UPLOAD_DIR = _EPHEMERAL / "uploads"
+    DB_PATH = _EPHEMERAL / "backtests.db"
+else:
+    DEFAULT_UPLOAD_DIR = ROOT_DIR / "uploads"
+    DB_PATH = ROOT_DIR / "backtests.db"
 
 
 class Settings(BaseSettings):
@@ -113,6 +128,9 @@ def get_settings() -> Settings:
     settings = apply_runtime_overrides(settings)
     settings.resolved_upload_dir.mkdir(parents=True, exist_ok=True)
     settings.resolved_data_dir.mkdir(parents=True, exist_ok=True)
+    if settings.database_url.startswith("sqlite:///"):
+        db_file = Path(settings.database_url.removeprefix("sqlite:///"))
+        db_file.parent.mkdir(parents=True, exist_ok=True)
     return settings
 
 
