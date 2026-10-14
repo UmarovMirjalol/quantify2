@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,6 +17,15 @@ settings = get_settings()
 docs_url = "/docs" if settings.docs_enabled else None
 redoc_url = "/redoc" if settings.docs_enabled else None
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Create SQLite schema on cold start (Vercel /tmp or local disk)."""
+    init_db()
+    _ensure_client_id_column()
+    yield
+
+
 app = FastAPI(
     title=settings.app_name,
     description=(
@@ -25,6 +36,7 @@ app = FastAPI(
     docs_url=docs_url,
     redoc_url=redoc_url,
     openapi_url="/openapi.json" if settings.docs_enabled else None,
+    lifespan=lifespan,
 )
 
 cors_origins = settings.cors_origin_list
@@ -47,12 +59,6 @@ app.add_middleware(RateLimitMiddleware)
 app.add_middleware(AccessTokenMiddleware)
 
 app.include_router(router)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
-    _ensure_client_id_column()
 
 
 def _ensure_client_id_column() -> None:

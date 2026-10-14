@@ -32,9 +32,16 @@ Same-origin API: leave `VITE_API_URL` unset so the SPA calls `/api/...` and Verc
 
 ### Vercel caveats
 
+- The API runs as a **container** (`backend/Dockerfile.vercel`) so pandas/numpy load reliably. Framework Preset must stay **Services**.
 - SQLite + CSV uploads live under `/tmp` (ephemeral). History can reset on cold starts / new instances. Fine for demos; for durable history later attach Neon (Postgres) or keep Docker Compose.
-- Backtests are capped at **60s** (`maxDuration` in `vercel.json`). Huge CSVs may time out — use Docker for heavy jobs.
+- Leave `APP_ACCESS_TOKEN` empty for public free mode. If you set a token, the Access Gate appears.
 - Free Hobby: enough for a public demo with the built-in parser (no OpenAI key).
+
+### If you see “API unreachable” on Vercel
+
+1. Confirm Project → Settings → General → **Framework Preset = Services**
+2. Redeploy the latest `main` (container API)
+3. Hit `https://YOUR_APP.vercel.app/api/health` — should return JSON `{"status":"ok",...}` not `FUNCTION_INVOCATION_FAILED`
 
 ---
 

@@ -149,8 +149,12 @@ export default function App() {
         <p className="eyebrow">API unreachable</p>
         <h1 style={{ fontSize: '1.35rem' }}>Can’t reach the Quantify backend</h1>
         <p className="lede" style={{ margin: '0.75rem auto' }}>
-          Start the API on port 8765, then retry. Local tip:{' '}
-          <code className="mono">uvicorn app.main:app --port 8765</code>
+          {typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+            ? 'The Vercel API service failed to start. Redeploy with Framework Preset = Services, then open /api/health.'
+            : 'Start the API on port 8765, then retry. Local tip: '}
+          {typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? null : (
+            <code className="mono">uvicorn app.main:app --port 8765</code>
+          )}
         </p>
         <button
           type="button"
