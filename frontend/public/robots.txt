@@ -4,8 +4,27 @@ Allow: /
 Allow: /playbook
 Allow: /guide
 Allow: /app
+Allow: /favicon.ico
+Allow: /favicon.svg
+Allow: /favicon-16x16.png
+Allow: /favicon-32x32.png
+Allow: /favicon-48x48.png
+Allow: /favicon-96x96.png
+Allow: /apple-touch-icon.png
+Allow: /icon-192.png
+Allow: /icon-512.png
+Allow: /og.png
+Allow: /site.webmanifest
+Allow: /sitemap.xml
 Disallow: /settings
 Disallow: /results/
 Disallow: /api/
+
+# Explicit allow for Google favicon crawler
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Googlebot
+Allow: /
 
 Sitemap: https://quantifylab.xyz/sitemap.xml
