@@ -8,4 +8,4 @@ Disallow: /settings
 Disallow: /results/
 Disallow: /api/
 
-Sitemap: /sitemap.xml
+Sitemap: https://quantifylab.xyz/sitemap.xml

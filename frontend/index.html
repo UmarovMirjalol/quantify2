@@ -2,9 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quantify — Free Trading Strategy Backtester</title>
+
+    <!-- Chrome history / omnibox prefer .ico over SVG -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <title>Quantify — Free Backtester</title>
     <meta
       name="description"
       content="Free backtesting for SMA, EMA, RSI, MACD, and Bollinger strategies. No signup, no API key. Signals at close, fills at next open."
@@ -17,30 +25,35 @@
     <meta name="author" content="Quantify" />
     <meta name="theme-color" content="#0a0c0f" />
     <meta name="application-name" content="Quantify" />
+    <link rel="canonical" href="https://quantifylab.xyz/" />
 
-    <meta property="og:title" content="Quantify — Free Trading Strategy Backtester" />
+    <meta property="og:title" content="Quantify — Free Backtester" />
     <meta
       property="og:description"
       content="Backtest plain-English trading strategies. Free, no API key. Look-ahead-safe fills."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Quantify" />
-    <meta property="og:image" content="og.svg" />
+    <meta property="og:url" content="https://quantifylab.xyz/" />
+    <meta property="og:image" content="https://quantifylab.xyz/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Quantify — Free Trading Strategy Backtester" />
+    <meta name="twitter:title" content="Quantify — Free Backtester" />
     <meta
       name="twitter:description"
       content="Backtest SMA, RSI, MACD and Bollinger strategies free. No signup. No API key."
     />
-    <meta name="twitter:image" content="og.svg" />
+    <meta name="twitter:image" content="https://quantifylab.xyz/og.png" />
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Quantify",
+        "url": "https://quantifylab.xyz/",
         "applicationCategory": "FinanceApplication",
         "operatingSystem": "Web",
         "offers": {
@@ -101,7 +114,7 @@
   <body>
     <noscript>
       <main style="max-width: 40rem; margin: 2rem auto; font-family: sans-serif; color: #eef1f3; background: #0a0c0f; padding: 2rem">
-        <h1>Quantify — Free Trading Strategy Backtester</h1>
+        <h1>Quantify — Free Backtester</h1>
         <p>
           Free trading strategy backtester with look-ahead-safe fills. No API key. Enable JavaScript
           to open the workspace.
