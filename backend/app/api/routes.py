@@ -34,6 +34,7 @@ from app.llm.schemas import (
 from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
+from app.stats_store import record_backtest, record_visitor, redis_counts, sqlite_counts
 
 router = APIRouter(prefix="/api")
 
@@ -56,6 +57,8 @@ def _touch_visitor(db: Session, client_id: str) -> None:
     else:
         row.last_seen = now
     db.commit()
+    # Durable cross-instance counter (Vercel /tmp SQLite is not shared).
+    record_visitor(client_id)
 
 
 def _client_id(x_client_id: str | None = Header(default=None, alias="X-Client-Id")) -> str:
@@ -140,18 +143,11 @@ class PublicStats(BaseModel):
 def public_stats(db: Session = Depends(get_db)) -> PublicStats:
     """Live counters for the landing page (baseline + real activity)."""
     settings = get_settings()
-    users_live = db.query(Visitor).count()
-    # Also count distinct clients from backtests that never pinged the landing.
-    from sqlalchemy import distinct, func
-
-    bt_clients = (
-        db.query(func.count(distinct(BacktestRecord.client_id)))
-        .filter(BacktestRecord.client_id != "")
-        .scalar()
-        or 0
-    )
-    users_live = max(users_live, int(bt_clients))
-    backtests_live = db.query(BacktestRecord).count()
+    redis = redis_counts()
+    if redis is not None:
+        users_live, backtests_live = redis
+    else:
+        users_live, backtests_live = sqlite_counts(db)
     return PublicStats(
         users=settings.stats_baseline_users + users_live,
         backtests=settings.stats_baseline_backtests + backtests_live,
@@ -452,6 +448,7 @@ async def api_run_backtest(
     db.commit()
     db.refresh(record)
     _touch_visitor(db, client_id)
+    record_backtest()
 
     return {
         "id": record.id,

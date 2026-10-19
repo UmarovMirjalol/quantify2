@@ -13,10 +13,10 @@ class Base(DeclarativeBase):
 
 
 settings = get_settings()
-engine = create_engine(
-    settings.database_url,
-    connect_args={"check_same_thread": False},
+_connect_args = (
+    {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
 )
+engine = create_engine(settings.database_url, connect_args=_connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -28,6 +28,8 @@ def init_db() -> None:
     from app.models import stats  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    if not settings.database_url.startswith("sqlite"):
+        return
     with engine.begin() as conn:
         rows = conn.execute(text("PRAGMA table_info(backtests)")).fetchall()
         cols = {r[1] for r in rows}

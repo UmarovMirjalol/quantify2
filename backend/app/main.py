@@ -67,6 +67,8 @@ def _ensure_client_id_column() -> None:
 
     from app.database import engine
 
+    if not settings.database_url.startswith("sqlite"):
+        return
     with engine.begin() as conn:
         rows = conn.execute(text("PRAGMA table_info(backtests)")).fetchall()
         cols = {r[1] for r in rows}

@@ -34,6 +34,7 @@ Same-origin API: leave `VITE_API_URL` unset so the SPA calls `/api/...` and Verc
 
 - The API runs as a **container** (`backend/Dockerfile.vercel`) so pandas/numpy load reliably. Framework Preset must stay **Services**.
 - SQLite + CSV uploads live under `/tmp` (ephemeral). History can reset on cold starts / new instances. Fine for demos; for durable history later attach Neon (Postgres) or keep Docker Compose.
+- **Landing counters** (users / backtests) need Upstash Redis or they reset between instances. Set `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` in Vercel env (see `.env.vercel.example`).
 - Leave `APP_ACCESS_TOKEN` empty for public free mode. If you set a token, the Access Gate appears.
 - Free Hobby: enough for a public demo with the built-in parser (no OpenAI key).
 
