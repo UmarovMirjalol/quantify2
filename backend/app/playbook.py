@@ -77,6 +77,51 @@ PLAYBOOK: list[dict[str, Any]] = [
 
 RELEASES: list[dict[str, str]] = [
     {
+        "version": "0.20",
+        "title": "Durable live counters",
+        "body": "Upstash-backed visitor and backtest totals so public stats stay consistent on Vercel.",
+    },
+    {
+        "version": "0.19",
+        "title": "Brand pack for quantifylab.xyz",
+        "body": "favicon.ico, 48px+ PNGs, OG image, and shorter tab title for search surfaces.",
+    },
+    {
+        "version": "0.18",
+        "title": "Vercel container API",
+        "body": "FastAPI API shipped as a container service so pandas/numpy load reliably in production.",
+    },
+    {
+        "version": "0.17",
+        "title": "Vercel Services split",
+        "body": "Vite web + FastAPI api on one domain with /api rewrites.",
+    },
+    {
+        "version": "0.16",
+        "title": "History search & sort",
+        "body": "Filter and sort saved backtests by return, Sharpe, drawdown, and trade count.",
+    },
+    {
+        "version": "0.15",
+        "title": "Edit & re-run",
+        "body": "Deep-link a past run back into the workspace with the same strategy draft.",
+    },
+    {
+        "version": "0.14",
+        "title": "CSV / JSON export",
+        "body": "Download trades, equity curve, and full metrics from the results view.",
+    },
+    {
+        "version": "0.13",
+        "title": "Buy & hold overlay",
+        "body": "Benchmark strategy equity against a simple buy-and-hold path on the same bars.",
+    },
+    {
+        "version": "0.12",
+        "title": "Parse preview",
+        "body": "Debounced live preview of asset, risk, and entry/exit rules before you run.",
+    },
+    {
         "version": "0.11",
         "title": "Parse preview & exports",
         "body": "Live parsed-spec preview, buy-and-hold overlay, CSV/JSON export, history search, edit & re-run.",

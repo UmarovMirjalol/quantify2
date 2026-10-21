@@ -18,9 +18,9 @@ def test_stats_baseline_and_ping(monkeypatch):
     before = client.get("/api/stats")
     assert before.status_code == 200
     body = before.json()
-    assert body["users"] >= 425
-    assert body["backtests"] >= 1195
-    assert body["releases"] == 11
+    assert body["users"] >= 650
+    assert body["backtests"] >= 1200
+    assert body["releases"] == 20
 
     users_before = body["users"]
     ping = client.post("/api/stats/ping", headers={"X-Client-Id": "stats-tester-1"})

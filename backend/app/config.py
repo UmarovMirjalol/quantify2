@@ -76,9 +76,9 @@ class Settings(BaseSettings):
     data_dir: str = str(DEFAULT_DATA_DIR)
     upload_dir: str = str(DEFAULT_UPLOAD_DIR)
     # Public live counters = baseline + real activity
-    stats_baseline_users: int = 425
-    stats_baseline_backtests: int = 1195
-    stats_releases: int = 11
+    stats_baseline_users: int = 650
+    stats_baseline_backtests: int = 1200
+    stats_releases: int = 20
 
     @property
     def is_production(self) -> bool:

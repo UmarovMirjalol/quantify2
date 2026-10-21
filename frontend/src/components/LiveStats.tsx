@@ -5,9 +5,9 @@ import { getPublicStats, pingStats } from '../services/api';
 import type { PublicStats } from '../types';
 
 const FALLBACK: PublicStats = {
-  users: 425,
-  backtests: 1195,
-  releases: 11,
+  users: 650,
+  backtests: 1200,
+  releases: 20,
   users_live: 0,
   backtests_live: 0,
   updated_at: '',
