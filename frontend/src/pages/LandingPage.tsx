@@ -78,8 +78,8 @@ function useInView<T extends HTMLElement>(reduced: boolean) {
 
 export function LandingPage() {
   usePageMeta(
-    'Quantify — Free Trading Strategy Backtester',
-    'Backtest SMA, EMA, RSI, MACD, and Bollinger strategies. No signup, no API key. Signals at close, fills at next open.',
+    'Quantify — Free Strategy Backtester',
+    'Type a trading idea in plain English. Get a look-ahead-safe backtest with next-open fills, costs, Sharpe, and a full trade blotter. Free. No signup.',
   );
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>(reduced ? 'hold' : 'boot');
@@ -223,22 +223,22 @@ export function LandingPage() {
             Quantify
           </p>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
-            Backtest strategies without the look-ahead.
+            Your edge — proven before you risk a dollar.
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Describe an idea in plain English. Get a simulation with next-open fills, costs, and a
-            trade blotter. Free — no signup, no API key.
+            Type a strategy in English. Quantify runs a look-ahead-safe backtest with real costs,
+            metrics, and every fill. Free. No signup.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
             <Link className="btn primary" to="/app">
-              Run a backtest
+              Backtest free
             </Link>
             <a className="btn secondary" href="#demo">
               See a demo
             </a>
           </div>
           <p className="hero-note mono reveal" style={{ ['--d' as string]: '300ms' }}>
-            Signal at close · fill at next open · commission + slippage applied
+            Signal at close · fill at next open · commission + slippage on every trade
           </p>
         </div>
 

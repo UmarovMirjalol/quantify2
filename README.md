@@ -1,6 +1,6 @@
 # Quantify
 
-AI-powered quantitative research platform. Describe a trading strategy in plain English, convert it into executable logic, run a look-ahead-safe backtest, and inspect institutional-grade metrics, charts, and trade history.
+**Your edge — proven before you risk a dollar.** Type a trading strategy in plain English. Quantify runs a look-ahead-safe backtest with next-open fills, costs, Sharpe / drawdown, and a full trade blotter. Free. No signup.
 
 > **Sample dataset:** `data/sample_data.csv` is synthetic OHLCV for local development and tests. Upload your own market CSV for research. Do not treat synthetic results as live market performance.
 

@@ -1,7 +1,7 @@
 {
   "name": "Quantify",
   "short_name": "Quantify",
-  "description": "Free trading strategy backtester",
+  "description": "Free strategy backtester — plain English in, look-ahead-safe results out",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0c0f",
