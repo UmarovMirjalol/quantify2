@@ -34,6 +34,7 @@ from app.llm.schemas import (
 from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
+from app.stats_drift import daily_user_offset
 from app.stats_store import record_backtest, record_visitor, redis_counts, sqlite_counts
 
 router = APIRouter(prefix="/api")
@@ -149,7 +150,7 @@ def public_stats(db: Session = Depends(get_db)) -> PublicStats:
     else:
         users_live, backtests_live = sqlite_counts(db)
     return PublicStats(
-        users=settings.stats_baseline_users + users_live,
+        users=settings.stats_baseline_users + daily_user_offset() + users_live,
         backtests=settings.stats_baseline_backtests + backtests_live,
         releases=settings.stats_releases,
         users_live=users_live,

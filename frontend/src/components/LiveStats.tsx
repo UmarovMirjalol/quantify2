@@ -3,15 +3,18 @@ import { useCountUp } from '../hooks/useCountUp';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import { getPublicStats, pingStats } from '../services/api';
 import type { PublicStats } from '../types';
+import { baselineUsers, STATS_BASELINE } from '../utils/publicStats';
 
-const FALLBACK: PublicStats = {
-  users: 650,
-  backtests: 1200,
-  releases: 20,
-  users_live: 0,
-  backtests_live: 0,
-  updated_at: '',
-};
+function fallbackStats(): PublicStats {
+  return {
+    users: baselineUsers(),
+    backtests: STATS_BASELINE.backtests,
+    releases: STATS_BASELINE.releases,
+    users_live: 0,
+    backtests_live: 0,
+    updated_at: '',
+  };
+}
 
 const POLL_MS = 20000;
 
@@ -59,7 +62,7 @@ function StatCell({
 
 export function LiveStats() {
   const reduced = usePrefersReducedMotion();
-  const [stats, setStats] = useState<PublicStats>(FALLBACK);
+  const [stats, setStats] = useState<PublicStats>(fallbackStats);
   const [ready, setReady] = useState(false);
   const [inView, setInView] = useState(reduced);
   const [flash, setFlash] = useState({ users: false, backtests: false, releases: false });
@@ -155,7 +158,8 @@ export function LiveStats() {
         </p>
         <h2>Usage counters.</h2>
         <p className="section-lede">
-          Baseline totals plus live visitors and backtests. Refresh as the platform is used.
+          {formatStat(stats.users)}+ users ran {formatStat(stats.backtests)}+ backtests; shipped{' '}
+          {formatStat(stats.releases)}+ releases.
         </p>
       </div>
 
@@ -179,7 +183,6 @@ export function LiveStats() {
         <StatCell
           value={stats.releases}
           label="releases"
-          suffix=""
           active={ready && inView}
           flash={flash.releases}
           reduced={reduced}

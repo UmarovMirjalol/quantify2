@@ -75,10 +75,11 @@ class Settings(BaseSettings):
     force_builtin_parser: bool = False
     data_dir: str = str(DEFAULT_DATA_DIR)
     upload_dir: str = str(DEFAULT_UPLOAD_DIR)
-    # Public live counters = baseline + real activity
-    stats_baseline_users: int = 650
-    stats_baseline_backtests: int = 1200
-    stats_releases: int = 20
+    # Public live counters = baseline + daily drift + real activity.
+    # User baseline is for 2026-11-04 UTC; later days add 1–3 (see stats_drift).
+    stats_baseline_users: int = 852
+    stats_baseline_backtests: int = 1442
+    stats_releases: int = 22
 
     @property
     def is_production(self) -> bool:

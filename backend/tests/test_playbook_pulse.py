@@ -23,7 +23,7 @@ def test_playbook_and_releases_public(monkeypatch):
 
     releases = client.get("/api/releases")
     assert releases.status_code == 200
-    assert releases.json()["count"] == 20
+    assert releases.json()["count"] == 22
     assert len(releases.json()["items"]) >= 20
 
     monkeypatch.delenv("APP_ACCESS_TOKEN", raising=False)
