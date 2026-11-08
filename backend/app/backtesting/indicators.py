@@ -86,6 +86,147 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return tr.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
 
 
+def volume_indicator(
+    df: pd.DataFrame, period: int | None = None, component: str = "value"
+) -> pd.Series:
+    """Volume series or Volume moving average."""
+    vol = df["volume"].astype(float)
+    if component == "sma" or (period is not None and period > 1):
+        p = period if period is not None else 20
+        return sma(vol, p)
+    return vol
+
+
+def vwap(df: pd.DataFrame, period: int | None = None) -> pd.Series:
+    """Volume-Weighted Average Price.
+
+    If period is provided, computes rolling VWAP.
+    Otherwise, if date column has intraday bars, resets per calendar day;
+    else cumulative across the series.
+    """
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    close = df["close"].astype(float)
+    volume = df["volume"].astype(float)
+    typical_price = (high + low + close) / 3.0
+    pv = typical_price * volume
+
+    if period is not None and period >= 1:
+        rolling_pv = pv.rolling(window=period, min_periods=1).sum()
+        rolling_vol = volume.rolling(window=period, min_periods=1).sum()
+        return rolling_pv / rolling_vol.replace(0, np.nan)
+
+    if "date" in df.columns:
+        dates = pd.to_datetime(df["date"], errors="coerce")
+        if dates.notna().all() and dates.dt.date.nunique() < len(dates):
+            day_groups = dates.dt.date
+            cum_pv = pv.groupby(day_groups).cumsum()
+            cum_vol = volume.groupby(day_groups).cumsum()
+            return cum_pv / cum_vol.replace(0, np.nan)
+
+    cum_pv = pv.cumsum()
+    cum_vol = volume.cumsum()
+    return cum_pv / cum_vol.replace(0, np.nan)
+
+
+def obv(df: pd.DataFrame) -> pd.Series:
+    """On-Balance Volume (OBV)."""
+    close = df["close"].astype(float)
+    volume = df["volume"].astype(float)
+    direction = np.sign(close.diff()).fillna(0.0)
+    return (direction * volume).cumsum()
+
+
+def hammer(df: pd.DataFrame) -> pd.Series:
+    """Hammer pattern (bullish reversal candle).
+
+    Returns 1.0 where detected, 0.0 otherwise.
+    """
+    open_ = df["open"].astype(float)
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    close = df["close"].astype(float)
+
+    total_range = high - low
+    body = (close - open_).abs()
+    lower_shadow = open_.combine(close, min) - low
+    upper_shadow = high - open_.combine(close, max)
+
+    is_hammer = (
+        (total_range > 0)
+        & (lower_shadow >= 2.0 * body)
+        & (upper_shadow <= 0.25 * total_range)
+        & (body >= 0.05 * total_range)
+    )
+    return is_hammer.astype(float)
+
+
+def pinbar(df: pd.DataFrame, component: str = "bullish") -> pd.Series:
+    """Pin-bar pattern (rejection candle).
+
+    Returns 1.0 where detected, 0.0 otherwise.
+    """
+    open_ = df["open"].astype(float)
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    close = df["close"].astype(float)
+
+    total_range = high - low
+    body = (close - open_).abs()
+    lower_shadow = open_.combine(close, min) - low
+    upper_shadow = high - open_.combine(close, max)
+
+    bullish_pin = (
+        (total_range > 0)
+        & (lower_shadow >= 0.55 * total_range)
+        & (upper_shadow <= 0.25 * total_range)
+        & (body <= 0.35 * total_range)
+    )
+    bearish_pin = (
+        (total_range > 0)
+        & (upper_shadow >= 0.55 * total_range)
+        & (lower_shadow <= 0.25 * total_range)
+        & (body <= 0.35 * total_range)
+    )
+
+    if component == "bearish":
+        return bearish_pin.astype(float)
+    if component in ("bullish", "value"):
+        return bullish_pin.astype(float)
+    return (bullish_pin | bearish_pin).astype(float)
+
+
+def engulfing(df: pd.DataFrame, component: str = "bullish") -> pd.Series:
+    """Engulfing pattern (bullish or bearish).
+
+    Returns 1.0 where detected, 0.0 otherwise.
+    """
+    open_ = df["open"].astype(float)
+    close = df["close"].astype(float)
+
+    prev_open = open_.shift(1)
+    prev_close = close.shift(1)
+
+    bullish = (
+        (prev_close < prev_open)
+        & (close > open_)
+        & (open_ <= prev_close)
+        & (close >= prev_open)
+    )
+    bearish = (
+        (prev_close > prev_open)
+        & (close < open_)
+        & (open_ >= prev_close)
+        & (close <= prev_open)
+    )
+
+    if component == "bearish":
+        return bearish.astype(float)
+    if component in ("bullish", "value"):
+        return bullish.astype(float)
+    return (bullish | bearish).astype(float)
+
+
 def compute_indicator_series(
     df: pd.DataFrame,
     indicator: str,
@@ -140,5 +281,23 @@ def compute_indicator_series(
 
     if ind == "ATR":
         return atr(df, period or 14)
+
+    if ind == "VOLUME":
+        return volume_indicator(df, period=period, component=component)
+
+    if ind == "VWAP":
+        return vwap(df, period=period)
+
+    if ind == "OBV":
+        return obv(df)
+
+    if ind == "HAMMER":
+        return hammer(df)
+
+    if ind == "PINBAR":
+        return pinbar(df, component=component)
+
+    if ind == "ENGULFING":
+        return engulfing(df, component=component)
 
     raise ValueError(f"Unsupported indicator: {indicator}")

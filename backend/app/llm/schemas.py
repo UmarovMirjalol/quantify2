@@ -18,6 +18,12 @@ class IndicatorType(str, Enum):
     BOLLINGER = "BOLLINGER"
     ATR = "ATR"
     PRICE = "PRICE"
+    VOLUME = "VOLUME"
+    VWAP = "VWAP"
+    OBV = "OBV"
+    HAMMER = "HAMMER"
+    PINBAR = "PINBAR"
+    ENGULFING = "ENGULFING"
 
 
 class ConditionOp(str, Enum):
@@ -54,7 +60,8 @@ class IndicatorRef(BaseModel):
     slow_period: int | None = Field(default=None, ge=1, le=500)
     signal_period: int | None = Field(default=None, ge=1, le=100)
     std_dev: float | None = Field(default=None, ge=0.1, le=10.0)
-    # For Bollinger: which band (upper/middle/lower); for MACD: line/signal/histogram
+    timeframe: str | None = Field(default=None, pattern=r"^(5m|15m|1h|4h|1d|1D)$")
+    # For Bollinger: band; for MACD: line/signal/hist; patterns: bullish/bearish; volume: sma/value
     component: Literal[
         "value",
         "upper",
@@ -67,6 +74,9 @@ class IndicatorRef(BaseModel):
         "high",
         "low",
         "close",
+        "bullish",
+        "bearish",
+        "sma",
     ] = "value"
 
     @model_validator(mode="after")
@@ -96,6 +106,12 @@ class IndicatorRef(BaseModel):
         if ind == IndicatorType.PRICE:
             if self.component not in ("open", "high", "low", "close"):
                 self.component = "close"
+        if ind == IndicatorType.VOLUME:
+            if self.component == "sma" and self.period is None:
+                self.period = 20
+        if ind in (IndicatorType.PINBAR, IndicatorType.ENGULFING):
+            if self.component not in ("bullish", "bearish", "value"):
+                self.component = "bullish"
         return self
 
 
@@ -219,6 +235,52 @@ class Condition(BaseModel):
                     "threshold": threshold,
                 }
 
+            if ind in (IndicatorType.HAMMER, IndicatorType.PINBAR, IndicatorType.ENGULFING):
+                pattern_comp = component if component in ("bullish", "bearish") else "bullish"
+                return {
+                    "left": {
+                        "indicator": ind.value if isinstance(ind, IndicatorType) else ind,
+                        "component": pattern_comp,
+                    },
+                    "operator": ConditionOp.EQUALS.value,
+                    "right": 1.0,
+                    "indicator": ind,
+                    "condition": ConditionOp.EQUALS,
+                }
+
+            if ind == IndicatorType.VWAP:
+                return {
+                    "left": {"indicator": "PRICE", "component": "close"},
+                    "operator": op.value if isinstance(op, ConditionOp) else (op or "cross_above"),
+                    "right": {"indicator": "VWAP"},
+                    "indicator": ind,
+                    "condition": op or ConditionOp.CROSS_ABOVE,
+                }
+
+            if ind == IndicatorType.OBV:
+                return {
+                    "left": {"indicator": "OBV"},
+                    "operator": op.value if isinstance(op, ConditionOp) else (op or "greater_than"),
+                    "right": float(threshold if threshold is not None else 0.0),
+                    "indicator": ind,
+                    "condition": op or ConditionOp.GREATER_THAN,
+                    "threshold": threshold or 0.0,
+                }
+
+            if ind == IndicatorType.VOLUME:
+                return {
+                    "left": {"indicator": "VOLUME", "component": "value"},
+                    "operator": op.value if isinstance(op, ConditionOp) else (op or "greater_than"),
+                    "right": {
+                        "indicator": "VOLUME",
+                        "component": "sma",
+                        "period": int(period or 20),
+                    },
+                    "indicator": ind,
+                    "period": period or 20,
+                    "condition": op or ConditionOp.GREATER_THAN,
+                }
+
             if threshold is not None and period is not None:
                 return {
                     "left": {
@@ -254,7 +316,7 @@ class StrategySpec(BaseModel):
     """Strict structured representation of a trading strategy."""
 
     asset: str = Field(default="SPY", min_length=1, max_length=32)
-    timeframe: str = Field(default="1d", pattern=r"^(1d|1h|4h|1w)$")
+    timeframe: str = Field(default="1d", pattern=r"^(1m|5m|15m|1h|4h|1d|1w|1D)$")
     side: Side = Side.LONG
     initial_capital: float = Field(default=100_000.0, gt=0, le=1e9)
     entry_conditions: list[Condition] = Field(min_length=1, max_length=5)
@@ -320,6 +382,7 @@ class ParseStrategyResponse(BaseModel):
     parser: str = Field(description="'builtin' or 'llm'")
     raw_text: str
     warnings: list[str] = Field(default_factory=list)
+    clarifications: list[str] = Field(default_factory=list)
 
     @property
     def demo_mode(self) -> bool:

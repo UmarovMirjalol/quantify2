@@ -51,26 +51,40 @@ def _extract_asset(text: str, override: str | None) -> str:
 def _extract_risk_fields(text: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
     risk = re.search(
-        r"risk\s+(\d+(?:\.\d+)?)\s*%\s*(?:per\s+trade|of\s+capital)?",
+        r"(?:risk|риск)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*%\s*(?:per\s+trade|of\s+capital|на\s+сделку)?",
         text,
         re.IGNORECASE,
     )
+    if not risk:
+        risk = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:risk|риск)", text, re.IGNORECASE)
     if risk:
         out["risk_per_trade"] = _pct_to_frac(float(risk.group(1)))
 
     stop = re.search(
-        r"(?:stop[-\s]?loss|sl)\s*(?:of|at|=|:)?\s*(\d+(?:\.\d+)?)\s*%",
+        r"(?:stop[-\s]?loss|sl|стоп[-\s]?лосс|стоп)\s*(?:of|at|=|:)?\s*(\d+(?:\.\d+)?)\s*%",
         text,
         re.IGNORECASE,
     )
+    if not stop:
+        stop = re.search(
+            r"(\d+(?:\.\d+)?)\s*%\s*(?:stop[-\s]?loss|sl|стоп[-\s]?лосс|стоп)",
+            text,
+            re.IGNORECASE,
+        )
     if stop:
         out["stop_loss"] = _pct_to_frac(float(stop.group(1)))
 
     take = re.search(
-        r"(?:take[-\s]?profit|tp)\s*(?:of|at|=|:)?\s*(\d+(?:\.\d+)?)\s*%",
+        r"(?:take[-\s]?profit|tp|тейк[-\s]?профит|тейк|профит)\s*(?:of|at|=|:)?\s*(\d+(?:\.\d+)?)\s*%",
         text,
         re.IGNORECASE,
     )
+    if not take:
+        take = re.search(
+            r"(\d+(?:\.\d+)?)\s*%\s*(?:take[-\s]?profit|tp|тейк[-\s]?профит|тейк|профит)",
+            text,
+            re.IGNORECASE,
+        )
     if take:
         out["take_profit"] = _pct_to_frac(float(take.group(1)))
 
@@ -288,6 +302,114 @@ def parse_builtin(
         ]
         warnings.append("Interpreted oversold/overbought language as RSI 30/70.")
 
+    # --- Price Action: Pin-bar ---
+    if entry is None and re.search(r"\b(?:pin[-\s]?bar|пин[-\s]?бар)\b", text, re.IGNORECASE):
+        entry = [
+            {
+                "left": {"indicator": "PINBAR", "component": "bullish"},
+                "operator": "equals",
+                "right": 1.0,
+            }
+        ]
+        exit_ = [
+            {
+                "left": {"indicator": "PINBAR", "component": "bearish"},
+                "operator": "equals",
+                "right": 1.0,
+            }
+        ]
+        warnings.append("Detected Price Action pattern: Bullish Pin-Bar entry / Bearish Pin-Bar exit.")
+
+    # --- Price Action: Hammer ---
+    if entry is None and re.search(r"\b(?:hammer|молот)\b", text, re.IGNORECASE):
+        entry = [
+            {
+                "left": {"indicator": "HAMMER", "component": "bullish"},
+                "operator": "equals",
+                "right": 1.0,
+            }
+        ]
+        exit_ = [
+            {
+                "left": {"indicator": "RSI", "period": 14},
+                "operator": "greater_than",
+                "right": 70.0,
+            }
+        ]
+        warnings.append("Detected Price Action pattern: Hammer entry / RSI 70 exit.")
+
+    # --- Price Action: Engulfing ---
+    if entry is None and re.search(r"\b(?:engulfing|поглощени[ея]|бычье\s+поглощение)\b", text, re.IGNORECASE):
+        entry = [
+            {
+                "left": {"indicator": "ENGULFING", "component": "bullish"},
+                "operator": "equals",
+                "right": 1.0,
+            }
+        ]
+        exit_ = [
+            {
+                "left": {"indicator": "ENGULFING", "component": "bearish"},
+                "operator": "equals",
+                "right": 1.0,
+            }
+        ]
+        warnings.append("Detected Price Action pattern: Bullish Engulfing entry / Bearish Engulfing exit.")
+
+    # --- Volume: VWAP ---
+    if entry is None and re.search(r"\b(?:vwap|ввап)\b", text, re.IGNORECASE):
+        entry = [
+            {
+                "left": {"indicator": "PRICE", "component": "close"},
+                "operator": "cross_above",
+                "right": {"indicator": "VWAP"},
+            }
+        ]
+        exit_ = [
+            {
+                "left": {"indicator": "PRICE", "component": "close"},
+                "operator": "cross_below",
+                "right": {"indicator": "VWAP"},
+            }
+        ]
+        warnings.append("Detected Volume pattern: Price cross above VWAP entry.")
+
+    # --- Volume: OBV ---
+    if entry is None and re.search(r"\b(?:obv|on[-\s]?balance\s+volume)\b", text, re.IGNORECASE):
+        entry = [
+            {
+                "left": {"indicator": "OBV"},
+                "operator": "greater_than",
+                "right": 0.0,
+            }
+        ]
+        exit_ = [
+            {
+                "left": {"indicator": "OBV"},
+                "operator": "less_than",
+                "right": 0.0,
+            }
+        ]
+        warnings.append("Detected Volume indicator: On-Balance Volume (OBV).")
+
+    # --- Volume: Volume Spike / SMA ---
+    if entry is None and re.search(r"\b(?:volume|объем)\b", text, re.IGNORECASE) and re.search(r"above|exceeds|spike|выше|всплеск", text, re.IGNORECASE):
+        entry = [
+            {
+                "left": {"indicator": "VOLUME", "component": "value"},
+                "operator": "greater_than",
+                "right": {"indicator": "VOLUME", "component": "sma", "period": 20},
+            }
+        ]
+        exit_ = [
+            {
+                "left": {"indicator": "VOLUME", "component": "value"},
+                "operator": "less_than",
+                "right": {"indicator": "VOLUME", "component": "sma", "period": 20},
+            }
+        ]
+        warnings.append("Detected Volume condition: Volume > SMA(Volume, 20).")
+
     # --- Free-mode safety net: never block a runnable idea ---
     # Any non-empty strategy text falls back to a classic SMA cross so users can
     # always get a backtest without an API key.
@@ -306,9 +428,29 @@ def parse_builtin(
 
     assert exit_ is not None
 
+    tf = "1d"
+    if re.search(r"\b(?:5m|5[-\s]?мин\w*)\b", text, re.IGNORECASE):
+        tf = "5m"
+    elif re.search(r"\b(?:15m|15[-\s]?мин\w*)\b", text, re.IGNORECASE):
+        tf = "15m"
+    elif re.search(r"\b(?:1h|60m|часов\w*)\b", text, re.IGNORECASE):
+        tf = "1h"
+    elif re.search(r"\b(?:4h|4[-\s]?часов\w*)\b", text, re.IGNORECASE):
+        tf = "4h"
+    elif re.search(r"\b(?:1w|weekly|недельн\w*)\b", text, re.IGNORECASE):
+        tf = "1w"
+
+    clarifications: list[str] = []
+    if raw_fields.get("stop_loss") is None:
+        clarifications.append("Совет: укажите Stop-Loss (например: «стоп-лосс 2%») для четкого ограничения риска.")
+    if raw_fields.get("take_profit") is None:
+        clarifications.append("Совет: можно добавить Take-Profit (например: «тейк-профит 5%») для фиксации прибыли.")
+    if raw_fields.get("risk_per_trade") is None:
+        clarifications.append("Размер риска на сделку по умолчанию составляет 1%. Вы можете изменить его (например: «риск 1.5%»).")
+
     spec: dict[str, Any] = {
         "asset": asset_name,
-        "timeframe": "1d",
+        "timeframe": tf,
         "initial_capital": initial_capital or 100_000.0,
         "entry_conditions": entry,
         "exit_conditions": exit_,
@@ -351,6 +493,7 @@ def parse_builtin(
         parser="builtin",
         raw_text=text,
         warnings=warnings,
+        clarifications=clarifications,
     )
 
 

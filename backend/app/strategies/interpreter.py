@@ -9,9 +9,76 @@ from app.backtesting.indicators import compute_indicator_series
 from app.llm.schemas import Condition, ConditionOp, LogicOp, StrategySpec
 
 
+def resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+    """Resample OHLCV dataframe to a higher timeframe."""
+    tf_map = {
+        "1m": "1min",
+        "5m": "5min",
+        "15m": "15min",
+        "1h": "1h",
+        "4h": "4h",
+        "1d": "1D",
+        "1D": "1D",
+        "1w": "1W",
+    }
+    rule = tf_map.get(timeframe)
+    if not rule:
+        return df
+
+    data = df.copy()
+    data["_dt"] = pd.to_datetime(data["date"], errors="coerce")
+    if data["_dt"].isna().all():
+        return df
+    data = data.dropna(subset=["_dt"]).set_index("_dt").sort_index()
+
+    resampled = (
+        data.resample(rule, label="right", closed="right")
+        .agg(
+            {
+                "open": "first",
+                "high": "max",
+                "low": "min",
+                "close": "last",
+                "volume": "sum",
+            }
+        )
+        .dropna()
+        .reset_index()
+    )
+
+    resampled["date"] = resampled["_dt"].astype(str)
+    return resampled
+
+
 def _resolve_side(df: pd.DataFrame, side: object) -> pd.Series:
     if isinstance(side, (int, float)):
         return pd.Series(float(side), index=df.index, dtype=float)
+
+    # Multi-timeframe handling: if side has a specific higher timeframe
+    if getattr(side, "timeframe", None) and "date" in df.columns:
+        htf_df = resample_ohlcv(df, side.timeframe)
+        if 0 < len(htf_df) < len(df):
+            htf_series = compute_indicator_series(
+                htf_df,
+                side.indicator.value if hasattr(side.indicator, "value") else str(side.indicator),
+                period=side.period,
+                fast_period=side.fast_period,
+                slow_period=side.slow_period,
+                signal_period=side.signal_period,
+                std_dev=side.std_dev,
+                component=side.component,
+            )
+            base_dates = pd.DataFrame({"_dt": pd.to_datetime(df["date"]), "_idx": df.index})
+            htf_aligned = pd.DataFrame({"_dt": pd.to_datetime(htf_df["date"]), "_val": htf_series})
+            merged = pd.merge_asof(
+                base_dates.sort_values("_dt"),
+                htf_aligned.sort_values("_dt"),
+                on="_dt",
+                direction="backward",
+            )
+            merged = merged.sort_values("_idx")
+            return pd.Series(merged["_val"].values, index=df.index, dtype=float)
+
     # IndicatorRef
     return compute_indicator_series(
         df,
@@ -40,7 +107,10 @@ def evaluate_condition(df: pd.DataFrame, condition: Condition) -> pd.Series:
     if op == ConditionOp.LESS_THAN:
         return left < right
     if op == ConditionOp.EQUALS:
-        return np.isclose(left, right, rtol=0.0, atol=1e-8, equal_nan=False)
+        return pd.Series(
+            np.isclose(left, right, rtol=0.0, atol=1e-8, equal_nan=False),
+            index=df.index,
+        )
     if op == ConditionOp.CROSS_ABOVE:
         prev_left = left.shift(1)
         prev_right = right.shift(1)
@@ -99,7 +169,21 @@ def validate_strategy_spec(strategy: StrategySpec) -> list[str]:
     except Exception as exc:  # noqa: BLE001
         errors.append(str(exc))
 
-    supported = {"SMA", "EMA", "RSI", "MACD", "BOLLINGER", "ATR", "PRICE"}
+    supported = {
+        "SMA",
+        "EMA",
+        "RSI",
+        "MACD",
+        "BOLLINGER",
+        "ATR",
+        "PRICE",
+        "VOLUME",
+        "VWAP",
+        "OBV",
+        "HAMMER",
+        "PINBAR",
+        "ENGULFING",
+    }
     for cond in strategy.entry_conditions + strategy.exit_conditions:
         for side_name in ("left", "right"):
             side = getattr(cond, side_name)

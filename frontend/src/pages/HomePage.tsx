@@ -11,26 +11,61 @@ import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
 import { formatConditions } from '../utils/formatStrategy';
 
-const EXAMPLE_STRATEGIES = [
+type PresetStrategy = {
+  id: string;
+  label: string;
+  text: string;
+  tag?: string;
+};
+
+const EXAMPLE_STRATEGIES: PresetStrategy[] = [
   {
     id: 'sma-cross',
-    label: 'SMA crossover',
+    label: '📈 SMA crossover',
+    tag: 'Trend',
     text: 'Buy SPY when the 20-day moving average crosses above the 50-day moving average. Risk 1% per trade and exit when RSI exceeds 70.',
   },
   {
     id: 'rsi-reversion',
-    label: 'RSI mean reversion',
+    label: '🔄 RSI mean reversion',
+    tag: 'Mean Reversion',
     text: 'Buy when RSI falls below 30 and sell when RSI rises above 70. Risk 1% per trade.',
   },
   {
     id: 'ema-stops',
-    label: 'EMA + stops',
+    label: '📊 EMA + stops',
+    tag: 'Trend',
     text: 'Buy when the 12-day EMA crosses above the 26-day EMA and sell when it crosses below. Use a 2% stop-loss and 5% take-profit.',
   },
   {
     id: 'bollinger-bounce',
-    label: 'Bollinger bounce',
+    label: '📉 Bollinger bounce',
+    tag: 'Volatility',
     text: 'Buy when price closes below the lower Bollinger Band and sell when it crosses above the middle band. Risk 1% per trade.',
+  },
+  {
+    id: 'pinbar-support',
+    label: '🕯️ Pin-bar Rejection',
+    tag: 'Price Action',
+    text: 'Buy SPY when a Bullish Pin-bar pattern forms on daily chart. Use 2% stop-loss and 5% take-profit. Risk 1% per trade.',
+  },
+  {
+    id: 'vwap-crossover',
+    label: '💹 VWAP Bounce',
+    tag: 'Volume Flow',
+    text: 'Buy when price crosses above VWAP and sell when price crosses below VWAP. Risk 1% per trade with 1.5% stop-loss.',
+  },
+  {
+    id: 'hammer-bounce',
+    label: '🔨 Hammer Reversal',
+    tag: 'Price Action',
+    text: 'Buy when Hammer candlestick pattern appears on chart. Risk 1.5% per trade with 2% stop-loss and exit when RSI exceeds 70.',
+  },
+  {
+    id: 'volume-breakout',
+    label: '🔊 Volume Spike',
+    tag: 'Breakout',
+    text: 'Buy when volume is above 20-day average volume and close is above 50-day SMA. Exit when close crosses below 20-day SMA. Use 2% stop-loss.',
   },
 ];
 
@@ -151,9 +186,10 @@ export function HomePage({ health }: Props) {
     getPlaybook()
       .then((data) => {
         if (cancelled || !data.items?.length) return;
-        const mapped = data.items.map((item: PlaybookItem) => ({
+        const mapped: PresetStrategy[] = data.items.map((item: PlaybookItem) => ({
           id: item.id,
           label: item.title,
+          tag: item.tag,
           text: item.text,
         }));
         setPresets(mapped);

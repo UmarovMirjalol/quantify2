@@ -582,6 +582,87 @@ h2 {
   color: var(--negative);
 }
 
+/* —— Strategy Code Export Buttons —— */
+.export-buttons {
+  margin: 1rem 0 1.25rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.export-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.export-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.export-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-export {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.825rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.btn-export:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-pine {
+  border-color: rgba(41, 98, 255, 0.35);
+  color: #2962ff;
+}
+
+.btn-pine:hover:not(:disabled) {
+  background: rgba(41, 98, 255, 0.1);
+}
+
+.btn-python {
+  border-color: rgba(79, 214, 160, 0.35);
+  color: var(--accent);
+}
+
+.btn-python:hover:not(:disabled) {
+  background: rgba(79, 214, 160, 0.1);
+}
+
+.btn-copy {
+  padding: 0.45rem 0.6rem;
+}
+
+.export-error {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--negative);
+}
+
 /* —— KPI ribbon (Bloomberg-style) —— */
 .kpi-grid {
   display: grid;

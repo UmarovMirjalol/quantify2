@@ -6,7 +6,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator
@@ -17,6 +17,9 @@ from app.database import get_db
 from app.data.loader import list_available_datasets, load_dataset
 from app.data.validators import DataValidationError, load_ohlcv_bytes
 from app.backtesting.engine import BacktestEngine, BacktestError
+from app.backtesting.portfolio_engine import PortfolioBacktestEngine
+from app.export.pine_generator import generate_pine_script
+from app.export.python_generator import generate_python_script
 from app.llm.client import LLMClient
 from app.llm.parser import StrategyParseError, parse_strategy
 from app.llm.runtime_config import (
@@ -462,6 +465,46 @@ async def api_run_backtest(
     }
 
 
+class PortfolioBacktestRequest(BaseModel):
+    strategy: StrategySpec | None = None
+    strategy_text: str | None = None
+    datasets: list[str] = Field(default_factory=lambda: ["sample_data.csv", "sample_intraday_15m.csv"])
+    initial_capital: float = 100_000.0
+    commission: float = 0.001
+    slippage: float = 0.0005
+
+
+@router.post("/backtest/portfolio")
+def api_run_portfolio_backtest(req: PortfolioBacktestRequest) -> dict[str, Any]:
+    if req.strategy is not None:
+        strategy = req.strategy
+    elif req.strategy_text:
+        parsed = parse_strategy(req.strategy_text)
+        strategy = parsed.strategy
+    else:
+        raise HTTPException(status_code=400, detail="Must provide strategy or strategy_text")
+
+    loaded_datasets: dict[str, Any] = {}
+    for ds_id in req.datasets:
+        try:
+            df = load_dataset(ds_id)
+            name = Path(ds_id).stem.upper()
+            loaded_datasets[name] = df
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Failed loading dataset '{ds_id}': {exc}") from exc
+
+    if not loaded_datasets:
+        raise HTTPException(status_code=400, detail="No valid datasets loaded")
+
+    engine = PortfolioBacktestEngine(strategy, initial_capital=req.initial_capital)
+    result = engine.run(loaded_datasets)
+    return {
+        "strategy": strategy.model_dump(),
+        "datasets": list(loaded_datasets.keys()),
+        **result,
+    }
+
+
 def _parser_label(demo_mode: int | bool | None) -> str:
     """Map legacy demo_mode column → parser label (0=llm, nonzero=builtin)."""
     return "llm" if demo_mode == 0 else "builtin"
@@ -517,3 +560,55 @@ def api_get_backtest(
         "config": json.loads(record.config_json),
         **results,
     }
+
+
+class ExportStrategyRequest(BaseModel):
+    strategy: StrategySpec
+    format: Literal["pine", "python"] = "pine"
+    title: str | None = None
+
+
+class ExportStrategyResponse(BaseModel):
+    code: str
+    format: str
+    filename: str
+
+
+@router.post("/export", response_model=ExportStrategyResponse)
+def api_export_strategy(req: ExportStrategyRequest) -> ExportStrategyResponse:
+    if req.format == "pine":
+        code = generate_pine_script(req.strategy, title=req.title)
+        filename = f"{req.strategy.asset.lower()}_strategy.pine"
+    else:
+        code = generate_python_script(req.strategy, title=req.title)
+        filename = f"{req.strategy.asset.lower()}_bot.py"
+    return ExportStrategyResponse(code=code, format=req.format, filename=filename)
+
+
+@router.get("/backtests/{backtest_id}/export/{format}", response_model=ExportStrategyResponse)
+def api_export_backtest(
+    backtest_id: int,
+    format: Literal["pine", "python"],
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> ExportStrategyResponse:
+    record = db.query(BacktestRecord).filter(BacktestRecord.id == backtest_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    scope = "" if client_id == "_anonymous" else client_id
+    if (record.client_id or "") != scope:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+
+    results = json.loads(record.results_json)
+    strategy_raw = results.get("strategy")
+    if not strategy_raw:
+        raise HTTPException(status_code=400, detail="Backtest record has no strategy spec")
+    strategy = StrategySpec.model_validate(strategy_raw)
+
+    if format == "pine":
+        code = generate_pine_script(strategy, title=record.strategy_description)
+        filename = f"quantify_backtest_{backtest_id}.pine"
+    else:
+        code = generate_python_script(strategy, title=record.strategy_description)
+        filename = f"quantify_backtest_{backtest_id}.py"
+    return ExportStrategyResponse(code=code, format=format, filename=filename)

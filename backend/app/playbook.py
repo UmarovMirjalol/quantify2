@@ -72,6 +72,61 @@ PLAYBOOK: list[dict[str, Any]] = [
         ),
         "indicators": ["SMA", "RSI"],
     },
+    {
+        "id": "pinbar-support",
+        "title": "Pin-bar Rejection",
+        "tag": "Price Action",
+        "blurb": "Rejection candle signal with tight stop-loss and 2:1 profit target.",
+        "text": (
+            "Buy SPY when a Bullish Pin-bar pattern forms on daily chart. "
+            "Use 2% stop-loss and 5% take-profit. Risk 1% per trade."
+        ),
+        "indicators": ["Pin-bar", "Stop", "TP"],
+    },
+    {
+        "id": "hammer-bounce",
+        "title": "Hammer Reversal",
+        "tag": "Price Action",
+        "blurb": "Classic candlestick hammer reversal after downward pressure.",
+        "text": (
+            "Buy when Hammer candlestick pattern appears on chart. "
+            "Risk 1.5% per trade with 2% stop-loss and exit when RSI exceeds 70."
+        ),
+        "indicators": ["Hammer", "RSI", "Stop"],
+    },
+    {
+        "id": "vwap-crossover",
+        "title": "VWAP Institutional Bounce",
+        "tag": "Volume Flow",
+        "blurb": "Trade alongside volume-weighted average benchmark.",
+        "text": (
+            "Buy when price crosses above VWAP and sell when price crosses below VWAP. "
+            "Risk 1% per trade with 1.5% stop-loss."
+        ),
+        "indicators": ["VWAP", "Volume", "Stop"],
+    },
+    {
+        "id": "volume-breakout",
+        "title": "Volume Spike Breakout",
+        "tag": "Breakout",
+        "blurb": "Confirm high-volume momentum when volume exceeds its 20-day average.",
+        "text": (
+            "Buy when volume is above 20-day average volume and close is above 50-day SMA. "
+            "Exit when close crosses below 20-day SMA. Use 2% stop-loss."
+        ),
+        "indicators": ["Volume", "SMA", "Breakout"],
+    },
+    {
+        "id": "obv-trend",
+        "title": "OBV Accumulation",
+        "tag": "Volume Flow",
+        "blurb": "Follow smart-money accumulation through On-Balance Volume.",
+        "text": (
+            "Buy when OBV is above 0 and 20-day SMA crosses above 50-day SMA. "
+            "Risk 1% per trade and exit when OBV falls below 0."
+        ),
+        "indicators": ["OBV", "SMA", "Trend"],
+    },
 ]
 
 

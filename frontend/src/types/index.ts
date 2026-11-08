@@ -79,6 +79,7 @@ export interface BacktestResult {
   id: number;
   parser: string;
   warnings?: string[];
+  clarifications?: string[];
   strategy_description: string;
   dataset_name: string;
   created_at: string;
@@ -91,6 +92,12 @@ export interface BacktestResult {
   total_commission?: number;
   total_slippage?: number;
   execution_convention?: string;
+}
+
+export interface ExportResult {
+  code: string;
+  format: string;
+  filename: string;
 }
 
 export interface BacktestSummary {

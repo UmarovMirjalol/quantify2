@@ -2,6 +2,7 @@ import type {
   BacktestResult,
   BacktestSummary,
   DatasetInfo,
+  ExportResult,
   HealthStatus,
   LLMStatus,
   PlaybookItem,
@@ -152,4 +153,23 @@ export async function updateLLMConfig(payload: {
 
 export async function clearLLMConfig(): Promise<LLMStatus> {
   return request('/api/llm/config', { method: 'DELETE' });
+}
+
+export async function exportStrategy(payload: {
+  strategy: StrategySpec;
+  format: 'pine' | 'python';
+  title?: string;
+}): Promise<ExportResult> {
+  return request('/api/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function exportBacktest(
+  backtestId: number,
+  format: 'pine' | 'python',
+): Promise<ExportResult> {
+  return request(`/api/backtests/${backtestId}/export/${format}`);
 }

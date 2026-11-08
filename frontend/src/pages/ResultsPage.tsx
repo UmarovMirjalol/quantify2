@@ -8,6 +8,7 @@ import {
   PriceTradeChart,
   ReturnsDistributionChart,
 } from '../components/Charts';
+import { ExportButtons } from '../components/ExportButtons';
 import { KpiCard } from '../components/KpiCard';
 import { TradeTable } from '../components/TradeTable';
 import type { BacktestResult } from '../types';
@@ -208,6 +209,19 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       {result.warnings && result.warnings.length > 0 ? (
         <div className="banner warn">{result.warnings.join(' ')}</div>
       ) : null}
+
+      {result.clarifications && result.clarifications.length > 0 ? (
+        <div className="banner info" style={{ background: 'var(--color-bg-info, #e8f0fe)', border: '1px solid var(--color-border-info, #4285f4)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+          <strong>💡 AI Suggestions:</strong>
+          <ul style={{ margin: '6px 0 0 16px', padding: 0, listStyle: 'disc' }}>
+            {result.clarifications.map((c, i) => (
+              <li key={i} style={{ margin: '2px 0' }}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <ExportButtons strategy={result.strategy} title={result.strategy_description} />
 
       <section className="kpi-grid">
         <KpiCard label="Total Return" value={pct(m.total_return)} tone={toneFor(m.total_return)} />
