@@ -6,6 +6,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -82,6 +83,18 @@ class Settings(BaseSettings):
     stats_baseline_users: int = 852
     stats_baseline_backtests: int = 1442
     stats_releases: int = 22
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _database_driver(cls, value: object) -> object:
+        """Neon/Supabase/Heroku hand out ``postgres://`` URLs; SQLAlchemy needs the driver named."""
+        if not isinstance(value, str) or not value.strip():
+            return f"sqlite:///{DB_PATH}"
+        url = value.strip()
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                return "postgresql+psycopg://" + url[len(prefix) :]
+        return url
 
     @property
     def is_production(self) -> bool:

@@ -168,7 +168,7 @@ npm install
 | `LLM_API_KEY` | Optional. From [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | `LLM_MODEL` | Model name (default `gpt-4o-mini`) |
 | `LLM_BASE_URL` | OpenAI-compatible base URL |
-| `DATABASE_URL` | SQLAlchemy URL (default SQLite) |
+| `DATABASE_URL` | SQLAlchemy URL (default SQLite). A Postgres URL from Neon or Supabase (`postgres://…?sslmode=require`) works as is; required on Vercel to keep accounts and history |
 | `CORS_ORIGINS` | Allowed frontend origins |
 | `FORCE_BUILTIN_PARSER` | Force built-in parser even if a key is set |
 | `ALLOW_CUSTOM_CODE` | `true` by default; `false` turns off Python strategies on this server |

@@ -13,10 +13,11 @@ class Base(DeclarativeBase):
 
 
 settings = get_settings()
-_connect_args = (
-    {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-)
-engine = create_engine(settings.database_url, connect_args=_connect_args)
+if settings.database_url.startswith("sqlite"):
+    engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
+else:
+    # Serverless Postgres (Neon, Supabase) drops idle connections; test each one before use.
+    engine = create_engine(settings.database_url, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
