@@ -14,6 +14,8 @@
 - Full performance metrics (Sharpe, Sortino, CAGR, max drawdown, profit factor, …)
 - Equity / drawdown / price-with-markers charts
 - Holdout audit: same rules on the unseen last 30% of bars, plus a nearby-parameter Sharpe check
+- Regime split: trade profit above and below a causal moving average
+- Walk-forward: refit the entry parameter on past bars and score only the next unseen slice
 - SQLite backtest history
 - Live landing counters (users / backtests / releases) that update as people visit and run tests
 - Strategy playbook gallery with deep-links into the workspace

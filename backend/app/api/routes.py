@@ -40,6 +40,7 @@ from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
 from app.research.stress import run_stress
+from app.research.walkforward import run_walk_forward
 from app.stats_drift import daily_user_offset
 from app.stats_store import record_backtest, record_visitor, redis_counts, sqlite_counts
 
@@ -588,6 +589,26 @@ def api_backtest_stress(
         raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Stress test failed: {exc}") from exc
+
+
+@router.get("/backtests/{backtest_id}/walk-forward")
+def api_backtest_walk_forward(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Refit the entry parameter on past bars and score only the next slice."""
+    record = _owned_backtest(db, backtest_id, client_id)
+    try:
+        strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
+        data = load_dataset(record.dataset_name)
+        return run_walk_forward(strategy, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DataValidationError as exc:
+        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Walk-forward failed: {exc}") from exc
 
 
 def _owned_backtest(db: Session, backtest_id: int, client_id: str) -> BacktestRecord:

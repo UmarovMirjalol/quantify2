@@ -11,6 +11,7 @@ import type {
   ReleaseItem,
   StrategySpec,
   StressReport,
+  WalkForwardReport,
 } from '../types';
 import { authHeaders } from './session';
 
@@ -152,6 +153,10 @@ export async function getBacktest(id: number): Promise<BacktestResult> {
 
 export async function getStress(id: number): Promise<StressReport> {
   return request(`/api/backtests/${id}/stress`);
+}
+
+export async function getWalkForward(id: number): Promise<WalkForwardReport> {
+  return request(`/api/backtests/${id}/walk-forward`);
 }
 
 export async function getLLMStatus(): Promise<LLMStatus> {

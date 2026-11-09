@@ -532,6 +532,8 @@ export function LandingPage() {
             { k: 'Trade ledger', d: 'Every fill with side, price, and PnL' },
             { k: 'Parsed JSON spec', d: 'Exact rules the engine ran' },
             { k: 'Holdout audit', d: 'Same rules on the unseen tail, plus nearby parameters' },
+            { k: 'Regime split', d: 'Profit above the moving average, and profit below it' },
+            { k: 'Walk-forward', d: 'Refit the parameter on the past, score only the next slice' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>

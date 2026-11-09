@@ -95,6 +95,40 @@ export interface MonteCarloResult {
   error?: string;
 }
 
+export interface WalkForwardFold {
+  fold: number;
+  parameter: string | null;
+  value: number | null;
+  test_return: number | null;
+  test_sharpe: number | null;
+  test_trades: number;
+  start_date: string;
+  end_date: string;
+}
+
+export interface WalkForwardReport {
+  verdict: 'stable' | 'uneven' | 'fails' | 'thin';
+  headline: string;
+  parameter: string | null;
+  refit: boolean;
+  hit_rate: number | null;
+  folds: WalkForwardFold[];
+}
+
+export interface RegimeBucket {
+  trades: number;
+  pnl: number;
+  win_rate: number | null;
+}
+
+export interface RegimeReport {
+  verdict: 'uptrend' | 'downtrend' | 'both' | 'neither' | 'thin';
+  headline: string;
+  window: number;
+  up: RegimeBucket;
+  down: RegimeBucket;
+}
+
 export interface BacktestResult {
   id: number;
   parser: string;
@@ -113,6 +147,7 @@ export interface BacktestResult {
   total_slippage?: number;
   execution_convention?: string;
   monte_carlo?: MonteCarloResult;
+  regimes?: RegimeReport;
 }
 
 export interface ExportResult {

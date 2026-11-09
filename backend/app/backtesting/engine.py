@@ -22,6 +22,7 @@ from app.backtesting.portfolio import Portfolio
 from app.backtesting.positions import PositionSide, TradeRecord
 from app.llm.schemas import StrategySpec
 from app.metrics.monte_carlo import run_monte_carlo_simulation
+from app.research.regimes import classify_regimes
 from app.metrics.performance import compute_performance_metrics
 from app.risk.risk_engine import RiskEngine
 from app.strategies.interpreter import generate_signals, validate_strategy_spec
@@ -190,6 +191,7 @@ class BacktestEngine:
             "total_commission": portfolio.total_commission,
             "total_slippage": portfolio.total_slippage,
             "monte_carlo": monte_carlo_res,
+            "regimes": classify_regimes(price_series, trades_out),
             "execution_convention": (
                 "Signals are generated at bar close using only information available "
                 "at that time. Orders are executed at the next bar's open. "

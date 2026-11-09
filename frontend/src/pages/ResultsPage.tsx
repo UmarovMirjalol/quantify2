@@ -11,13 +11,16 @@ import {
 } from '../components/Charts';
 import { ExportButtons } from '../components/ExportButtons';
 import { KpiCard } from '../components/KpiCard';
+import { RegimeSplit } from '../components/RegimeSplit';
 import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
+import { classifyRegimes } from '../utils/regimes';
+import { WalkForward } from '../components/WalkForward';
 import { downloadText, toCsv } from '../utils/download';
 
-type Tab = 'overview' | 'risk' | 'monte_carlo' | 'trades' | 'statistics' | 'stress';
+type Tab = 'overview' | 'risk' | 'monte_carlo' | 'trades' | 'statistics' | 'stress' | 'regimes' | 'walk';
 
 function pct(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
@@ -51,6 +54,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'trades', label: 'Trades' },
   { id: 'statistics', label: 'Statistics' },
   { id: 'stress', label: 'Holdout' },
+  { id: 'regimes', label: 'Regimes' },
+  { id: 'walk', label: 'Walk-forward' },
 ];
 
 export function ResultsView({ result }: { result: BacktestResult }) {
@@ -60,6 +65,11 @@ export function ResultsView({ result }: { result: BacktestResult }) {
   const strategyJson = useMemo(
     () => JSON.stringify(result.strategy, null, 2),
     [result.strategy],
+  );
+
+  const regimes = useMemo(
+    () => result.regimes ?? classifyRegimes(result.price_series, result.trades),
+    [result],
   );
 
   const buyHold = useMemo(
@@ -426,6 +436,18 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       {tab === 'stress' ? (
         <div className="tab-pane" key="stress">
           <StressAudit backtestId={result.id} />
+        </div>
+      ) : null}
+
+      {tab === 'regimes' ? (
+        <div className="tab-pane" key="regimes">
+          <RegimeSplit report={regimes} />
+        </div>
+      ) : null}
+
+      {tab === 'walk' ? (
+        <div className="tab-pane" key="walk">
+          <WalkForward backtestId={result.id} />
         </div>
       ) : null}
 
