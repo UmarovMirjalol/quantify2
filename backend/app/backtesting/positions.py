@@ -1,4 +1,4 @@
-"""Position tracking for long (and future short) trades."""
+"""Position tracking for long and short trades."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from enum import Enum
 class PositionSide(str, Enum):
     FLAT = "flat"
     LONG = "long"
-    SHORT = "short"  # reserved for future use
+    SHORT = "short"
 
 
 @dataclass

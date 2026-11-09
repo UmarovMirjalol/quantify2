@@ -6,6 +6,7 @@ matching this schema (no markdown, JSON only):
 
 {
   "asset": "SPY",
+  "side": "long",
   "timeframe": "1d",
   "initial_capital": 100000,
   "entry_conditions": [
@@ -39,7 +40,8 @@ For a higher-timeframe filter set bar_factor (base bars per higher bar), e.g. 16
 If the request is ambiguous, still return the closest JSON and do not invent fields.
 Supported conditions: greater_than, less_than, cross_above, cross_below, equals
 Supported position_sizing: fixed, percent_capital, risk_based
-Only long strategies. Do not invent unsupported indicators.
+"side" is "long" (default) or "short". For a short, entry_conditions open the short and exit_conditions cover it.
+Do not invent unsupported indicators.
 stop_loss and take_profit are decimal fractions (e.g. 0.02 for 2%).
 risk.risk_per_trade is a decimal fraction (e.g. 0.01 for 1%).
 For RSI use period and threshold, e.g. {"indicator":"RSI","period":14,"condition":"less_than","threshold":30}

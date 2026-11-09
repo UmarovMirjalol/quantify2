@@ -1,5 +1,6 @@
 export interface StrategySpec {
   asset: string;
+  side?: 'long' | 'short';
   timeframe: string;
   initial_capital: number;
   entry_conditions: unknown[];
@@ -185,6 +186,42 @@ export interface BacktestResult {
   execution_convention?: string;
   monte_carlo?: MonteCarloResult;
   regimes?: RegimeReport;
+  market?: MarketReport;
+  verdict?: VerdictReport;
+  share_token?: string | null;
+  shared?: boolean;
+}
+
+export interface MarketReport {
+  verdict: 'alpha' | 'unproven' | 'beta' | 'no_edge' | 'thin';
+  headline: string;
+  bars: number;
+  market_return: number;
+  strategy_return: number;
+  excess_return: number;
+  beta: number;
+  alpha_annual: number;
+  alpha_t: number;
+  correlation: number;
+  r_squared: number;
+  up_capture: number;
+  down_capture: number;
+}
+
+export interface VerdictCheck {
+  key: string;
+  label: string;
+  status: 'pass' | 'warn' | 'fail' | 'skip';
+  detail: string;
+}
+
+export interface VerdictReport {
+  grade: 'robust' | 'promising' | 'overfit' | 'no_edge' | 'insufficient';
+  score: number;
+  headline: string;
+  passed: number;
+  scored: number;
+  checks: VerdictCheck[];
 }
 
 export interface ExportResult {

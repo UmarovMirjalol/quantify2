@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from app.llm.schemas import Condition, ConditionOp, IndicatorRef, IndicatorType, StrategySpec
+from app.llm.schemas import Condition, ConditionOp, IndicatorRef, IndicatorType, Side, StrategySpec
 
 
 def _var_name(ref: IndicatorRef) -> str:
@@ -160,31 +160,36 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
     lines.append("")
     lines.append("// === STRATEGY RULES ===")
 
+    short = strategy.side == Side.SHORT
+    tag = "short" if short else "long"
+    label = "Short" if short else "Long"
+    stop_sign, take_sign = ("+", "-") if short else ("-", "+")
+
     # Entry condition
     entry_clauses = [_condition_to_pine(c) for c in strategy.entry_conditions]
     entry_glue = " and " if strategy.entry_logic.value == "AND" else " or "
-    lines.append(f"enter_long = {entry_glue.join(entry_clauses)}")
+    lines.append(f"enter_{tag} = {entry_glue.join(entry_clauses)}")
 
     # Exit condition
     exit_clauses = [_condition_to_pine(c) for c in strategy.exit_conditions]
     exit_glue = " and " if strategy.exit_logic.value == "AND" else " or "
-    lines.append(f"exit_long = {exit_glue.join(exit_clauses)}")
+    lines.append(f"exit_{tag} = {exit_glue.join(exit_clauses)}")
 
     lines.append("")
     lines.append("// === EXECUTION ===")
-    lines.append("if (enter_long)")
-    lines.append('    strategy.entry("Long", strategy.long)')
+    lines.append(f"if (enter_{tag})")
+    lines.append(f'    strategy.entry("{label}", strategy.{tag})')
 
-    lines.append("if (exit_long)")
-    lines.append('    strategy.close("Long")')
+    lines.append(f"if (exit_{tag})")
+    lines.append(f'    strategy.close("{label}")')
 
     # Stop loss & Take profit
     if strategy.stop_loss is not None or strategy.take_profit is not None:
         lines.append("")
         lines.append("// Risk Management: Stops & Targets")
-        stop_arg = f"stop = strategy.position_avg_price * (1.0 - {strategy.stop_loss})" if strategy.stop_loss else "stop = na"
-        tp_arg = f"limit = strategy.position_avg_price * (1.0 + {strategy.take_profit})" if strategy.take_profit else "limit = na"
-        lines.append(f'strategy.exit("Bracket", "Long", {stop_arg}, {tp_arg})')
+        stop_arg = f"stop = strategy.position_avg_price * (1.0 {stop_sign} {strategy.stop_loss})" if strategy.stop_loss else "stop = na"
+        tp_arg = f"limit = strategy.position_avg_price * (1.0 {take_sign} {strategy.take_profit})" if strategy.take_profit else "limit = na"
+        lines.append(f'strategy.exit("Bracket", "{label}", {stop_arg}, {tp_arg})')
 
     return "\n".join(lines) + "\n"
 

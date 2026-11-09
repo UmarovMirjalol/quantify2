@@ -45,33 +45,43 @@ class RiskEngine:
         """Commission as a fraction of notional."""
         return abs(price * quantity) * self.commission
 
-    def compute_stop_take(self, entry_price: float) -> tuple[float | None, float | None]:
+    def compute_stop_take(
+        self, entry_price: float, short: bool = False
+    ) -> tuple[float | None, float | None]:
         stop = None
         take = None
+        sign = -1.0 if short else 1.0
         if self.strategy.stop_loss is not None:
-            stop = entry_price * (1.0 - self.strategy.stop_loss)
+            stop = entry_price * (1.0 - sign * self.strategy.stop_loss)
         if self.strategy.take_profit is not None:
-            take = entry_price * (1.0 + self.strategy.take_profit)
+            take = entry_price * (1.0 + sign * self.strategy.take_profit)
         return stop, take
 
-    def size_long_entry(
+    def size_long_entry(self, portfolio: Portfolio, raw_price: float) -> RiskDecision:
+        return self.size_entry(portfolio, raw_price, short=False)
+
+    def size_entry(
         self,
         portfolio: Portfolio,
         raw_price: float,
+        short: bool = False,
     ) -> RiskDecision:
         """
-        Calculate how many shares to buy for a long entry.
+        Calculate how many shares to buy (long) or sell short.
 
         Risk-based example:
             capital=100_000, risk_per_trade=1%, stop_loss=2%
             dollar_risk = 1_000
             per_share_risk = price * 0.02
             shares = floor(dollar_risk / per_share_risk)
+
+        A short is sized against equity, not cash: sale proceeds are credited
+        to cash but the position is a liability of the same size.
         """
         if portfolio.position.is_open:
             return RiskDecision(False, 0.0, "Position already open")
 
-        fill_price = self.apply_slippage(raw_price, OrderSide.BUY)
+        fill_price = self.apply_slippage(raw_price, OrderSide.SELL if short else OrderSide.BUY)
         if fill_price <= 0:
             return RiskDecision(False, 0.0, "Invalid fill price")
 
@@ -114,7 +124,8 @@ class RiskEngine:
         quantity = min(quantity, max_qty_by_exposure)
 
         # Leverage limit (MVP: cash-only unless leverage > 1)
-        max_buying_power = portfolio.cash * self.risk.max_leverage
+        backing = equity if short else portfolio.cash
+        max_buying_power = backing * self.risk.max_leverage
         max_qty_by_cash = max_buying_power / (fill_price * (1.0 + self.commission))
         quantity = min(quantity, max_qty_by_cash)
 
@@ -124,10 +135,10 @@ class RiskEngine:
             return RiskDecision(False, 0.0, "Position size rounded to zero under risk constraints")
 
         cost = fill_price * quantity * (1.0 + self.commission)
-        if cost > portfolio.cash * self.risk.max_leverage + 1e-9:
+        if cost > backing * self.risk.max_leverage + 1e-9:
             return RiskDecision(False, 0.0, "Insufficient cash after costs")
 
-        stop, take = self.compute_stop_take(fill_price)
+        stop, take = self.compute_stop_take(fill_price, short=short)
         return RiskDecision(
             allowed=True,
             quantity=quantity,
@@ -152,7 +163,11 @@ class RiskEngine:
           (worse case) unless open gapped favorably through take.
         """
         pos = portfolio.position
-        if not pos.is_open or pos.side.value != "long":
+        if not pos.is_open:
+            return None
+        if pos.side.value == "short":
+            return self._check_short_stop_take(pos, bar_high, bar_low, bar_open)
+        if pos.side.value != "long":
             return None
 
         stop = pos.stop_loss_price
@@ -191,4 +206,23 @@ class RiskEngine:
                 signal_bar_index=-1,
                 reason="take_profit",
             )
+        return None
+
+    def _check_short_stop_take(
+        self, pos: object, bar_high: float, bar_low: float, bar_open: float
+    ) -> Order | None:
+        """Mirror of the long check: a short stops out above, takes profit below."""
+        stop = pos.stop_loss_price  # type: ignore[attr-defined]
+        take = pos.take_profit_price  # type: ignore[attr-defined]
+        quantity = pos.quantity  # type: ignore[attr-defined]
+        hit_stop = stop is not None and bar_high >= stop
+        hit_take = take is not None and bar_low <= take
+        if hit_stop and hit_take:
+            if bar_open <= (take or 0) and (stop is None or bar_open < stop):
+                return Order(side=OrderSide.BUY, quantity=quantity, signal_bar_index=-1, reason="take_profit")
+            return Order(side=OrderSide.BUY, quantity=quantity, signal_bar_index=-1, reason="stop_loss")
+        if hit_stop:
+            return Order(side=OrderSide.BUY, quantity=quantity, signal_bar_index=-1, reason="stop_loss")
+        if hit_take:
+            return Order(side=OrderSide.BUY, quantity=quantity, signal_bar_index=-1, reason="take_profit")
         return None

@@ -12,6 +12,7 @@ import type {
   RobustnessReport,
   StrategySpec,
   StressReport,
+  VerdictReport,
   WalkForwardReport,
 } from '../types';
 import { authHeaders } from './session';
@@ -162,6 +163,22 @@ export async function getWalkForward(id: number): Promise<WalkForwardReport> {
 
 export async function getRobustness(id: number): Promise<RobustnessReport> {
   return request(`/api/backtests/${id}/robustness`);
+}
+
+export async function getVerdict(id: number): Promise<VerdictReport> {
+  return request(`/api/backtests/${id}/verdict`);
+}
+
+export async function shareBacktest(id: number): Promise<{ token: string }> {
+  return request(`/api/backtests/${id}/share`, { method: 'POST' });
+}
+
+export async function unshareBacktest(id: number): Promise<{ token: null }> {
+  return request(`/api/backtests/${id}/share`, { method: 'DELETE' });
+}
+
+export async function getReport(token: string): Promise<BacktestResult> {
+  return request(`/api/reports/${encodeURIComponent(token)}`);
 }
 
 export async function getLLMStatus(): Promise<LLMStatus> {

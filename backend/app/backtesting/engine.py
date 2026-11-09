@@ -20,8 +20,9 @@ import pandas as pd
 from app.backtesting.orders import Order, OrderSide
 from app.backtesting.portfolio import Portfolio
 from app.backtesting.positions import PositionSide, TradeRecord
-from app.llm.schemas import StrategySpec
+from app.llm.schemas import Side, StrategySpec
 from app.metrics.monte_carlo import run_monte_carlo_simulation
+from app.research.market import market_exposure
 from app.research.regimes import classify_regimes
 from app.metrics.performance import compute_performance_metrics
 from app.risk.risk_engine import RiskEngine
@@ -33,13 +34,14 @@ class BacktestError(Exception):
 
 
 class BacktestEngine:
-    """Bar-by-bar long-only backtesting engine with risk management."""
+    """Bar-by-bar backtesting engine for one long or one short position at a time."""
 
     def __init__(self, strategy: StrategySpec):
         errors = validate_strategy_spec(strategy)
         if errors:
             raise BacktestError("Invalid strategy: " + "; ".join(errors))
         self.strategy = strategy
+        self.short = strategy.side == Side.SHORT
         self.risk_engine = RiskEngine(strategy)
 
     def run(self, data: pd.DataFrame) -> dict[str, Any]:
@@ -89,10 +91,12 @@ class BacktestEngine:
                 if st_order is not None:
                     # Execute immediately at stop/take price (or open if gapped)
                     fill_px = o
+                    short = portfolio.position.side == PositionSide.SHORT
+                    worse, better = (max, min) if short else (min, max)
                     if st_order.reason == "stop_loss" and portfolio.position.stop_loss_price:
-                        fill_px = min(o, portfolio.position.stop_loss_price)
+                        fill_px = worse(o, portfolio.position.stop_loss_price)
                     elif st_order.reason == "take_profit" and portfolio.position.take_profit_price:
-                        fill_px = max(o, portfolio.position.take_profit_price)
+                        fill_px = better(o, portfolio.position.take_profit_price)
                     st_order.signal_bar_index = i
                     self._execute_order(
                         portfolio,
@@ -107,13 +111,14 @@ class BacktestEngine:
             # 3) Generate new signal at close — queue for next bar open
             if i < n - 1:  # cannot execute after last bar
                 if not portfolio.position.is_open and entry_flags[i]:
-                    decision = self.risk_engine.size_long_entry(portfolio, c)
+                    decision = self.risk_engine.size_entry(portfolio, c, short=self.short)
                     if decision.allowed:
                         pending_order = Order(
-                            side=OrderSide.BUY,
+                            side=OrderSide.SELL if self.short else OrderSide.BUY,
                             quantity=decision.quantity,
                             signal_bar_index=i,
                             reason="entry_signal",
+                            opens_position=True,
                         )
                         # Stash stop/take on order via temporary attributes
                         pending_order.stop_loss_price = decision.stop_loss_price  # type: ignore[attr-defined]
@@ -121,7 +126,7 @@ class BacktestEngine:
                         entry_reason = "entry_signal"
                 elif portfolio.position.is_open and exit_flags[i]:
                     pending_order = Order(
-                        side=OrderSide.SELL,
+                        side=OrderSide.BUY if self.short else OrderSide.SELL,
                         quantity=portfolio.position.quantity,
                         signal_bar_index=i,
                         reason="exit_signal",
@@ -198,6 +203,10 @@ class BacktestEngine:
             "total_slippage": portfolio.total_slippage,
             "monte_carlo": monte_carlo_res,
             "regimes": classify_regimes(price_series, trades_out),
+            "market": market_exposure(
+                [pt["equity"] for pt in equity_series],
+                [float(x) for x in closes[: len(equity_series)]],
+            ),
             "execution_convention": (
                 "Signals are generated at bar close using only information available "
                 "at that time. Orders are executed at the next bar's open. "
@@ -219,18 +228,24 @@ class BacktestEngine:
         commission = self.risk_engine.commission_cost(fill_price, order.quantity)
         slippage_cost = abs(fill_price - fill_price_raw) * order.quantity
 
-        if order.side == OrderSide.BUY:
-            total_cost = fill_price * order.quantity + commission
-            if total_cost > portfolio.cash + 1e-6:
-                return  # reject — insufficient cash
-            portfolio.cash -= total_cost
+        if order.opens_position:
+            if portfolio.position.is_open:
+                return
+            short = order.side == OrderSide.SELL
+            if short:
+                portfolio.cash += fill_price * order.quantity - commission
+            else:
+                total_cost = fill_price * order.quantity + commission
+                if total_cost > portfolio.cash + 1e-6:
+                    return  # reject — insufficient cash
+                portfolio.cash -= total_cost
             portfolio.total_commission += commission
             portfolio.total_slippage += slippage_cost
             stop = getattr(order, "stop_loss_price", None)
             take = getattr(order, "take_profit_price", None)
             if stop is None and take is None:
-                stop, take = self.risk_engine.compute_stop_take(fill_price)
-            portfolio.position.side = PositionSide.LONG
+                stop, take = self.risk_engine.compute_stop_take(fill_price, short=short)
+            portfolio.position.side = PositionSide.SHORT if short else PositionSide.LONG
             portfolio.position.quantity = order.quantity
             portfolio.position.entry_price = fill_price
             portfolio.position.entry_date = fill_date
@@ -242,50 +257,55 @@ class BacktestEngine:
                     "date": fill_date.isoformat(),
                     "price": fill_price,
                     "type": "entry",
+                    "side": portfolio.position.side.value,
                     "reason": order.reason,
                 }
             )
-        else:  # SELL / exit
-            if not portfolio.position.is_open:
-                return
-            qty = min(order.quantity, portfolio.position.quantity)
-            proceeds = fill_price * qty - commission
-            portfolio.cash += proceeds
-            portfolio.total_commission += commission
-            portfolio.total_slippage += slippage_cost
+            return
 
-            entry_price = portfolio.position.entry_price
+        if not portfolio.position.is_open:
+            return
+        short = portfolio.position.side == PositionSide.SHORT
+        qty = min(order.quantity, portfolio.position.quantity)
+        entry_price = portfolio.position.entry_price
+        if short:
+            portfolio.cash -= fill_price * qty + commission
+            pnl = (entry_price - fill_price) * qty - commission
+            ret = (entry_price - fill_price) / entry_price if entry_price else 0.0
+        else:
+            portfolio.cash += fill_price * qty - commission
             pnl = (fill_price - entry_price) * qty - commission
-            # Also subtract entry commission already paid from realized? Entry commission
-            # was paid from cash already; trade PnL is price delta minus this exit commission.
-            # For reporting, include proportional entry cost estimate as 0 here (already in cash).
-            portfolio.realized_pnl += pnl
-            bars_held = 0
-            if portfolio.position.entry_bar_index is not None:
-                bars_held = fill_bar_index - portfolio.position.entry_bar_index
             ret = (fill_price / entry_price - 1.0) if entry_price else 0.0
-            portfolio.trades.append(
-                TradeRecord(
-                    entry_date=portfolio.position.entry_date or fill_date,
-                    exit_date=fill_date,
-                    entry_price=entry_price,
-                    exit_price=fill_price,
-                    quantity=qty,
-                    side="long",
-                    pnl=pnl,
-                    return_pct=ret,
-                    commission=commission,
-                    entry_reason=entry_reason_ref.get("value", "entry_signal"),
-                    exit_reason=order.reason,
-                    bars_held=bars_held,
-                )
+        portfolio.total_commission += commission
+        portfolio.total_slippage += slippage_cost
+        # Entry commission was already taken from cash; trade PnL carries only the exit commission.
+        portfolio.realized_pnl += pnl
+        bars_held = 0
+        if portfolio.position.entry_bar_index is not None:
+            bars_held = fill_bar_index - portfolio.position.entry_bar_index
+        portfolio.trades.append(
+            TradeRecord(
+                entry_date=portfolio.position.entry_date or fill_date,
+                exit_date=fill_date,
+                entry_price=entry_price,
+                exit_price=fill_price,
+                quantity=qty,
+                side=portfolio.position.side.value,
+                pnl=pnl,
+                return_pct=ret,
+                commission=commission,
+                entry_reason=entry_reason_ref.get("value", "entry_signal"),
+                exit_reason=order.reason,
+                bars_held=bars_held,
             )
-            markers.append(
-                {
-                    "date": fill_date.isoformat(),
-                    "price": fill_price,
-                    "type": "exit",
-                    "reason": order.reason,
-                }
-            )
-            portfolio.position.reset()
+        )
+        markers.append(
+            {
+                "date": fill_date.isoformat(),
+                "price": fill_price,
+                "type": "exit",
+                "side": portfolio.position.side.value,
+                "reason": order.reason,
+            }
+        )
+        portfolio.position.reset()

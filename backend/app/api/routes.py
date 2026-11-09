@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,8 +40,10 @@ from app.llm.schemas import (
 from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
+from app.research.market import market_exposure
 from app.research.robustness import cost_breakeven, deflated_sharpe, parameter_heatmap
 from app.research.stress import run_stress
+from app.research.verdict import build_verdict
 from app.research.walkforward import run_walk_forward
 from app.stats_drift import daily_user_offset
 from app.stats_store import record_backtest, record_visitor, redis_counts, sqlite_counts
@@ -620,6 +623,19 @@ def api_backtest_robustness(
 ) -> dict[str, Any]:
     """Deflated Sharpe over this browser's tries, cost break-even, and a parameter heatmap."""
     record = _owned_backtest(db, backtest_id, client_id)
+    try:
+        strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
+        data = load_dataset(record.dataset_name)
+        return _robustness(db, record, strategy, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DataValidationError as exc:
+        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Robustness check failed: {exc}") from exc
+
+
+def _robustness(db: Session, record: BacktestRecord, strategy: StrategySpec, data: Any) -> dict[str, Any]:
     trials = (
         db.query(BacktestRecord.sharpe_ratio)
         .filter(
@@ -631,21 +647,99 @@ def api_backtest_robustness(
     trial_sharpes = [float(row[0]) for row in trials if row[0] is not None]
     if not trial_sharpes:
         trial_sharpes = [float(record.sharpe_ratio or 0.0)]
-    try:
-        strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
-        data = load_dataset(record.dataset_name)
-        equity = [float(pt["equity"]) for pt in json.loads(record.results_json).get("equity_curve", [])]
-        return {
-            "deflated": deflated_sharpe(equity, trial_sharpes),
-            "costs": cost_breakeven(strategy, data),
-            "heatmap": parameter_heatmap(strategy, data),
-        }
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DataValidationError as exc:
-        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=f"Robustness check failed: {exc}") from exc
+    equity = [float(pt["equity"]) for pt in json.loads(record.results_json).get("equity_curve", [])]
+    return {
+        "deflated": deflated_sharpe(equity, trial_sharpes),
+        "costs": cost_breakeven(strategy, data),
+        "heatmap": parameter_heatmap(strategy, data),
+    }
+
+
+def _verdict_for(db: Session, record: BacktestRecord) -> dict[str, Any]:
+    """Run every check once and cache the combined verdict on the record."""
+    results = _with_market(json.loads(record.results_json))
+    if results.get("verdict"):
+        return results["verdict"]
+
+    def attempt(run: Any) -> Any:
+        try:
+            return run()
+        except Exception:  # noqa: BLE001
+            return None
+
+    strategy = attempt(lambda: StrategySpec.model_validate(json.loads(record.parsed_strategy_json)))
+    data = attempt(lambda: load_dataset(record.dataset_name))
+    stress = walk = robust = None
+    if strategy is not None and data is not None:
+        stress = attempt(lambda: run_stress(strategy, data))
+        walk = attempt(lambda: run_walk_forward(strategy, data))
+        robust = attempt(lambda: _robustness(db, record, strategy, data))
+    verdict = build_verdict(results, stress=stress, walk=walk, robust=robust)
+    results["verdict"] = verdict
+    record.results_json = json.dumps(results)
+    db.commit()
+    return verdict
+
+
+@router.get("/backtests/{backtest_id}/verdict")
+def api_backtest_verdict(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Holdout, walk-forward, luck, costs, heatmap, regimes, alpha, and Monte Carlo in one grade."""
+    return _verdict_for(db, _owned_backtest(db, backtest_id, client_id))
+
+
+@router.post("/backtests/{backtest_id}/share")
+def api_share_backtest(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Create (or return) a read-only public link for this run."""
+    record = _owned_backtest(db, backtest_id, client_id)
+    _verdict_for(db, record)
+    if not record.share_token:
+        record.share_token = secrets.token_urlsafe(16)[:22]
+        db.commit()
+    return {"token": record.share_token}
+
+
+@router.delete("/backtests/{backtest_id}/share")
+def api_unshare_backtest(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Revoke the public link; the old URL stops working."""
+    record = _owned_backtest(db, backtest_id, client_id)
+    record.share_token = None
+    db.commit()
+    return {"token": None}
+
+
+@router.get("/reports/{token}")
+def api_public_report(token: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Read-only report for anyone holding the link."""
+    if not token or len(token) > 32:
+        raise HTTPException(status_code=404, detail="Report not found")
+    record = db.query(BacktestRecord).filter(BacktestRecord.share_token == token).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Report not found")
+    payload = _backtest_payload(record, json.loads(record.results_json))
+    payload["shared"] = True
+    return payload
+
+
+def _with_market(results: dict[str, Any]) -> dict[str, Any]:
+    """Backfill alpha/beta for runs saved before the engine computed it."""
+    if "market" not in results and results.get("equity_curve") and results.get("price_series"):
+        results["market"] = market_exposure(
+            [float(pt["equity"]) for pt in results["equity_curve"]],
+            [float(bar["close"]) for bar in results["price_series"]],
+        )
+    return results
 
 
 def _owned_backtest(db: Session, backtest_id: int, client_id: str) -> BacktestRecord:
@@ -666,7 +760,8 @@ def _backtest_payload(record: BacktestRecord, results: dict[str, Any]) -> dict[s
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "parser": _parser_label(record.demo_mode),
         "config": json.loads(record.config_json),
-        **results,
+        "share_token": record.share_token,
+        **_with_market(results),
     }
 
 

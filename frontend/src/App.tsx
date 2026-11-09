@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AccessGate } from './components/AccessGate';
 import { Layout } from './components/Layout';
 import { getHealth, listDatasets } from './services/api';
@@ -24,6 +24,10 @@ const ResultsLoader = lazy(() =>
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
+const ReportPage = lazy(() => import('./pages/ReportPage').then((m) => ({ default: m.ReportPage })));
+const ComparePage = lazy(() =>
+  import('./pages/ComparePage').then((m) => ({ default: m.ComparePage })),
+);
 
 function RouteFallback() {
   return (
@@ -35,6 +39,7 @@ function RouteFallback() {
 }
 
 export default function App() {
+  const location = useLocation();
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
@@ -172,6 +177,17 @@ export default function App() {
   }
 
   if (health?.auth_required && !unlocked) {
+    if (location.pathname.startsWith('/r/')) {
+      return (
+        <main className="main public-report">
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/r/:token" element={<ReportPage />} />
+            </Routes>
+          </Suspense>
+        </main>
+      );
+    }
     return (
       <AccessGate
         onUnlocked={() => {
@@ -192,6 +208,8 @@ export default function App() {
           <Route path="/guide" element={<GuidePage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/results/:id" element={<ResultsLoader />} />
+          <Route path="/compare" element={<ComparePage />} />
+          <Route path="/r/:token" element={<ReportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

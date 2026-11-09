@@ -19,6 +19,11 @@
 - Deflated Sharpe (Bailey & López de Prado): discounts the Sharpe for how many variants this browser tried on the same data
 - Cost break-even: the per-side cost at which total return turns non-positive
 - Parameter heatmap: Sharpe across every fast × slow crossover pair, with a plateau-or-peak verdict
+- Unified verdict: holdout, walk-forward, Deflated Sharpe, costs, heatmap, regimes, alpha, and Monte Carlo graded into one 0–100 score; a failure on unseen data caps the grade
+- Alpha & beta vs buy-and-hold of the same asset: per-bar regression with alpha t-stat, R², and up/down capture
+- Short selling: "Short SPY when…" opens a real short (cash credit, mirrored stops, cover P&L), exported to Pine as `strategy.short`
+- Compare two runs: equity rebased to one start, every metric and check side by side, winner highlighted
+- Public report link (read-only, revocable, no account needed) and print-ready PDF
 - Engine loop runs on NumPy arrays (~90× faster than row-wise pandas), which keeps grid sweeps interactive
 - SQLite backtest history
 - Live landing counters (users / backtests / releases) that update as people visit and run tests
@@ -65,7 +70,7 @@ Commission is a fraction of fill notional. Slippage worsens the fill (higher for
 
 **Risk:** fixed shares, % of capital, risk-per-trade sizing, stop-loss, take-profit, max position %, max exposure, leverage, commission, slippage  
 
-Long-only in this release; short-selling can extend `PositionSide.SHORT`.
+**Side:** long (default) or short. A short sells at the next open, holds a cash credit plus a liability marked to market, and covers on the exit rule, a stop above entry, or a take-profit below it.
 
 ## Project structure
 
@@ -264,7 +269,7 @@ pytest -q
 
 ## Limitations
 
-- Long-only (no short selling yet)
+- One position at a time, long or short (no simultaneous long/short or borrow fees)
 - Single-asset per run
 - Integer share sizing
 - Built-in parser covers common quant phrasings; LLM expands coverage

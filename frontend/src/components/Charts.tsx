@@ -39,10 +39,12 @@ export function EquityChart({
   data,
   benchmark,
   benchmarkName = 'Buy & hold',
+  name = 'Strategy',
 }: {
   data: EquityPoint[];
   benchmark?: EquityPoint[];
   benchmarkName?: string;
+  name?: string;
 }) {
   const traces: Record<string, unknown>[] = [
     {
@@ -53,8 +55,8 @@ export function EquityChart({
       line: { color: '#4fd6a0', width: 1.85 },
       fill: benchmark?.length ? undefined : 'tozeroy',
       fillcolor: 'rgba(79,214,160,0.08)',
-      name: 'Strategy',
-      hovertemplate: '%{x}<br>$%{y:,.0f}<extra>Strategy</extra>',
+      name,
+      hovertemplate: `%{x}<br>$%{y:,.0f}<extra>${name}</extra>`,
     },
   ];
   if (benchmark?.length) {

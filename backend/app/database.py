@@ -22,21 +22,21 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db() -> None:
     """Create all tables and apply lightweight migrations."""
-    from sqlalchemy import text
+    from sqlalchemy import inspect, text
 
     from app.models import backtest  # noqa: F401
     from app.models import stats  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
-    if not settings.database_url.startswith("sqlite"):
-        return
+    cols = {c["name"] for c in inspect(engine).get_columns("backtests")}
+    added = {
+        "client_id": "ALTER TABLE backtests ADD COLUMN client_id VARCHAR(64) DEFAULT ''",
+        "share_token": "ALTER TABLE backtests ADD COLUMN share_token VARCHAR(32)",
+    }
     with engine.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(backtests)")).fetchall()
-        cols = {r[1] for r in rows}
-        if cols and "client_id" not in cols:
-            conn.execute(
-                text("ALTER TABLE backtests ADD COLUMN client_id VARCHAR(64) DEFAULT ''")
-            )
+        for name, ddl in added.items():
+            if cols and name not in cols:
+                conn.execute(text(ddl))
 
 
 def get_db() -> Generator[Session, None, None]:

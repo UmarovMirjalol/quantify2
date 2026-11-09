@@ -33,7 +33,7 @@ def _extract_asset(text: str, override: str | None) -> str:
     )
     if m:
         return m.group(1).upper()
-    m = re.search(r"\b(?:buy|sell|trade)\s+([A-Z]{2,5})\b", text)
+    m = re.search(r"\b(?:buy|sell|trade|short|[Ss]hort)\s+([A-Z]{2,5})\b", text)
     if m:
         return m.group(1).upper()
     tickers = re.findall(r"\b([A-Z]{2,5})\b", text)
@@ -41,6 +41,7 @@ def _extract_asset(text: str, override: str | None) -> str:
         "SMA", "EMA", "RSI", "ATR", "MACD", "AND", "OR", "BUY", "SELL", "WHEN",
         "THE", "DAY", "FOR", "WITH", "FROM", "INTO", "OVER", "UNDER", "BELOW",
         "ABOVE", "CROSS", "RISK", "STOP", "TAKE", "BAND", "PRICE", "CLOSE",
+        "SHORT", "COVER",
     }
     for t in tickers:
         if t not in skip:
@@ -89,6 +90,18 @@ def _extract_risk_fields(text: str) -> dict[str, Any]:
         out["take_profit"] = _pct_to_frac(float(take.group(1)))
 
     return out
+
+
+_SHORT_PATTERN = re.compile(
+    r"\b(?:sell\s+short|go\s+short|short[-\s]?sell\w*|shorting|"
+    r"short\s+(?:when|if|on|after|once|the|it)\b|шорт\w*|продава\w+\s+в\s+шорт)"
+    r"|(?:^|[.;!]\s*)short\b",
+    re.IGNORECASE,
+)
+
+
+def _wants_short(text: str) -> bool:
+    return bool(_SHORT_PATTERN.search(text) or re.search(r"\b[Ss]hort\s+[A-Z]{2,5}\b", text))
 
 
 def _ma_crossover(
@@ -428,6 +441,13 @@ def parse_builtin(
 
     assert exit_ is not None
 
+    side = "short" if _wants_short(text) else "long"
+    if side == "short":
+        # Every template above is written from the buyer's side: entry is the bullish
+        # condition. A short enters on the bearish one and covers on the bullish one.
+        entry, exit_ = exit_, entry
+        warnings.append("Short side: entering on the bearish rule and covering on the bullish rule.")
+
     tf = "1d"
     if re.search(r"\b(?:5m|5[-\s]?мин\w*)\b", text, re.IGNORECASE):
         tf = "5m"
@@ -450,6 +470,7 @@ def parse_builtin(
 
     spec: dict[str, Any] = {
         "asset": asset_name,
+        "side": side,
         "timeframe": tf,
         "initial_capital": initial_capital or 100_000.0,
         "entry_conditions": entry,

@@ -47,8 +47,7 @@ class PositionSizing(str, Enum):
 
 class Side(str, Enum):
     LONG = "long"
-    # SHORT reserved for future extension
-    # SHORT = "short"
+    SHORT = "short"
 
 
 class IndicatorRef(BaseModel):

@@ -537,6 +537,10 @@ export function LandingPage() {
             { k: 'Deflated Sharpe', d: 'Discounts the Sharpe for every variant you already tried' },
             { k: 'Cost break-even', d: 'The fee level at which the edge disappears' },
             { k: 'Parameter heatmap', d: 'Plateau or lucky spike, across every fast × slow pair' },
+            { k: 'One verdict', d: 'Eight checks graded into a single 0–100 score' },
+            { k: 'Alpha & beta', d: 'What is left after paying for market exposure' },
+            { k: 'Long or short', d: '"Short SPY when…" runs a real short with mirrored stops' },
+            { k: 'Share & compare', d: 'Public report link, PDF, and two runs side by side' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>

@@ -11,10 +11,13 @@ import {
 } from '../components/Charts';
 import { ExportButtons } from '../components/ExportButtons';
 import { KpiCard } from '../components/KpiCard';
+import { MarketExposure } from '../components/MarketExposure';
 import { RegimeSplit } from '../components/RegimeSplit';
 import { Robustness } from '../components/Robustness';
 import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
+import { VerdictCard } from '../components/VerdictCard';
+import { shareBacktest, unshareBacktest } from '../services/api';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
 import { classifyRegimes } from '../utils/regimes';
@@ -30,7 +33,14 @@ type Tab =
   | 'stress'
   | 'regimes'
   | 'walk'
-  | 'robust';
+  | 'robust'
+  | 'alpha';
+
+const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust'];
+
+export function reportUrl(token: string): string {
+  return `${window.location.origin}/r/${token}`;
+}
 
 function pct(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
@@ -67,11 +77,17 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'regimes', label: 'Regimes' },
   { id: 'walk', label: 'Walk-forward' },
   { id: 'robust', label: 'Robustness' },
+  { id: 'alpha', label: 'Alpha & beta' },
 ];
 
-export function ResultsView({ result }: { result: BacktestResult }) {
+export function ResultsView({ result, readOnly = false }: { result: BacktestResult; readOnly?: boolean }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('overview');
+  const [shareToken, setShareToken] = useState<string | null>(result.share_token ?? null);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareNote, setShareNote] = useState('');
+  const tabs = readOnly ? TABS.filter((t) => !OWNER_ONLY.includes(t.id)) : TABS;
+  const isShort = result.strategy.side === 'short';
   const m = result.metrics;
   const strategyJson = useMemo(
     () => JSON.stringify(result.strategy, null, 2),
@@ -195,11 +211,43 @@ export function ResultsView({ result }: { result: BacktestResult }) {
     navigate('/app?rerun=1');
   }
 
+  async function share() {
+    setShareBusy(true);
+    setShareNote('Running every check so the report carries its verdict…');
+    try {
+      const { token } = await shareBacktest(result.id);
+      setShareToken(token);
+      try {
+        await navigator.clipboard.writeText(reportUrl(token));
+        setShareNote('Link copied. Anyone with it can view this report, no account needed.');
+      } catch {
+        setShareNote('Anyone with this link can view the report, no account needed.');
+      }
+    } catch (err) {
+      setShareNote(err instanceof Error ? err.message : 'Could not create the link.');
+    } finally {
+      setShareBusy(false);
+    }
+  }
+
+  async function revoke() {
+    setShareBusy(true);
+    try {
+      await unshareBacktest(result.id);
+      setShareToken(null);
+      setShareNote('Link revoked. The old URL no longer opens.');
+    } catch (err) {
+      setShareNote(err instanceof Error ? err.message : 'Could not revoke the link.');
+    } finally {
+      setShareBusy(false);
+    }
+  }
+
   return (
     <div className="results">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Backtest #{result.id}</p>
+          <p className="eyebrow">{readOnly ? 'Shared report' : `Backtest #${result.id}`}</p>
           <h1>Results</h1>
           <p className="lede">{result.strategy_description}</p>
           <div className="meta-row">
@@ -210,9 +258,10 @@ export function ResultsView({ result }: { result: BacktestResult }) {
             ) : (
               <span className="tag">Built-in parser</span>
             )}
+            <span className={`tag ${isShort ? 'short' : ''}`}>{isShort ? 'Short' : 'Long'}</span>
           </div>
         </div>
-        <div className="results-actions">
+        <div className="results-actions no-print">
           <button type="button" className="btn secondary small" onClick={exportTradesCsv}>
             Export trades CSV
           </button>
@@ -222,14 +271,42 @@ export function ResultsView({ result }: { result: BacktestResult }) {
           <button type="button" className="btn secondary small" onClick={exportMetricsJson}>
             Export JSON
           </button>
-          <button type="button" className="btn secondary" onClick={rerunInWorkspace}>
-            Edit & re-run
+          <button type="button" className="btn secondary small" onClick={() => window.print()}>
+            Save PDF
           </button>
-          <Link className="btn primary" to="/app">
-            New Backtest
-          </Link>
+          {readOnly ? (
+            <Link className="btn primary" to="/app">
+              Test your own strategy
+            </Link>
+          ) : (
+            <>
+              <button type="button" className="btn secondary" onClick={share} disabled={shareBusy}>
+                {shareToken ? 'Copy share link' : 'Share link'}
+              </button>
+              <button type="button" className="btn secondary" onClick={rerunInWorkspace}>
+                Edit & re-run
+              </button>
+              <Link className="btn primary" to="/app">
+                New Backtest
+              </Link>
+            </>
+          )}
         </div>
       </div>
+
+      {!readOnly && (shareToken || shareNote) ? (
+        <div className="share-bar no-print">
+          {shareToken ? (
+            <input className="mono" readOnly value={reportUrl(shareToken)} onFocus={(e) => e.target.select()} />
+          ) : null}
+          {shareNote ? <span className="hint">{shareNote}</span> : null}
+          {shareToken ? (
+            <button type="button" className="btn ghost small" onClick={revoke} disabled={shareBusy}>
+              Revoke
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {result.warnings && result.warnings.length > 0 ? (
         <div className="banner warn">{result.warnings.join(' ')}</div>
@@ -246,7 +323,9 @@ export function ResultsView({ result }: { result: BacktestResult }) {
         </div>
       ) : null}
 
-      <ExportButtons strategy={result.strategy} title={result.strategy_description} />
+      {readOnly ? null : <ExportButtons strategy={result.strategy} title={result.strategy_description} />}
+
+      <VerdictCard backtestId={result.id} initial={result.verdict} />
 
       <section className="kpi-grid">
         <KpiCard label="Total Return" value={pct(m.total_return)} tone={toneFor(m.total_return)} />
@@ -272,8 +351,8 @@ export function ResultsView({ result }: { result: BacktestResult }) {
         />
       </section>
 
-      <div className="tabs" role="tablist">
-        {TABS.map((t) => (
+      <div className="tabs no-print" role="tablist">
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -465,6 +544,12 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       {tab === 'robust' ? (
         <div className="tab-pane" key="robust">
           <Robustness backtestId={result.id} />
+        </div>
+      ) : null}
+
+      {tab === 'alpha' ? (
+        <div className="tab-pane" key="alpha">
+          <MarketExposure report={result.market} />
         </div>
       ) : null}
 

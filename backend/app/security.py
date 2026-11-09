@@ -42,6 +42,10 @@ class AccessTokenMiddleware(BaseHTTPMiddleware):
         if path in PUBLIC_PATHS or path.startswith("/assets"):
             return await call_next(request)
 
+        # A shared report link carries its own unguessable token.
+        if request.method == "GET" and path.startswith("/api/reports/"):
+            return await call_next(request)
+
         # Allow CORS preflight
         if request.method == "OPTIONS":
             return await call_next(request)

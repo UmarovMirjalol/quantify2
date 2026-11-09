@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { listBacktests } from '../services/api';
 import type { BacktestSummary } from '../types';
 
@@ -18,6 +18,14 @@ export function HistoryPage() {
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [picked, setPicked] = useState<number[]>([]);
+  const navigate = useNavigate();
+
+  function togglePick(id: number) {
+    setPicked((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-2),
+    );
+  }
 
   useEffect(() => {
     listBacktests()
@@ -129,11 +137,23 @@ export function HistoryPage() {
             <span className="hint mono">
               {filtered.length}/{items.length} runs
             </span>
+            <button
+              type="button"
+              className="btn primary small"
+              disabled={picked.length !== 2}
+              onClick={() => navigate(`/compare?a=${picked[0]}&b=${picked[1]}`)}
+              title="Tick two runs to compare them side by side"
+            >
+              Compare {picked.length}/2
+            </button>
           </div>
           <div className="table-wrap panel">
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>
+                    <span className="sr-only">Compare</span>
+                  </th>
                   <th>ID</th>
                   <th>
                     <button type="button" className="chip" onClick={() => toggleSort('created_at')}>
@@ -171,7 +191,15 @@ export function HistoryPage() {
               </thead>
               <tbody>
                 {filtered.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={item.id} className={picked.includes(item.id) ? 'picked' : ''}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Compare run ${item.id}`}
+                        checked={picked.includes(item.id)}
+                        onChange={() => togglePick(item.id)}
+                      />
+                    </td>
                     <td className="mono">#{item.id}</td>
                     <td className="mono">{item.created_at.slice(0, 19).replace('T', ' ')}</td>
                     <td className="truncate">{item.strategy_description}</td>

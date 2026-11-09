@@ -32,6 +32,7 @@ class Order:
     quantity: float
     signal_bar_index: int
     reason: str = ""
+    opens_position: bool = False
     order_type: OrderType = OrderType.MARKET
     status: OrderStatus = OrderStatus.PENDING
     created_at: datetime | None = None
