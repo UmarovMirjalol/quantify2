@@ -15,7 +15,11 @@ import numpy as np
 import pandas as pd
 
 # --- standalone:start ---
-def _size(spec, equity, cash, price, short, fraction):
+def round_quantity(qty):
+    return float(int(qty)) if qty >= 1 else math.floor(max(qty, 0.0) * 1e6) / 1e6
+
+
+def _size(spec, equity, cash, price, short, fraction, held=0.0):
     risk = spec["risk"]
     slip, comm = spec["slippage"], spec["commission"]
     fill = price * (1.0 - slip) if short else price * (1.0 + slip)
@@ -34,14 +38,15 @@ def _size(spec, equity, cash, price, short, fraction):
     else:
         qty = equity * risk["risk_per_trade"] / unit
     backing = equity if short else cash
+    power = backing * risk["max_leverage"] - (held if short else 0.0)
     qty = min(
         qty,
-        equity * risk["max_position_pct"] / unit,
-        equity * risk["max_portfolio_exposure"] / unit,
-        backing * risk["max_leverage"] / unit,
+        (equity * risk["max_position_pct"] - held) / unit,
+        (equity * risk["max_portfolio_exposure"] - held) / unit,
+        power / unit,
     )
-    qty = float(int(qty)) if qty >= 1 else math.floor(qty * 1e6) / 1e6
-    if qty <= 0 or fill * qty * (1.0 + comm) > backing * risk["max_leverage"] + 1e-9:
+    qty = round_quantity(qty)
+    if qty <= 0 or fill * qty * (1.0 + comm) > power + 1e-9:
         return 0.0, None, None
     stop, take = _stop_take(spec, fill, short)
     return qty, stop, take
@@ -89,52 +94,108 @@ def backtest(df, spec, entry, exit_, size=None):
     def fill(raw, sell):
         return raw * (1.0 - slip) if sell else raw * (1.0 + slip)
 
-    def close_position(raw, i, reason):
+    trailing = spec.get("trailing_stop")
+    levels = spec.get("scale_out") or []
+    breakeven = spec.get("breakeven_after_scale", False)
+    max_entries = spec.get("max_entries", 1)
+
+    def value(price):
+        return 0.0 if pos is None else (-1.0 if pos["short"] else 1.0) * pos["qty"] * price
+
+    def tighten(floor_at=None):
+        """Stops only move toward profit: trailing level, breakeven after a partial exit."""
+        candidates = [floor_at]
+        if trailing and pos["best"] is not None:
+            candidates.append(pos["best"] * (1.0 + trailing) if pos["short"] else pos["best"] * (1.0 - trailing))
+        if breakeven and pos["scaled"] > 0:
+            candidates.append(pos["entry"])
+        for level in candidates:
+            if level is None:
+                continue
+            if pos["stop"] is None:
+                pos["stop"] = level
+            else:
+                pos["stop"] = min(pos["stop"], level) if pos["short"] else max(pos["stop"], level)
+
+    def close_position(raw, i, reason, qty=None):
         nonlocal cash, pos
+        qty = pos["qty"] if qty is None else min(qty, pos["qty"])
         px = fill(raw, sell=not pos["short"])
-        fee = abs(px * pos["qty"]) * comm
+        fee = abs(px * qty) * comm
         if pos["short"]:
-            cash -= px * pos["qty"] + fee
-            pnl = (pos["entry"] - px) * pos["qty"] - fee
+            cash -= px * qty + fee
+            pnl = (pos["entry"] - px) * qty - fee
             ret = (pos["entry"] - px) / pos["entry"]
         else:
-            cash += px * pos["qty"] - fee
-            pnl = (px - pos["entry"]) * pos["qty"] - fee
+            cash += px * qty - fee
+            pnl = (px - pos["entry"]) * qty - fee
             ret = px / pos["entry"] - 1.0
         trades.append(
             {
                 "entry_date": str(dates[pos["bar"]]), "exit_date": str(dates[i]), "side": "short" if pos["short"] else "long",
-                "entry_price": pos["entry"], "exit_price": px, "quantity": pos["qty"], "pnl": pnl,
+                "entry_price": pos["entry"], "exit_price": px, "quantity": qty, "pnl": pnl,
                 "return_pct": ret, "exit_reason": reason, "bars_held": i - pos["bar"],
             }
         )
-        pos = None
+        if pos["qty"] - qty > 1e-9:
+            pos["qty"] -= qty
+        else:
+            pos = None
+
+    def scale_out(i, h, l, o):
+        sign = -1.0 if pos["short"] else 1.0
+        while pos is not None and pos["scaled"] < len(levels):
+            level = levels[pos["scaled"]]
+            target = pos["entry"] * (1.0 + sign * level["profit"])
+            if not (l <= target if pos["short"] else h >= target):
+                return
+            if pos["base"] is None:
+                pos["base"] = pos["qty"]
+            qty = min(pos["qty"], round_quantity(pos["base"] * level["fraction"]))
+            pos["scaled"] += 1
+            if qty <= 0:
+                continue
+            if pos["qty"] - qty < 1e-9:
+                qty = pos["qty"]
+            close_position(min(o, target) if pos["short"] else max(o, target), i, "scale_out", qty)
+            if pos is not None and breakeven:
+                tighten(floor_at=pos["entry"])
 
     for i in range(len(df)):
         o, h, l, c = o_[i], h_[i], l_[i], c_[i]
         if pending is not None:
             kind, qty, stop, take = pending
             pending = None
-            if kind == "open" and pos is None:
+            if kind in ("open", "add") and (pos is None) == (kind == "open"):
                 px = fill(o, sell=short)
                 fee = abs(px * qty) * comm
                 if short or px * qty + fee <= cash + 1e-6:
                     cash += (px * qty - fee) if short else -(px * qty + fee)
-                    if stop is None and take is None:
-                        stop, take = _stop_take(spec, px, short)
-                    pos = {"short": short, "qty": qty, "entry": px, "bar": i, "stop": stop, "take": take}
+                    if kind == "add":
+                        total = pos["qty"] + qty
+                        pos["entry"] = (pos["entry"] * pos["qty"] + px * qty) / total
+                        pos["qty"] = total
+                        pos["entries"] += 1
+                        pos["stop"], pos["take"] = _stop_take(spec, pos["entry"], short)
+                    else:
+                        if stop is None and take is None:
+                            stop, take = _stop_take(spec, px, short)
+                        pos = {
+                            "short": short, "qty": qty, "entry": px, "bar": i, "stop": stop, "take": take,
+                            "entries": 1, "best": px, "base": None, "scaled": 0,
+                        }
+                    tighten()
             elif kind == "close" and pos is not None:
                 close_position(o, i, "exit_signal")
 
         if pos is not None:
             reason = _bracket_hit(pos, h, l, o)
-            if reason is not None:
-                level = pos["stop"] if reason == "stop_loss" else pos["take"]
-                if reason == "stop_loss":
-                    raw = max(o, level) if pos["short"] else min(o, level)
-                else:
-                    raw = min(o, level) if pos["short"] else max(o, level)
-                close_position(raw, i, reason)
+            if reason == "stop_loss":
+                close_position(max(o, pos["stop"]) if pos["short"] else min(o, pos["stop"]), i, reason)
+            else:
+                scale_out(i, h, l, o)
+                if reason == "take_profit" and pos is not None:
+                    close_position(min(o, pos["take"]) if pos["short"] else max(o, pos["take"]), i, reason)
 
         if i < len(df) - 1:
             fraction = float(size[i]) if size is not None else None
@@ -144,9 +205,15 @@ def backtest(df, spec, entry, exit_, size=None):
                     pending = ("open", qty, stop, take)
             elif pos is not None and exit_[i]:
                 pending = ("close", pos["qty"], None, None)
+            elif pos is not None and entry[i] and fraction != 0.0 and pos["entries"] < max_entries:
+                qty, _, _ = _size(spec, cash + value(c), cash, c, short, fraction, held=pos["qty"] * c)
+                if qty > 0:
+                    pending = ("add", qty, None, None)
 
-        value = 0.0 if pos is None else (-1.0 if pos["short"] else 1.0) * pos["qty"] * c
-        equity.append(cash + value)
+        equity.append(cash + value(c))
+        if pos is not None:
+            pos["best"] = min(pos["best"], l) if pos["short"] else max(pos["best"], h)
+            tighten()
     return trades, equity
 
 

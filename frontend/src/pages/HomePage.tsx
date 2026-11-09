@@ -8,6 +8,13 @@ import {
   runBacktest,
   uploadDataset,
 } from '../services/api';
+import {
+  applyManagement,
+  EMPTY_MANAGEMENT,
+  managementSummary,
+  PositionManagement,
+  type ManagementDraft,
+} from '../components/PositionManagement';
 import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
 import { formatConditions } from '../utils/formatStrategy';
@@ -136,6 +143,11 @@ export function HomePage({ health }: Props) {
     warnings: [],
     error: null,
   });
+  const [management, setManagement] = useState<ManagementDraft>(EMPTY_MANAGEMENT);
+  const effectiveStrategy = useMemo(
+    () => (parse.status === 'ok' && parse.strategy ? applyManagement(parse.strategy, management) : null),
+    [parse, management],
+  );
 
   useEffect(() => {
     listDatasets()
@@ -334,7 +346,7 @@ export function HomePage({ health }: Props) {
       const result = await runBacktest({
         strategy_text: cleanedStrategy,
         dataset_id: datasetId,
-        strategy: parse.status === 'ok' && parse.strategy ? parse.strategy : undefined,
+        strategy: effectiveStrategy ?? undefined,
         config: {
           initial_capital: initialCapital,
           commission,
@@ -520,6 +532,8 @@ export function HomePage({ health }: Props) {
             </label>
           </div>
 
+          <PositionManagement value={management} onChange={setManagement} disabled={loading} />
+
           <label className="field">
             <span>Upload market CSV</span>
             <input
@@ -627,6 +641,16 @@ export function HomePage({ health }: Props) {
                     : `${(parse.strategy.take_profit * 100).toFixed(2)}%`}
                 </span>
               </div>
+              {effectiveStrategy && managementSummary(effectiveStrategy).length ? (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <small className="hint">Position management</small>
+                  <ul className="cond-list">
+                    {managementSummary(effectiveStrategy).map((line) => (
+                      <li key={`m-${line}`}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div style={{ marginTop: '0.75rem' }}>
                 <small className="hint">Entry</small>
                 <ul className="cond-list">

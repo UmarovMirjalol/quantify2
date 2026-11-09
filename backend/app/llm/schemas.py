@@ -313,6 +313,13 @@ class RiskConfig(BaseModel):
     percent_capital: float | None = Field(default=None, ge=0.01, le=1.0)
 
 
+class ScaleOut(BaseModel):
+    """Close part of the position once it is this far in profit from the average entry."""
+
+    profit: float = Field(ge=0.001, le=5.0)
+    fraction: float = Field(ge=0.05, le=1.0)
+
+
 class StrategySpec(BaseModel):
     """Strict structured representation of a trading strategy."""
 
@@ -329,6 +336,14 @@ class StrategySpec(BaseModel):
     risk: RiskConfig = Field(default_factory=RiskConfig)
     stop_loss: float | None = Field(default=None, ge=0.001, le=0.5)
     take_profit: float | None = Field(default=None, ge=0.001, le=5.0)
+    # Stop that follows the best price since entry by this fraction and never loosens.
+    trailing_stop: float | None = Field(default=None, ge=0.001, le=0.5)
+    # Partial exits, each a fraction of the position size at the time of the first exit.
+    scale_out: list[ScaleOut] = Field(default_factory=list, max_length=3)
+    # After the first partial exit, lift the stop to the average entry price.
+    breakeven_after_scale: bool = False
+    # Pyramiding: entry signals while in a position add a new unit, up to this many entries.
+    max_entries: int = Field(default=1, ge=1, le=10)
     position_sizing: PositionSizing = PositionSizing.RISK_BASED
     commission: float = Field(default=0.0, ge=0.0, le=0.05)
     slippage: float = Field(default=0.0, ge=0.0, le=0.05)
@@ -351,6 +366,10 @@ class StrategySpec(BaseModel):
                 pass
         if len(self.entry_conditions) + len(self.exit_conditions) > 8:
             raise ValueError("Strategy too complex: max 8 total conditions for MVP")
+        if self.scale_out:
+            self.scale_out = sorted(self.scale_out, key=lambda level: level.profit)
+            if sum(level.fraction for level in self.scale_out) > 1.0 + 1e-9:
+                raise ValueError("Partial exits close more than 100% of the position")
         if self.custom_code is not None and not self.custom_code.strip():
             self.custom_code = None
         if self.custom_code is None and (not self.entry_conditions or not self.exit_conditions):

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
+from app.api.accounts import account_for_session, is_account_id
 from app.config import UPLOAD_DIR, get_settings
 from app.database import get_db
 from app.data.loader import list_available_datasets, load_dataset
@@ -81,16 +82,25 @@ def _touch_visitor(db: Session, client_id: str) -> None:
     record_visitor(client_id)
 
 
-def _client_id(x_client_id: str | None = Header(default=None, alias="X-Client-Id")) -> str:
+def _client_id(
+    x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
+    x_session: str | None = Header(default=None, alias="X-Session"),
+    db: Session = Depends(get_db),
+) -> str:
     """Normalize per-browser client id for history isolation.
 
     Always returns a stable id. Missing headers get an anonymous sentinel so
-    list/get never leak another client's history.
+    list/get never leak another client's history. An account id is honoured only
+    with that account's session token.
     """
     if not x_client_id:
         return "_anonymous"
     value = x_client_id.strip()[:64]
     cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "-_")
+    if cleaned and is_account_id(cleaned):
+        account = account_for_session(db, x_session)
+        if account is None or account.client_id != cleaned:
+            raise HTTPException(status_code=403, detail="Your session has expired. Sign in again.")
     return cleaned or "_anonymous"
 
 

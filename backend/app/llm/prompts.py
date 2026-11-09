@@ -44,6 +44,11 @@ Supported position_sizing: fixed, percent_capital, risk_based
 Do not invent unsupported indicators.
 stop_loss and take_profit are decimal fractions (e.g. 0.02 for 2%).
 risk.risk_per_trade is a decimal fraction (e.g. 0.01 for 1%).
+Optional position management (omit when not asked for):
+  "trailing_stop": 0.03 trails the best price since entry by 3%.
+  "scale_out": [{"profit": 0.05, "fraction": 0.5}] closes half the position at +5%; up to 3 levels, fractions sum to at most 1.
+  "breakeven_after_scale": true moves the stop to the entry price after the first partial exit.
+  "max_entries": 3 allows pyramiding: up to 3 entries into the same position (default 1).
 For RSI use period and threshold, e.g. {"indicator":"RSI","period":14,"condition":"less_than","threshold":30}
 For MACD crossover use {"indicator":"MACD","condition":"cross_above"}
 For Bollinger use {"indicator":"BOLLINGER","period":20,"condition":"less_than","component":"lower"}

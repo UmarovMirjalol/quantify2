@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { getAccount } from '../services/session';
 import type { HealthStatus } from '../types';
 
 interface Props {
@@ -19,6 +20,17 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
   const location = useLocation();
   const isLanding = location.pathname === '/';
   const llmOn = Boolean(health?.llm_enabled);
+  const [username, setUsername] = useState(() => getAccount()?.username ?? null);
+
+  useEffect(() => {
+    const sync = () => setUsername(getAccount()?.username ?? null);
+    window.addEventListener('quantify-account', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('quantify-account', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -80,6 +92,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
           <NavLink to="/settings">
             <Icon d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.4 1.4M16.1 16.1l1.4 1.4M6.5 17.5l1.4-1.4M16.1 7.9l1.4-1.4" />
             Settings
+          </NavLink>
+          <NavLink to="/account">
+            <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" />
+            {username ?? 'Sign in'}
           </NavLink>
         </nav>
 

@@ -11,6 +11,8 @@
 - **Python strategies** (`/code`): write `strategy(df)` returning entry, exit and an optional per-entry size. Runs in a sandboxed child process through the same engine and every overfitting check; a look-ahead guard rejects code whose past signals change when future bars are removed
 - **Standalone export**: any run downloads as one `.py` file (numpy + pandas only) that reproduces the site's trades on your CSV, tested to match the engine exactly
 - **Export everything**: trades CSV, equity CSV, result JSON per run, and the full history as one JSON archive
+- **Position management**: trailing stop, up to three partial take-profits, stop-to-breakeven after the first partial exit, and pyramiding (up to 10 entries into one position). Set them in the form or just write "trailing stop 3%, take half at 5%, pyramid up to 3"; Pine and standalone Python exports reproduce them
+- **Accounts** (optional, username + password, no email): history follows you to any browser or device; runs you made before signing up move into the account
 - Custom bar-by-bar backtesting engine
 - Risk engine: position sizing, stops, exposure, cash, leverage, costs, slippage
 - CSV upload with validation
@@ -75,6 +77,17 @@ Commission is a fraction of fill notional. Slippage worsens the fill (higher for
 **Logic:** AND / OR  
 
 **Risk:** fixed shares, % of capital, risk-per-trade sizing, stop-loss, take-profit, max position %, max exposure, leverage, commission, slippage  
+
+**Position management:**
+
+| Field | Meaning |
+|-------|---------|
+| `trailing_stop` | Stop trails the best price since entry (high for long, low for short) by this fraction; updated at each close and never loosened |
+| `scale_out` | Up to 3 `{profit, fraction}` levels: close `fraction` of the position once it is `profit` above the average entry. Gaps through a level fill at the open |
+| `breakeven_after_scale` | After the first partial exit the stop moves to the average entry |
+| `max_entries` | Pyramiding: while in a position, each bar where the entry rule holds adds one more unit (sized by the same rules, capped by position and exposure limits) until this many entries. Stops and targets re-anchor to the new average entry |
+
+Inside a bar the stop is checked first, then partial exits, then the full take-profit. Each partial exit is a separate trade in the trade list.
 
 **Side:** long (default) or short. A short sells at the next open, holds a cash credit plus a liability marked to market, and covers on the exit rule, a stop above entry, or a take-profit below it.
 
@@ -291,6 +304,10 @@ Buy when price closes below the lower Bollinger Band and sell when it crosses ab
 | POST | `/api/parse-strategy` | NL → StrategySpec |
 | POST | `/api/backtest` | Parse + run + save |
 | GET | `/api/backtests` | History |
+| POST | `/api/auth/register` | Create an account; moves this browser's runs into it |
+| POST | `/api/auth/login` | Sign in; returns a session token for the `X-Session` header |
+| GET | `/api/auth/me` | Current account, if the session is valid |
+| POST | `/api/auth/logout` | End the session |
 | GET | `/api/backtests/export-all` | Every saved run of this browser as one JSON archive |
 | GET | `/api/backtests/{id}` | Full result |
 | GET | `/api/backtests/{id}/export/{pine\|python}` | Pine Script or standalone Python file |
@@ -309,7 +326,8 @@ pytest -q
 
 ## Limitations
 
-- One position at a time, long or short (no simultaneous long/short or borrow fees)
+- One position per run, long or short; pyramiding adds to it (no simultaneous long/short or borrow fees)
+- Accounts have no email, so a lost password cannot be reset
 - Single-asset per run
 - Whole-unit sizing when at least one unit fits; fractional units otherwise (e.g. BTC on a small sleeve)
 - Built-in parser covers common quant phrasings; LLM expands coverage

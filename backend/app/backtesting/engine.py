@@ -25,7 +25,7 @@ from app.metrics.monte_carlo import run_monte_carlo_simulation
 from app.research.market import market_exposure
 from app.research.regimes import classify_regimes
 from app.metrics.performance import compute_performance_metrics
-from app.risk.risk_engine import RiskEngine
+from app.risk.risk_engine import RiskEngine, round_quantity
 from app.strategies.interpreter import generate_signals, validate_strategy_spec
 from app.strategies.sandbox import CustomSignals, SandboxError, run_custom
 
@@ -95,33 +95,36 @@ class BacktestEngine:
                 )
                 pending_order = None
 
-            # 2) Intrabar stop / take-profit (checked after open execution)
-            if portfolio.position.is_open:
+            def fill(order: Order, raw: float) -> None:
+                order.signal_bar_index = i
+                self._execute_order(
+                    portfolio,
+                    order,
+                    fill_price_raw=raw,
+                    fill_bar_index=i,
+                    fill_date=bar_date,
+                    markers=markers,
+                    entry_reason_ref={"value": entry_reason},
+                )
+
+            # 2) Intrabar exits, checked after the open fill: stop first (conservative),
+            #    then partial exits, then the full take-profit.
+            pos = portfolio.position
+            if pos.is_open:
+                short = pos.side == PositionSide.SHORT
+                worse, better = (max, min) if short else (min, max)
                 st_order = self.risk_engine.check_stop_take(portfolio, h, l, o)
-                if st_order is not None:
-                    # Execute immediately at stop/take price (or open if gapped)
-                    fill_px = o
-                    short = portfolio.position.side == PositionSide.SHORT
-                    worse, better = (max, min) if short else (min, max)
-                    if st_order.reason == "stop_loss" and portfolio.position.stop_loss_price:
-                        fill_px = worse(o, portfolio.position.stop_loss_price)
-                    elif st_order.reason == "take_profit" and portfolio.position.take_profit_price:
-                        fill_px = better(o, portfolio.position.take_profit_price)
-                    st_order.signal_bar_index = i
-                    self._execute_order(
-                        portfolio,
-                        st_order,
-                        fill_price_raw=fill_px,
-                        fill_bar_index=i,
-                        fill_date=bar_date,
-                        markers=markers,
-                        entry_reason_ref={"value": entry_reason},
-                    )
+                if st_order is not None and st_order.reason == "stop_loss":
+                    fill(st_order, worse(o, pos.stop_loss_price))
+                else:
+                    self._scale_out(pos, short, h, l, o, fill)
+                    if st_order is not None and pos.is_open:
+                        fill(st_order, better(o, pos.take_profit_price))
 
             # 3) Generate new signal at close — queue for next bar open
             if i < n - 1:  # cannot execute after last bar
                 fraction = float(sizes[i]) if sizes is not None else None
-                if not portfolio.position.is_open and entry_flags[i] and fraction != 0.0:
+                if not pos.is_open and entry_flags[i] and fraction != 0.0:
                     decision = self.risk_engine.size_entry(
                         portfolio, c, short=self.short, fraction=fraction
                     )
@@ -132,21 +135,43 @@ class BacktestEngine:
                             signal_bar_index=i,
                             reason="entry_signal",
                             opens_position=True,
+                            stop_loss_price=decision.stop_loss_price,
+                            take_profit_price=decision.take_profit_price,
                         )
-                        # Stash stop/take on order via temporary attributes
-                        pending_order.stop_loss_price = decision.stop_loss_price  # type: ignore[attr-defined]
-                        pending_order.take_profit_price = decision.take_profit_price  # type: ignore[attr-defined]
                         entry_reason = "entry_signal"
-                elif portfolio.position.is_open and exit_flags[i]:
+                elif pos.is_open and exit_flags[i]:
                     pending_order = Order(
                         side=OrderSide.BUY if self.short else OrderSide.SELL,
-                        quantity=portfolio.position.quantity,
+                        quantity=pos.quantity,
                         signal_bar_index=i,
                         reason="exit_signal",
                     )
+                elif (
+                    pos.is_open
+                    and entry_flags[i]
+                    and fraction != 0.0
+                    and pos.entries < self.strategy.max_entries
+                ):
+                    decision = self.risk_engine.size_entry(
+                        portfolio, c, short=self.short, fraction=fraction, adding=True
+                    )
+                    if decision.allowed:
+                        pending_order = Order(
+                            side=OrderSide.SELL if self.short else OrderSide.BUY,
+                            quantity=decision.quantity,
+                            signal_bar_index=i,
+                            reason="pyramid_add",
+                            opens_position=True,
+                            adds_to_position=True,
+                        )
 
-            # 4) Mark-to-market at close
+            # 4) Mark-to-market at close, then let the trailing stop follow this bar's extreme
             portfolio.record_equity(bar_date, c)
+            if pos.is_open:
+                short = pos.side == PositionSide.SHORT
+                best = pos.best_price if pos.best_price is not None else pos.entry_price
+                pos.best_price = min(best, l) if short else max(best, h)
+                self._tighten_stop(pos, short)
 
         metrics = compute_performance_metrics(
             equity_curve=portfolio.equity_curve,
@@ -227,6 +252,50 @@ class BacktestEngine:
             ),
         }
 
+    def _scale_out(self, pos: Any, short: bool, h: float, l: float, o: float, fill: Any) -> None:
+        """Close the configured slices whose profit target this bar reached (gaps fill at the open)."""
+        levels = self.strategy.scale_out
+        while pos.is_open and pos.scaled < len(levels):
+            level = levels[pos.scaled]
+            sign = -1.0 if short else 1.0
+            target = pos.entry_price * (1.0 + sign * level.profit)
+            if not (l <= target if short else h >= target):
+                return
+            if pos.scale_base is None:
+                pos.scale_base = pos.quantity
+            qty = min(pos.quantity, round_quantity(pos.scale_base * level.fraction))
+            pos.scaled += 1
+            if qty <= 0:
+                continue
+            if pos.quantity - qty < 1e-9:
+                qty = pos.quantity
+            order = Order(
+                side=OrderSide.BUY if short else OrderSide.SELL,
+                quantity=qty,
+                signal_bar_index=-1,
+                reason="scale_out",
+            )
+            fill(order, min(o, target) if short else max(o, target))
+            if pos.is_open and self.strategy.breakeven_after_scale:
+                self._tighten_stop(pos, short, floor_at=pos.entry_price)
+
+    def _tighten_stop(self, pos: Any, short: bool, floor_at: float | None = None) -> None:
+        """Move the stop toward profit only: trailing level from the best price, or a breakeven floor."""
+        candidates = [floor_at]
+        if self.strategy.trailing_stop and pos.best_price is not None:
+            ts = self.strategy.trailing_stop
+            candidates.append(pos.best_price * (1.0 + ts) if short else pos.best_price * (1.0 - ts))
+        if self.strategy.breakeven_after_scale and pos.scaled > 0:
+            candidates.append(pos.entry_price)
+        for level in candidates:
+            if level is None:
+                continue
+            current = pos.stop_loss_price
+            if current is None:
+                pos.stop_loss_price = level
+            else:
+                pos.stop_loss_price = min(current, level) if short else max(current, level)
+
     def _execute_order(
         self,
         portfolio: Portfolio,
@@ -242,7 +311,7 @@ class BacktestEngine:
         slippage_cost = abs(fill_price - fill_price_raw) * order.quantity
 
         if order.opens_position:
-            if portfolio.position.is_open:
+            if portfolio.position.is_open != order.adds_to_position:
                 return
             short = order.side == OrderSide.SELL
             if short:
@@ -254,17 +323,31 @@ class BacktestEngine:
                 portfolio.cash -= total_cost
             portfolio.total_commission += commission
             portfolio.total_slippage += slippage_cost
-            stop = getattr(order, "stop_loss_price", None)
-            take = getattr(order, "take_profit_price", None)
-            if stop is None and take is None:
-                stop, take = self.risk_engine.compute_stop_take(fill_price, short=short)
-            portfolio.position.side = PositionSide.SHORT if short else PositionSide.LONG
-            portfolio.position.quantity = order.quantity
-            portfolio.position.entry_price = fill_price
-            portfolio.position.entry_date = fill_date
-            portfolio.position.entry_bar_index = fill_bar_index
-            portfolio.position.stop_loss_price = stop
-            portfolio.position.take_profit_price = take
+            pos = portfolio.position
+            if order.adds_to_position:
+                # Fixed stop/take re-anchor to the new average entry; trailing and breakeven never loosen.
+                total = pos.quantity + order.quantity
+                pos.entry_price = (pos.entry_price * pos.quantity + fill_price * order.quantity) / total
+                pos.quantity = total
+                pos.entries += 1
+                pos.stop_loss_price, pos.take_profit_price = self.risk_engine.compute_stop_take(
+                    pos.entry_price, short=short
+                )
+                self._tighten_stop(pos, short)
+            else:
+                stop, take = order.stop_loss_price, order.take_profit_price
+                if stop is None and take is None:
+                    stop, take = self.risk_engine.compute_stop_take(fill_price, short=short)
+                pos.side = PositionSide.SHORT if short else PositionSide.LONG
+                pos.quantity = order.quantity
+                pos.entry_price = fill_price
+                pos.entry_date = fill_date
+                pos.entry_bar_index = fill_bar_index
+                pos.stop_loss_price = stop
+                pos.take_profit_price = take
+                pos.entries = 1
+                pos.best_price = fill_price
+                self._tighten_stop(pos, short)
             markers.append(
                 {
                     "date": fill_date.isoformat(),
@@ -321,4 +404,7 @@ class BacktestEngine:
                 "reason": order.reason,
             }
         )
-        portfolio.position.reset()
+        if portfolio.position.quantity - qty > 1e-9:
+            portfolio.position.quantity -= qty
+        else:
+            portfolio.position.reset()

@@ -49,6 +49,11 @@ def _extract_asset(text: str, override: str | None) -> str:
     return "SPY"
 
 
+def _percent(value: float) -> float:
+    """A number written with a % sign: 1% is 0.01, never 1.0."""
+    return value / 100.0
+
+
 def _extract_risk_fields(text: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
     risk = re.search(
@@ -59,7 +64,7 @@ def _extract_risk_fields(text: str) -> dict[str, Any]:
     if not risk:
         risk = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:risk|риск)", text, re.IGNORECASE)
     if risk:
-        out["risk_per_trade"] = _pct_to_frac(float(risk.group(1)))
+        out["risk_per_trade"] = _percent(float(risk.group(1)))
 
     stop = re.search(
         r"(?:stop[-\s]?loss|sl|стоп[-\s]?лосс|стоп)\s*(?:of|at|=|:)?\s*(\d+(?:\.\d+)?)\s*%",
@@ -73,7 +78,7 @@ def _extract_risk_fields(text: str) -> dict[str, Any]:
             re.IGNORECASE,
         )
     if stop:
-        out["stop_loss"] = _pct_to_frac(float(stop.group(1)))
+        out["stop_loss"] = _percent(float(stop.group(1)))
 
     take = re.search(
         r"(?:take[-\s]?profit|tp|тейк[-\s]?профит|тейк|профит)\s*(?:of|at|=|:)?\s*(\d+(?:\.\d+)?)\s*%",
@@ -87,9 +92,95 @@ def _extract_risk_fields(text: str) -> dict[str, Any]:
             re.IGNORECASE,
         )
     if take:
-        out["take_profit"] = _pct_to_frac(float(take.group(1)))
+        out["take_profit"] = _percent(float(take.group(1)))
 
     return out
+
+
+_PCT = r"\+?(\d+(?:[.,]\d+)?)\s*%"
+_TRAILING = [
+    re.compile(r"(?:trailing|trail)(?:[-\s]?stop)?(?:[-\s]?loss)?\s*(?:of|at|=|:)?\s*" + _PCT, re.I),
+    re.compile(_PCT + r"\s*trailing(?:[-\s]?stop)?", re.I),
+    re.compile(r"трейлинг\w*(?:[-\s]?стоп\w*)?\s*(?:на|в|=|:)?\s*" + _PCT, re.I),
+    re.compile(r"скользящ\w+\s+стоп\w*\s*(?:на|в|=|:)?\s*" + _PCT, re.I),
+]
+_PORTION = (
+    r"(half|a\s+third|one\s+third|a\s+quarter|one\s+quarter|\d+(?:[.,]\d+)?\s*%|"
+    r"половин\w*|треть|четверть)"
+)
+_SCALE_OUT = re.compile(
+    r"(?:take|close|sell|book|scale\s+out(?:\s+of)?|exit|cover|закр\w*|зафикс\w*|фикс\w*|прода\w*)\s+"
+    + _PORTION
+    + r"\s*(?:of\s+(?:the\s+)?position\s*|позиции\s*)?(?:profit\s+)?"
+    r"(?:at|on|when\s+up|once\s+up|after|на|при)\s*(?:a\s+)?" + _PCT,
+    re.I,
+)
+_BREAKEVEN = re.compile(r"break[-\s]?even|безубыт\w*", re.I)
+_PYRAMID = [
+    re.compile(r"pyramid\w*\s*(?:up\s+to|max(?:imum)?|of)?\s*(\d+)", re.I),
+    re.compile(r"up\s+to\s+(\d+)\s+entries", re.I),
+    re.compile(r"пирамид\w*\s*(?:до)?\s*(\d+)", re.I),
+    re.compile(r"до\s+(\d+)\s+вход\w*", re.I),
+]
+_ADD_TIMES = re.compile(r"add\s+(?:to\s+(?:the\s+)?(?:position|winners?)\s+)?(?:up\s+to\s+)?(\d+)\s+times|доб\w+\s+(?:до\s+)?(\d+)\s+раз", re.I)
+_PORTION_WORDS = {"half": 0.5, "third": 1 / 3, "quarter": 0.25, "половин": 0.5, "треть": 1 / 3, "четверть": 0.25}
+
+
+def _portion(raw: str) -> float | None:
+    raw = raw.lower().replace(",", ".")
+    for word, value in _PORTION_WORDS.items():
+        if word in raw:
+            return value
+    match = re.search(r"\d+(?:\.\d+)?", raw)
+    return _percent(float(match.group())) if match else None
+
+
+def _extract_management(text: str) -> tuple[dict[str, Any], str]:
+    """Trailing stop, partial exits, breakeven and pyramiding. Matched phrases are removed
+    from the returned text so the stop-loss and rule parsers do not read them twice."""
+    out: dict[str, Any] = {}
+    for pattern in _TRAILING:
+        match = pattern.search(text)
+        if match:
+            out["trailing_stop"] = _percent(float(match.group(1).replace(",", ".")))
+            text = text[: match.start()] + " " + text[match.end() :]
+            break
+
+    levels = []
+    for match in list(_SCALE_OUT.finditer(text))[:3]:
+        fraction = _portion(match.group(1))
+        if fraction:
+            levels.append({"profit": _percent(float(match.group(2).replace(",", "."))), "fraction": fraction})
+    if levels:
+        total = sum(level["fraction"] for level in levels)
+        if total > 1.0:
+            levels = [{**level, "fraction": level["fraction"] / total} for level in levels]
+        out["scale_out"] = levels
+        text = _SCALE_OUT.sub(" ", text)
+
+    if _BREAKEVEN.search(text):
+        out["breakeven_after_scale"] = True
+        text = _BREAKEVEN.sub(" ", text)
+
+    for pattern in _PYRAMID:
+        match = pattern.search(text)
+        if match:
+            out["max_entries"] = max(1, min(10, int(match.group(1))))
+            text = text[: match.start()] + " " + text[match.end() :]
+            break
+    else:
+        match = _ADD_TIMES.search(text)
+        if match:
+            out["max_entries"] = max(1, min(10, 1 + int(match.group(1) or match.group(2))))
+            text = text[: match.start()] + " " + text[match.end() :]
+    return out, text
+
+
+def _apply_management(spec: dict[str, Any], management: dict[str, Any]) -> dict[str, Any]:
+    for key, value in management.items():
+        if not spec.get(key):
+            spec[key] = value
+    return spec
 
 
 _SHORT_PATTERN = re.compile(
@@ -141,6 +232,8 @@ def parse_builtin(
     Deterministically extracts MA crossovers, RSI bands, MACD, Bollinger, ATR,
     risk %, stop-loss, and take-profit from free-form English without an LLM.
     """
+    original_text = text
+    management, text = _extract_management(text)
     raw_fields = _extract_risk_fields(text)
     asset_name = _extract_asset(text, asset)
     entry: list[dict[str, Any]] | None = None
@@ -499,6 +592,7 @@ def parse_builtin(
     ):
         # leave null — risk engine falls back to capital fraction
         pass
+    _apply_management(spec, management)
 
     try:
         strategy = StrategySpec.model_validate(spec)
@@ -512,7 +606,7 @@ def parse_builtin(
     return ParseStrategyResponse(
         strategy=strategy,
         parser="builtin",
-        raw_text=text,
+        raw_text=original_text,
         warnings=warnings,
         clarifications=clarifications,
     )
@@ -578,7 +672,7 @@ async def parse_with_llm(
         "slippage": slippage,
         "asset": asset,
     }
-    raw = _apply_overrides(raw, overrides)
+    raw = _apply_management(_apply_overrides(raw, overrides), _extract_management(text)[0])
     try:
         strategy = StrategySpec.model_validate(raw)
     except Exception as exc:  # noqa: BLE001

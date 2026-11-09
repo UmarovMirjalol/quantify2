@@ -28,6 +28,9 @@ const PortfolioPage = lazy(() =>
   import('./pages/PortfolioPage').then((m) => ({ default: m.PortfolioPage })),
 );
 const PythonPage = lazy(() => import('./pages/PythonPage').then((m) => ({ default: m.PythonPage })));
+const AccountPage = lazy(() =>
+  import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })),
+);
 const ReportPage = lazy(() => import('./pages/ReportPage').then((m) => ({ default: m.ReportPage })));
 const ComparePage = lazy(() =>
   import('./pages/ComparePage').then((m) => ({ default: m.ComparePage })),
@@ -217,6 +220,7 @@ export default function App() {
           <Route path="/code" element={<PythonPage />} />
           <Route path="/r/:token" element={<ReportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

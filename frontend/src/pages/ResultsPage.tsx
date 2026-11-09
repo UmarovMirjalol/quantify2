@@ -10,6 +10,7 @@ import {
   ReturnsDistributionChart,
 } from '../components/Charts';
 import { ExportButtons } from '../components/ExportButtons';
+import { managementSummary } from '../components/PositionManagement';
 import { KpiCard } from '../components/KpiCard';
 import { MarketExposure } from '../components/MarketExposure';
 import { Optimizer } from '../components/Optimizer';
@@ -202,6 +203,10 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             side: s.side,
             stop_loss: s.stop_loss,
             take_profit: s.take_profit,
+            trailing_stop: s.trailing_stop,
+            scale_out: s.scale_out,
+            breakeven_after_scale: s.breakeven_after_scale,
+            max_entries: s.max_entries,
             initial_capital: s.initial_capital,
             commission: s.commission,
             slippage: s.slippage,
@@ -431,6 +436,12 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
                     {result.strategy.take_profit == null ? '—' : pct(result.strategy.take_profit)}
                   </dd>
                 </div>
+                {managementSummary(result.strategy).length ? (
+                  <div>
+                    <dt>Position management</dt>
+                    <dd>{managementSummary(result.strategy).join(' · ')}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>Period</dt>
                   <dd className="mono">

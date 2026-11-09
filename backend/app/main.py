@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.accounts import router as accounts_router
 from app.api.routes import router
 from app.config import get_settings
 from app.database import init_db
@@ -59,6 +60,7 @@ app.add_middleware(RateLimitMiddleware)
 app.add_middleware(AccessTokenMiddleware)
 
 app.include_router(router)
+app.include_router(accounts_router)
 
 
 def _ensure_client_id_column() -> None:

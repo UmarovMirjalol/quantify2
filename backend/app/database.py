@@ -24,6 +24,7 @@ def init_db() -> None:
     """Create all tables and apply lightweight migrations."""
     from sqlalchemy import inspect, text
 
+    from app.models import account  # noqa: F401
     from app.models import backtest  # noqa: F401
     from app.models import stats  # noqa: F401
 

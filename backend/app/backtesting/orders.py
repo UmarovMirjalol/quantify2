@@ -33,6 +33,10 @@ class Order:
     signal_bar_index: int
     reason: str = ""
     opens_position: bool = False
+    # Pyramiding: adds to the open position instead of opening a new one.
+    adds_to_position: bool = False
+    stop_loss_price: float | None = None
+    take_profit_price: float | None = None
     order_type: OrderType = OrderType.MARKET
     status: OrderStatus = OrderStatus.PENDING
     created_at: datetime | None = None

@@ -25,6 +25,12 @@ class Position:
     stop_loss_price: float | None = None
     take_profit_price: float | None = None
     realized_pnl: float = 0.0
+    entries: int = 0
+    # Best price since entry (high for a long, low for a short), for the trailing stop.
+    best_price: float | None = None
+    # Size when the first partial exit fired; later levels are fractions of it.
+    scale_base: float | None = None
+    scaled: int = 0
 
     @property
     def is_open(self) -> bool:
@@ -53,6 +59,10 @@ class Position:
         self.entry_bar_index = None
         self.stop_loss_price = None
         self.take_profit_price = None
+        self.entries = 0
+        self.best_price = None
+        self.scale_base = None
+        self.scaled = 0
 
 
 @dataclass

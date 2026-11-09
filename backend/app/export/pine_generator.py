@@ -78,7 +78,9 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
 
     lines: list[str] = [
         "//@version=5",
-        f'strategy("{strat_title}", overlay=true, initial_capital={initial_cap:.0f}, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value={commission_pct:.2f})',
+        f'strategy("{strat_title}", overlay=true, initial_capital={initial_cap:.0f}, default_qty_type=strategy.percent_of_equity, '
+        f"default_qty_value={100 // strategy.max_entries}, pyramiding={strategy.max_entries}, "
+        f"commission_type=strategy.commission.percent, commission_value={commission_pct:.2f})",
         "",
         "// === INDICATORS ===",
     ]
@@ -185,13 +187,35 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
     lines.append(f"if (exit_{tag})")
     lines.append(f'    strategy.close("{label}")')
 
-    # Stop loss & Take profit
-    if strategy.stop_loss is not None or strategy.take_profit is not None:
+    managed = strategy.trailing_stop or strategy.scale_out or strategy.breakeven_after_scale
+    if strategy.stop_loss is not None or strategy.take_profit is not None or managed:
         lines.append("")
-        lines.append("// Risk Management: Stops & Targets")
-        stop_arg = f"stop = strategy.position_avg_price * (1.0 {stop_sign} {strategy.stop_loss})" if strategy.stop_loss else "stop = na"
-        tp_arg = f"limit = strategy.position_avg_price * (1.0 {take_sign} {strategy.take_profit})" if strategy.take_profit else "limit = na"
-        lines.append(f'strategy.exit("Bracket", "{label}", {stop_arg}, {tp_arg})')
+        lines.append("// === RISK MANAGEMENT: stops, trailing, partial exits ===")
+        tighter = "math.min" if short else "math.max"
+        lines.append("in_pos = strategy.position_size != 0")
+        lines.append("avg = strategy.position_avg_price")
+        lines.append(
+            f"stop_level = {f'avg * (1.0 {stop_sign} {strategy.stop_loss})' if strategy.stop_loss else 'float(na)'}"
+        )
+        if strategy.trailing_stop:
+            extreme, pick = ("low", "math.min") if short else ("high", "math.max")
+            lines.append("var float best = na")
+            lines.append(f"best := not in_pos ? na : na(best) ? {extreme} : {pick}(best, {extreme})")
+            lines.append(f"trail_level = best * (1.0 {stop_sign} {strategy.trailing_stop})")
+            lines.append(f"stop_level := na(stop_level) ? trail_level : {tighter}(stop_level, trail_level)")
+        if strategy.breakeven_after_scale and strategy.scale_out:
+            lines.append("var bool scaled = false")
+            lines.append(
+                "scaled := not in_pos ? false : scaled or math.abs(strategy.position_size) < math.abs(strategy.position_size[1])"
+            )
+            lines.append(f"stop_level := scaled ? (na(stop_level) ? avg : {tighter}(stop_level, avg)) : stop_level")
+        for k, level in enumerate(strategy.scale_out, start=1):
+            lines.append(
+                f'strategy.exit("Part {k}", "{label}", qty_percent = {level.fraction * 100:.0f}, '
+                f"limit = avg * (1.0 {take_sign} {level.profit}), stop = stop_level)"
+            )
+        tp_arg = f"avg * (1.0 {take_sign} {strategy.take_profit})" if strategy.take_profit else "na"
+        lines.append(f'strategy.exit("Bracket", "{label}", stop = stop_level, limit = {tp_arg})')
 
     return "\n".join(lines) + "\n"
 

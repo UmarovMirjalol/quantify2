@@ -7,6 +7,12 @@ import {
   listDatasets,
   runBacktest,
 } from '../services/api';
+import {
+  applyManagement,
+  managementFromSpec,
+  PositionManagement,
+  type ManagementDraft,
+} from '../components/PositionManagement';
 import type { DatasetInfo, StrategySpec } from '../types';
 
 const DRAFT_KEY = 'quantify_python_draft';
@@ -17,6 +23,10 @@ export type PythonDraft = {
   side?: 'long' | 'short';
   stop_loss?: number | null;
   take_profit?: number | null;
+  trailing_stop?: number | null;
+  scale_out?: StrategySpec['scale_out'];
+  breakeven_after_scale?: boolean;
+  max_entries?: number;
   initial_capital?: number;
   commission?: number;
   slippage?: number;
@@ -48,6 +58,7 @@ export function PythonPage() {
   const [side, setSide] = useState<'long' | 'short'>(incoming?.side ?? 'long');
   const [stop, setStop] = useState(incoming?.stop_loss ? String(incoming.stop_loss * 100) : '');
   const [take, setTake] = useState(incoming?.take_profit ? String(incoming.take_profit * 100) : '');
+  const [management, setManagement] = useState<ManagementDraft>(() => managementFromSpec(incoming));
   const [capital, setCapital] = useState(incoming?.initial_capital ?? 100000);
   const [commission, setCommission] = useState(incoming?.commission ?? 0.001);
   const [slippage, setSlippage] = useState(incoming?.slippage ?? 0.0005);
@@ -116,7 +127,7 @@ export function PythonPage() {
     setError('');
     if (!(await check())) return;
     setRunning(true);
-    const strategy: StrategySpec = {
+    const base: StrategySpec = {
       asset: datasetId.replace(/\.csv$/i, '').split(/[_\-]/)[0].toUpperCase().slice(0, 32) || 'ASSET',
       side,
       timeframe: '1d',
@@ -129,6 +140,7 @@ export function PythonPage() {
       take_profit: optionalPct(take),
       position_sizing: 'percent_capital',
     };
+    const strategy = applyManagement(base, management);
     try {
       const result = await runBacktest({
         strategy_text: titleFrom(code),
@@ -241,6 +253,7 @@ export function PythonPage() {
               <input type="number" min={0} step="any" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} />
             </label>
           </div>
+          <PositionManagement value={management} onChange={setManagement} disabled={running} />
           <div className="chip-row">
             <span className="hint">Load live daily data:</span>
             {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL'].map((sym) => (
@@ -284,7 +297,8 @@ export function PythonPage() {
           <ul className="cond-list">
             <li>A signal at the close of bar t fills at the open of bar t+1.</li>
             <li>Stop and take profit are checked inside each bar; slippage and commission hit every fill.</li>
-            <li>One position at a time; size 0 skips an entry.</li>
+            <li>One position at a time unless pyramiding is on; size 0 skips an entry.</li>
+            <li>Trailing stop, partial exits and breakeven run inside the engine, so your code only needs signals.</li>
           </ul>
           <h3>Guards</h3>
           <ul className="cond-list">

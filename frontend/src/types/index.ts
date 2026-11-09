@@ -16,6 +16,10 @@ export interface StrategySpec {
   };
   stop_loss: number | null;
   take_profit: number | null;
+  trailing_stop?: number | null;
+  scale_out?: { profit: number; fraction: number }[];
+  breakeven_after_scale?: boolean;
+  max_entries?: number;
   position_sizing: string;
   commission?: number;
   slippage?: number;

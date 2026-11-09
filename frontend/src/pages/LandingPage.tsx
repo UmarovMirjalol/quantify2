@@ -546,6 +546,8 @@ export function LandingPage() {
             { k: 'Share & compare', d: 'Public report link, PDF, and two runs side by side' },
             { k: 'Python strategies', d: 'Any logic and dynamic sizing in code, with a look-ahead guard' },
             { k: 'No lock-in', d: 'MIT, self-hostable, and a standalone .py that reproduces every trade' },
+            { k: 'Position management', d: 'Trailing stop, partial take-profits, breakeven, pyramiding' },
+            { k: 'Accounts', d: 'Optional sign-in: your history follows you to any device' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>

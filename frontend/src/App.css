@@ -5050,3 +5050,38 @@ h2 {
   font-family: var(--mono);
   font-size: 0.78rem;
 }
+
+.management {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.management summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.management[open] summary {
+  margin-bottom: 0.25rem;
+}
+
+.management .scale-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.management .check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.form-panel > .tabs {
+  overflow: visible;
+}

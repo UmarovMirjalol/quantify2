@@ -10,6 +10,14 @@ from app.backtesting.portfolio import Portfolio
 from app.llm.schemas import PositionSizing, StrategySpec
 
 
+def round_quantity(quantity: float) -> float:
+    """Whole units when at least one fits; otherwise fractional units (crypto, high-priced stocks)
+    rounded down to 1e-6 so the size never exceeds the limits that produced it."""
+    if quantity >= 1:
+        return float(int(quantity))
+    return floor(max(quantity, 0.0) * 1e6) / 1e6
+
+
 @dataclass
 class RiskDecision:
     """Result of risk checks for a proposed trade."""
@@ -67,12 +75,14 @@ class RiskEngine:
         raw_price: float,
         short: bool = False,
         fraction: float | None = None,
+        adding: bool = False,
     ) -> RiskDecision:
         """
         Calculate how many shares to buy (long) or sell short.
 
         ``fraction`` (0..1 of equity, from a Python strategy's size output) overrides the
         configured sizing mode; position, exposure and leverage limits still apply.
+        ``adding`` sizes a pyramid unit: the limits count the units already held.
 
         Risk-based example:
             capital=100_000, risk_per_trade=1%, stop_loss=2%
@@ -83,8 +93,9 @@ class RiskEngine:
         A short is sized against equity, not cash: sale proceeds are credited
         to cash but the position is a liability of the same size.
         """
-        if portfolio.position.is_open:
+        if portfolio.position.is_open and not adding:
             return RiskDecision(False, 0.0, "Position already open")
+        held = portfolio.position.quantity * raw_price if adding else 0.0
 
         fill_price = self.apply_slippage(raw_price, OrderSide.SELL if short else OrderSide.BUY)
         if fill_price <= 0:
@@ -122,29 +133,27 @@ class RiskEngine:
                 quantity = (equity * risk_frac) / (fill_price * (1.0 + self.commission))
 
         # Max position as % of equity
-        max_notional = equity * self.risk.max_position_pct
+        max_notional = equity * self.risk.max_position_pct - held
         max_qty_by_position = max_notional / (fill_price * (1.0 + self.commission))
         quantity = min(quantity, max_qty_by_position)
 
         # Max portfolio exposure
-        max_exposure_notional = equity * self.risk.max_portfolio_exposure
+        max_exposure_notional = equity * self.risk.max_portfolio_exposure - held
         max_qty_by_exposure = max_exposure_notional / (fill_price * (1.0 + self.commission))
         quantity = min(quantity, max_qty_by_exposure)
 
-        # Leverage limit (MVP: cash-only unless leverage > 1)
+        # Leverage limit (MVP: cash-only unless leverage > 1). A long's cash already paid for held units.
         backing = equity if short else portfolio.cash
-        max_buying_power = backing * self.risk.max_leverage
-        max_qty_by_cash = max_buying_power / (fill_price * (1.0 + self.commission))
+        buying_power = backing * self.risk.max_leverage - (held if short else 0.0)
+        max_qty_by_cash = buying_power / (fill_price * (1.0 + self.commission))
         quantity = min(quantity, max_qty_by_cash)
 
-        # Whole units when at least one fits; otherwise fractional units (crypto, high-priced stocks)
-        # rounded down to 1e-6 so the size never exceeds the limits above.
-        quantity = float(int(quantity)) if quantity >= 1 else floor(quantity * 1e6) / 1e6
+        quantity = round_quantity(quantity)
         if quantity <= 0:
             return RiskDecision(False, 0.0, "Position size rounded to zero under risk constraints")
 
         cost = fill_price * quantity * (1.0 + self.commission)
-        if cost > backing * self.risk.max_leverage + 1e-9:
+        if cost > buying_power + 1e-9:
             return RiskDecision(False, 0.0, "Insufficient cash after costs")
 
         stop, take = self.compute_stop_take(fill_price, short=short)

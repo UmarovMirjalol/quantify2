@@ -18,7 +18,7 @@ import type {
   VerdictReport,
   WalkForwardReport,
 } from '../types';
-import { authHeaders } from './session';
+import { authHeaders, clearAccount, getAccount, getClientId, setAccount } from './session';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -50,6 +50,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     }
     if (res.status === 429) {
       detail = detail || 'Too many requests. Please wait a minute and try again.';
+    }
+    if (res.status === 403 && detail.startsWith('Your session has expired') && getAccount()) {
+      clearAccount();
     }
     const err = new Error(detail) as Error & { status?: number };
     err.status = res.status;
@@ -154,6 +157,44 @@ export async function listBacktests(): Promise<BacktestSummary[]> {
 
 export async function exportAllBacktests(): Promise<{ count: number; backtests: BacktestResult[] }> {
   return request('/api/backtests/export-all');
+}
+
+export interface AccountInfo {
+  signed_in: boolean;
+  username?: string;
+  client_id?: string;
+  backtests?: number;
+  created_at?: string | null;
+}
+
+async function startSession(path: string, username: string, password: string): Promise<number> {
+  const result = await request<{ token: string; username: string; client_id: string; moved: number }>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, claim_client_id: getAccount() ? null : getClientId() }),
+  });
+  setAccount({ token: result.token, username: result.username, client_id: result.client_id });
+  return result.moved;
+}
+
+export async function registerAccount(username: string, password: string): Promise<number> {
+  return startSession('/api/auth/register', username, password);
+}
+
+export async function loginAccount(username: string, password: string): Promise<number> {
+  return startSession('/api/auth/login', username, password);
+}
+
+export async function getAccountInfo(): Promise<AccountInfo> {
+  return request('/api/auth/me');
+}
+
+export async function logoutAccount(): Promise<void> {
+  try {
+    await request('/api/auth/logout', { method: 'POST' });
+  } finally {
+    clearAccount();
+  }
 }
 
 export async function getPythonStrategyInfo(): Promise<{ enabled: boolean; template: string }> {

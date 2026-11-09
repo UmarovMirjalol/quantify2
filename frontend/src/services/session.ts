@@ -74,10 +74,44 @@ export function getClientId(): string {
   return id;
 }
 
+const ACCOUNT_KEY = 'quantify_account';
+
+export interface AccountSession {
+  token: string;
+  username: string;
+  client_id: string;
+}
+
+export function getAccount(): AccountSession | null {
+  try {
+    const raw = localStorage.getItem(ACCOUNT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as AccountSession) : null;
+    return parsed?.token && parsed.client_id ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setAccount(account: AccountSession): void {
+  localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+  window.dispatchEvent(new Event('quantify-account'));
+}
+
+/** Sign out locally; the browser starts over with a fresh anonymous history. */
+export function clearAccount(): void {
+  localStorage.removeItem(ACCOUNT_KEY);
+  localStorage.setItem(CLIENT_ID_KEY, crypto.randomUUID().replace(/-/g, ''));
+  window.dispatchEvent(new Event('quantify-account'));
+}
+
 export function authHeaders(): Record<string, string> {
+  const account = getAccount();
   const headers: Record<string, string> = {
-    'X-Client-Id': getClientId(),
+    'X-Client-Id': account ? account.client_id : getClientId(),
   };
+  if (account) {
+    headers['X-Session'] = account.token;
+  }
   const token = getAccessToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
