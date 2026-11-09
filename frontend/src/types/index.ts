@@ -121,6 +121,39 @@ export interface ExportResult {
   filename: string;
 }
 
+export interface StressSlice {
+  total_return: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+  number_of_trades: number;
+  start_date: string;
+  end_date: string;
+  equity?: { date: string; equity: number }[];
+}
+
+export interface StressNeighbor {
+  label: string;
+  value: number;
+  chosen: boolean;
+  sharpe_ratio: number | null;
+  total_return: number | null;
+  number_of_trades: number;
+}
+
+export interface StressReport {
+  verdict: 'holds' | 'fragile' | 'overfit' | 'thin';
+  headline: string;
+  split: {
+    in_sample_bars: number;
+    holdout_bars: number;
+    holdout_fraction: number;
+  };
+  in_sample: StressSlice;
+  holdout: StressSlice;
+  parameter: { label: string; value: number } | null;
+  neighbors: StressNeighbor[];
+}
+
 export interface BacktestSummary {
   id: number;
   strategy_description: string;

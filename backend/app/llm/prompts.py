@@ -32,7 +32,11 @@ matching this schema (no markdown, JSON only):
   "position_sizing": "risk_based"
 }
 
-Supported indicators: SMA, EMA, RSI, MACD, BOLLINGER, ATR, PRICE
+Supported indicators: SMA, EMA, RSI, MACD, BOLLINGER, ATR, PRICE, VOLUME, VWAP, OBV, HAMMER, ENGULFING, PINBAR
+Supported timeframes: 5m, 15m, 1h, 4h, 1d, 1w
+Patterns are true/false series: compare HAMMER, ENGULFING, or PINBAR greater_than 0.5.
+For a higher-timeframe filter set bar_factor (base bars per higher bar), e.g. 16 when trading 15m with a 4h SMA filter.
+If the request is ambiguous, still return the closest JSON and do not invent fields.
 Supported conditions: greater_than, less_than, cross_above, cross_below, equals
 Supported position_sizing: fixed, percent_capital, risk_based
 Only long strategies. Do not invent unsupported indicators.

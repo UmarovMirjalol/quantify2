@@ -11,12 +11,13 @@ import {
 } from '../components/Charts';
 import { ExportButtons } from '../components/ExportButtons';
 import { KpiCard } from '../components/KpiCard';
+import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
 import { downloadText, toCsv } from '../utils/download';
 
-type Tab = 'overview' | 'risk' | 'monte_carlo' | 'trades' | 'statistics';
+type Tab = 'overview' | 'risk' | 'monte_carlo' | 'trades' | 'statistics' | 'stress';
 
 function pct(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
@@ -49,6 +50,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'monte_carlo', label: '🎲 Monte Carlo' },
   { id: 'trades', label: 'Trades' },
   { id: 'statistics', label: 'Statistics' },
+  { id: 'stress', label: 'Holdout' },
 ];
 
 export function ResultsView({ result }: { result: BacktestResult }) {
@@ -418,6 +420,12 @@ export function ResultsView({ result }: { result: BacktestResult }) {
             </div>
             <TradeTable trades={result.trades} asset={result.strategy.asset} />
           </section>
+        </div>
+      ) : null}
+
+      {tab === 'stress' ? (
+        <div className="tab-pane" key="stress">
+          <StressAudit backtestId={result.id} />
         </div>
       ) : null}
 

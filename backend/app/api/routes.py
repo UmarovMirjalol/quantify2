@@ -39,6 +39,7 @@ from app.llm.schemas import (
 from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
+from app.research.stress import run_stress
 from app.stats_drift import daily_user_offset
 from app.stats_store import record_backtest, record_visitor, redis_counts, sqlite_counts
 
@@ -566,6 +567,40 @@ def api_get_backtest(
     if (record.client_id or "") != scope:
         raise HTTPException(status_code=404, detail="Backtest not found")
     results = json.loads(record.results_json)
+    return _backtest_payload(record, results)
+
+
+@router.get("/backtests/{backtest_id}/stress")
+def api_backtest_stress(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Rerun the saved spec on a 70/30 holdout and on nearby entry parameters."""
+    record = _owned_backtest(db, backtest_id, client_id)
+    try:
+        strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
+        data = load_dataset(record.dataset_name)
+        return run_stress(strategy, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DataValidationError as exc:
+        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Stress test failed: {exc}") from exc
+
+
+def _owned_backtest(db: Session, backtest_id: int, client_id: str) -> BacktestRecord:
+    record = db.query(BacktestRecord).filter(BacktestRecord.id == backtest_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    scope = "" if client_id == "_anonymous" else client_id
+    if (record.client_id or "") != scope:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    return record
+
+
+def _backtest_payload(record: BacktestRecord, results: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": record.id,
         "strategy_description": record.strategy_description,

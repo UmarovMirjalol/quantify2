@@ -78,6 +78,8 @@ class IndicatorRef(BaseModel):
         "bearish",
         "sma",
     ] = "value"
+    # Base bars per higher-timeframe bar. 1 means the chart timeframe.
+    bar_factor: int | None = Field(default=None, ge=1, le=2000)
 
     @model_validator(mode="after")
     def validate_periods(self) -> IndicatorRef:

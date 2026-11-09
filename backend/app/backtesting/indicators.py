@@ -67,6 +67,37 @@ def bollinger_bands(
     return upper, middle, lower
 
 
+def _bucket_ohlcv(df: pd.DataFrame, factor: int) -> pd.DataFrame:
+    """One row per completed group of `factor` base bars. No partial tail."""
+    n = (len(df) // factor) * factor
+    if n < factor:
+        return df.iloc[0:0].copy()
+    chunks = []
+    for start in range(0, n, factor):
+        sl = df.iloc[start : start + factor]
+        chunks.append(
+            {
+                "open": float(sl["open"].iloc[0]),
+                "high": float(sl["high"].max()),
+                "low": float(sl["low"].min()),
+                "close": float(sl["close"].iloc[-1]),
+                "volume": float(sl["volume"].sum()),
+            }
+        )
+    return pd.DataFrame(chunks)
+
+
+def _align_completed(index: pd.Index, values: np.ndarray, factor: int) -> pd.Series:
+    """Publish bucket i only after it closes, held until the next bucket closes."""
+    out = np.full(len(index), np.nan)
+    for i, value in enumerate(values):
+        start = (i + 1) * factor
+        end = min(len(index), (i + 2) * factor)
+        if start < len(index):
+            out[start:end] = value
+    return pd.Series(out, index=index)
+
+
 def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     """Average True Range. Requires columns high, low, close."""
     if period < 1:
@@ -237,8 +268,25 @@ def compute_indicator_series(
     signal_period: int | None = None,
     std_dev: float | None = None,
     component: str = "value",
+    bar_factor: int | None = None,
 ) -> pd.Series:
     """Compute a named indicator series from OHLCV data."""
+    if bar_factor and bar_factor > 1:
+        reduced = _bucket_ohlcv(df, bar_factor)
+        if reduced.empty:
+            return pd.Series(np.nan, index=df.index)
+        series = compute_indicator_series(
+            reduced,
+            indicator,
+            period=period,
+            fast_period=fast_period,
+            slow_period=slow_period,
+            signal_period=signal_period,
+            std_dev=std_dev,
+            component=component,
+        )
+        return _align_completed(df.index, series.to_numpy(dtype=float), bar_factor)
+
     close = df["close"]
     ind = indicator.upper()
 

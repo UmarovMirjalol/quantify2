@@ -13,6 +13,7 @@
 - CSV upload with validation
 - Full performance metrics (Sharpe, Sortino, CAGR, max drawdown, profit factor, …)
 - Equity / drawdown / price-with-markers charts
+- Holdout audit: same rules on the unseen last 30% of bars, plus a nearby-parameter Sharpe check
 - SQLite backtest history
 - Live landing counters (users / backtests / releases) that update as people visit and run tests
 - Strategy playbook gallery with deep-links into the workspace

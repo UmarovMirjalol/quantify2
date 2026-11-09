@@ -6,6 +6,50 @@ from typing import Any
 
 PLAYBOOK: list[dict[str, Any]] = [
     {
+        "id": "pin-bar-support",
+        "title": "Pin bar at support",
+        "tag": "Price action",
+        "blurb": "Long when a pin bar prints and price is under the 20-day average.",
+        "text": (
+            "Buy SPY when a pin bar forms on the daily chart and price is below the 20-day SMA. "
+            "Exit when RSI exceeds 70. Risk 1% per trade."
+        ),
+        "indicators": ["PINBAR", "SMA", "RSI"],
+    },
+    {
+        "id": "vwap-trend",
+        "title": "VWAP trend",
+        "tag": "Volume",
+        "blurb": "Intraday trend: close crossing VWAP, confirmed by rising OBV.",
+        "text": (
+            "On the 15-minute chart, buy when price crosses above VWAP and OBV is rising. "
+            "Sell when price crosses below VWAP. Risk 1% per trade."
+        ),
+        "indicators": ["VWAP", "OBV"],
+    },
+    {
+        "id": "mtf-15m-4h",
+        "title": "15m entry, 4h trend",
+        "tag": "Multi-timeframe",
+        "blurb": "Take 15-minute RSI dips only while the 4-hour trend is up.",
+        "text": (
+            "On the 15-minute chart, buy when RSI falls below 30, only if the trend on the "
+            "4-hour chart is up. Sell when RSI rises above 60. Risk 1% per trade."
+        ),
+        "indicators": ["RSI", "SMA"],
+    },
+    {
+        "id": "volume-breakout",
+        "title": "Volume breakout",
+        "tag": "Breakout",
+        "blurb": "Close above the 20-day high zone only if volume expands.",
+        "text": (
+            "Buy when price closes above the 20-day SMA and volume is above its 20-day average. "
+            "Sell when price closes below the 20-day SMA. Risk 1% per trade."
+        ),
+        "indicators": ["SMA", "VOLUME"],
+    },
+    {
         "id": "sma-cross",
         "title": "SMA crossover",
         "tag": "Trend",

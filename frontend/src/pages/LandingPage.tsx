@@ -531,6 +531,7 @@ export function LandingPage() {
             { k: 'Win rate / profit factor', d: 'Trade quality alongside direction' },
             { k: 'Trade ledger', d: 'Every fill with side, price, and PnL' },
             { k: 'Parsed JSON spec', d: 'Exact rules the engine ran' },
+            { k: 'Holdout audit', d: 'Same rules on the unseen tail, plus nearby parameters' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>
@@ -548,6 +549,30 @@ export function LandingPage() {
           <a className="btn ghost" href="#demo">
             Demo
           </a>
+        </div>
+      </section>
+
+      <section className="landing-section in-view">
+        <div className="section-head">
+          <p className="eyebrow">Holdout audit</p>
+          <h2>The curve is not the evidence.</h2>
+          <p className="section-lede">
+            After a run, Quantify replays the same rules on the last 30% of bars — a slice that never
+            chose the strategy — then nudges the entry parameter. If Sharpe only exists on the fitted
+            window, the verdict says so.
+          </p>
+        </div>
+        <div className="metric-board">
+          {[
+            { k: 'Fit window', d: 'First 70% of bars. This is the history the rules were allowed to like.' },
+            { k: 'Unseen holdout', d: 'Last 30%. Same spec, no retuning. Return, Sharpe, drawdown, trades.' },
+            { k: 'Nearby parameters', d: 'Move the main entry setting. A lonely spike is a fragile result.' },
+          ].map((item, i) => (
+            <div key={item.k} style={{ ['--i' as string]: i }}>
+              <strong>{item.k}</strong>
+              <span>{item.d}</span>
+            </div>
+          ))}
         </div>
       </section>
 

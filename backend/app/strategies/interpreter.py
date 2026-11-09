@@ -89,6 +89,7 @@ def _resolve_side(df: pd.DataFrame, side: object) -> pd.Series:
         signal_period=side.signal_period,
         std_dev=side.std_dev,
         component=side.component,
+        bar_factor=getattr(side, "bar_factor", None),
     )
 
 

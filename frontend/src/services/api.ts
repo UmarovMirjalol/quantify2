@@ -10,6 +10,7 @@ import type {
   PulseItem,
   ReleaseItem,
   StrategySpec,
+  StressReport,
 } from '../types';
 import { authHeaders } from './session';
 
@@ -147,6 +148,10 @@ export async function listBacktests(): Promise<BacktestSummary[]> {
 
 export async function getBacktest(id: number): Promise<BacktestResult> {
   return request(`/api/backtests/${id}`);
+}
+
+export async function getStress(id: number): Promise<StressReport> {
+  return request(`/api/backtests/${id}/stress`);
 }
 
 export async function getLLMStatus(): Promise<LLMStatus> {
