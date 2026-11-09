@@ -21,6 +21,7 @@ _MAPS: dict[str, dict[str, str]] = {
     "heatmap": {"plateau": PASS, "peak": WARN, "no_edge": FAIL},
     "regimes": {"both": PASS, "uptrend": WARN, "downtrend": WARN, "neither": FAIL},
     "market": {"alpha": PASS, "unproven": WARN, "beta": FAIL, "no_edge": FAIL},
+    "synthetic": {"robust": PASS, "fragile": WARN, "history_only": FAIL, "no_edge": FAIL},
 }
 
 _LABELS = {
@@ -32,6 +33,7 @@ _LABELS = {
     "regimes": "Market regimes",
     "market": "Alpha vs buy & hold",
     "monte_carlo": "Monte Carlo (trade order)",
+    "synthetic": "Synthetic markets",
 }
 
 
@@ -65,11 +67,13 @@ def build_verdict(
     stress: dict[str, Any] | None = None,
     walk: dict[str, Any] | None = None,
     robust: dict[str, Any] | None = None,
+    synthetic: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     robust = robust or {}
     checks = [
         _check("holdout", stress),
         _check("walk_forward", walk),
+        _check("synthetic", synthetic),
         _check("deflated_sharpe", robust.get("deflated")),
         _check("costs", robust.get("costs")),
         _check("heatmap", robust.get("heatmap")),

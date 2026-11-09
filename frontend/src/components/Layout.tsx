@@ -57,6 +57,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             <Icon d="M12 3v18M5 10l7-7 7 7M5 21h14" />
             New Backtest
           </NavLink>
+          <NavLink to="/portfolio">
+            <Icon d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+            Portfolio
+          </NavLink>
           <NavLink to="/playbook">
             <Icon d="M4 5h16v14H4zM8 9h8M8 13h5" />
             Playbook

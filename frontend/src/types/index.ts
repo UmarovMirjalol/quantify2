@@ -208,6 +208,91 @@ export interface MarketReport {
   down_capture: number;
 }
 
+export interface Percentiles {
+  p5: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p95: number;
+}
+
+export interface SyntheticReport {
+  verdict: 'robust' | 'fragile' | 'history_only' | 'no_edge' | 'thin';
+  headline: string;
+  paths: number;
+  block: number;
+  real: { total_return: number; sharpe_ratio: number };
+  profitable_share: number;
+  real_rank: number;
+  median_trades: number;
+  returns: Percentiles;
+  sharpes: Percentiles;
+  hold_median: number;
+  histogram: { edges: number[]; counts: number[] };
+}
+
+export interface OptimizerScore {
+  sharpe_ratio: number | null;
+  total_return: number | null;
+  max_drawdown: number | null;
+  number_of_trades: number;
+}
+
+export interface OptimizerReport {
+  verdict: 'improves' | 'no_gain' | 'overfit' | 'already_best' | 'thin';
+  headline: string;
+  parameters: string[];
+  trials: number;
+  eligible: number;
+  split: { train_bars: number; test_bars: number; train_end: string; test_start: string };
+  top: {
+    label: string;
+    params: Record<string, number | null>;
+    train_sharpe: number | null;
+    train_return: number | null;
+    trades: number;
+    original: boolean;
+  }[];
+  best: {
+    label: string;
+    params: Record<string, number | null>;
+    train: OptimizerScore | null;
+    test: OptimizerScore | null;
+    is_original: boolean;
+  } | null;
+  original: {
+    label: string;
+    params: Record<string, number | null>;
+    train: OptimizerScore | null;
+    test: OptimizerScore | null;
+  } | null;
+  deflated: { verdict: string; probability: number | null; expected_max_sharpe: number | null } | null;
+  best_strategy: StrategySpec | null;
+}
+
+export interface PortfolioAsset {
+  total_return: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+  trades_count: number;
+  final_equity: number;
+  pnl: number;
+  contribution: number;
+  buy_hold_return: number | null;
+}
+
+export interface PortfolioResult {
+  strategy: StrategySpec;
+  datasets: string[];
+  portfolio_metrics: Metrics;
+  portfolio_equity_curve: { date: string; equity: number; drawdown: number }[];
+  benchmark_equity_curve: { date: string; equity: number }[];
+  asset_results: Record<string, PortfolioAsset>;
+  correlation: { assets: string[]; matrix: number[][]; average: number | null };
+  diversification_ratio: number | null;
+  trades: (Trade & { asset: string })[];
+}
+
 export interface VerdictCheck {
   key: string;
   label: string;

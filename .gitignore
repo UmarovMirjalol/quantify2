@@ -14,6 +14,7 @@ frontend/dist/
 # App runtime
 uploads/**
 !uploads/.gitkeep
+backend/uploads/
 *.db
 .env
 .env.production

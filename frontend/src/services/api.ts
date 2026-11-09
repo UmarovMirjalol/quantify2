@@ -5,13 +5,16 @@ import type {
   ExportResult,
   HealthStatus,
   LLMStatus,
+  OptimizerReport,
   PlaybookItem,
+  PortfolioResult,
   PublicStats,
   PulseItem,
   ReleaseItem,
   RobustnessReport,
   StrategySpec,
   StressReport,
+  SyntheticReport,
   VerdictReport,
   WalkForwardReport,
 } from '../types';
@@ -163,6 +166,28 @@ export async function getWalkForward(id: number): Promise<WalkForwardReport> {
 
 export async function getRobustness(id: number): Promise<RobustnessReport> {
   return request(`/api/backtests/${id}/robustness`);
+}
+
+export async function getOptimizer(id: number): Promise<OptimizerReport> {
+  return request(`/api/backtests/${id}/optimize`);
+}
+
+export async function getSynthetic(id: number): Promise<SyntheticReport> {
+  return request(`/api/backtests/${id}/synthetic`);
+}
+
+export async function runPortfolio(payload: {
+  strategy_text: string;
+  datasets: string[];
+  initial_capital: number;
+  commission: number;
+  slippage: number;
+}): Promise<PortfolioResult> {
+  return request('/api/backtest/portfolio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getVerdict(id: number): Promise<VerdictReport> {

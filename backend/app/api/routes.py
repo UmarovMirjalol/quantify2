@@ -41,6 +41,8 @@ from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
 from app.research.market import market_exposure
+from app.research.optimizer import run_optimizer
+from app.research.synthetic import run_synthetic
 from app.research.robustness import cost_breakeven, deflated_sharpe, parameter_heatmap
 from app.research.stress import run_stress
 from app.research.verdict import build_verdict
@@ -488,39 +490,48 @@ async def api_run_backtest(
 
 class PortfolioBacktestRequest(BaseModel):
     strategy: StrategySpec | None = None
-    strategy_text: str | None = None
-    datasets: list[str] = Field(default_factory=lambda: ["sample_data.csv", "sample_intraday_15m.csv"])
-    initial_capital: float = 100_000.0
-    commission: float = 0.001
-    slippage: float = 0.0005
+    strategy_text: str | None = Field(default=None, max_length=4000)
+    datasets: list[str] = Field(
+        default_factory=lambda: ["sample_data.csv", "sample_intraday_15m.csv"],
+        min_length=1,
+        max_length=12,
+    )
+    initial_capital: float = Field(default=100_000.0, gt=0)
+    commission: float = Field(default=0.001, ge=0, le=0.05)
+    slippage: float = Field(default=0.0005, ge=0, le=0.05)
 
 
 @router.post("/backtest/portfolio")
-def api_run_portfolio_backtest(req: PortfolioBacktestRequest) -> dict[str, Any]:
-    if req.strategy is not None:
-        strategy = req.strategy
-    elif req.strategy_text:
-        parsed = parse_strategy(req.strategy_text)
-        strategy = parsed.strategy
-    else:
-        raise HTTPException(status_code=400, detail="Must provide strategy or strategy_text")
+async def api_run_portfolio_backtest(req: PortfolioBacktestRequest) -> dict[str, Any]:
+    """Run one rule set on a basket of assets with equal capital per sleeve."""
+    try:
+        if req.strategy is not None:
+            strategy = req.strategy
+        elif req.strategy_text:
+            strategy = (await parse_strategy(req.strategy_text)).strategy
+        else:
+            raise HTTPException(status_code=400, detail="Must provide strategy or strategy_text")
+    except StrategyParseError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    strategy = strategy.model_copy(update={"commission": req.commission, "slippage": req.slippage})
 
     loaded_datasets: dict[str, Any] = {}
-    for ds_id in req.datasets:
+    for ds_id in dict.fromkeys(req.datasets):
         try:
             df = load_dataset(ds_id)
-            name = Path(ds_id).stem.upper()
-            loaded_datasets[name] = df
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=400, detail=f"Failed loading dataset '{ds_id}': {exc}") from exc
+        name = Path(ds_id).stem.upper()
+        while name in loaded_datasets:
+            name += "_2"
+        loaded_datasets[name] = df
 
-    if not loaded_datasets:
-        raise HTTPException(status_code=400, detail="No valid datasets loaded")
-
-    engine = PortfolioBacktestEngine(strategy, initial_capital=req.initial_capital)
-    result = engine.run(loaded_datasets)
+    try:
+        result = PortfolioBacktestEngine(strategy, initial_capital=req.initial_capital).run(loaded_datasets)
+    except (BacktestError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {
-        "strategy": strategy.model_dump(),
+        "strategy": strategy.model_dump(mode="json"),
         "datasets": list(loaded_datasets.keys()),
         **result,
     }
@@ -635,6 +646,42 @@ def api_backtest_robustness(
         raise HTTPException(status_code=500, detail=f"Robustness check failed: {exc}") from exc
 
 
+def _research(backtest_id: int, db: Session, client_id: str, label: str, run: Any) -> dict[str, Any]:
+    record = _owned_backtest(db, backtest_id, client_id)
+    try:
+        strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
+        data = load_dataset(record.dataset_name)
+        return run(record, strategy, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DataValidationError as exc:
+        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"{label} failed: {exc}") from exc
+
+
+@router.get("/backtests/{backtest_id}/optimize")
+def api_backtest_optimize(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Grid-search the entry parameter on the first 70% only, then judge the winner on the last 30%."""
+    return _research(backtest_id, db, client_id, "Optimizer", lambda _r, s, d: run_optimizer(s, d))
+
+
+@router.get("/backtests/{backtest_id}/synthetic")
+def api_backtest_synthetic(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Rerun the rules on 100 block-bootstrapped alternate histories of the same asset."""
+    return _research(
+        backtest_id, db, client_id, "Synthetic markets", lambda r, s, d: run_synthetic(s, d, seed=r.id)
+    )
+
+
 def _robustness(db: Session, record: BacktestRecord, strategy: StrategySpec, data: Any) -> dict[str, Any]:
     trials = (
         db.query(BacktestRecord.sharpe_ratio)
@@ -669,12 +716,13 @@ def _verdict_for(db: Session, record: BacktestRecord) -> dict[str, Any]:
 
     strategy = attempt(lambda: StrategySpec.model_validate(json.loads(record.parsed_strategy_json)))
     data = attempt(lambda: load_dataset(record.dataset_name))
-    stress = walk = robust = None
+    stress = walk = robust = synthetic = None
     if strategy is not None and data is not None:
         stress = attempt(lambda: run_stress(strategy, data))
         walk = attempt(lambda: run_walk_forward(strategy, data))
         robust = attempt(lambda: _robustness(db, record, strategy, data))
-    verdict = build_verdict(results, stress=stress, walk=walk, robust=robust)
+        synthetic = attempt(lambda: run_synthetic(strategy, data, seed=record.id))
+    verdict = build_verdict(results, stress=stress, walk=walk, robust=robust, synthetic=synthetic)
     results["verdict"] = verdict
     record.results_json = json.dumps(results)
     db.commit()

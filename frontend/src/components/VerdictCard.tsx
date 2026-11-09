@@ -60,7 +60,7 @@ export function VerdictCard({
     return (
       <section className="stress-verdict verdict-card verdict-thin">
         <p className="eyebrow">Quantify verdict</p>
-        <p className="note">Running holdout, walk-forward, luck, cost, heatmap, regime, alpha, and Monte Carlo checks…</p>
+        <p className="note">Running holdout, walk-forward, synthetic-market, luck, cost, heatmap, regime, alpha, and Monte Carlo checks…</p>
       </section>
     );
   }

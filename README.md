@@ -19,7 +19,10 @@
 - Deflated Sharpe (Bailey & López de Prado): discounts the Sharpe for how many variants this browser tried on the same data
 - Cost break-even: the per-side cost at which total return turns non-positive
 - Parameter heatmap: Sharpe across every fast × slow crossover pair, with a plateau-or-peak verdict
-- Unified verdict: holdout, walk-forward, Deflated Sharpe, costs, heatmap, regimes, alpha, and Monte Carlo graded into one 0–100 score; a failure on unseen data caps the grade
+- Unified verdict: holdout, walk-forward, synthetic markets, Deflated Sharpe, costs, heatmap, regimes, alpha, and Monte Carlo graded into one 0–100 score; a failure on unseen data caps the grade
+- Synthetic markets: 100 block-bootstrapped alternate histories of the asset (20-bar blocks), with the share of paths that pay and where the real history ranks
+- No-peek optimizer: grid-search the entry parameters (crossover fast × slow, oscillator period × threshold, or a single period) on the first 70% only, judge the winner once on the last 30%, and deflate its Sharpe for the number of candidates; the tuned setting can be rerun in one click
+- Portfolio: one rule set on up to 12 assets (samples, uploads, or tickers fetched live) with equal-capital sleeves, an equal-weight buy-and-hold benchmark, per-asset contribution, a sleeve correlation matrix, and the diversification ratio
 - Alpha & beta vs buy-and-hold of the same asset: per-bar regression with alpha t-stat, R², and up/down capture
 - Short selling: "Short SPY when…" opens a real short (cash credit, mirrored stops, cover P&L), exported to Pine as `strategy.short`
 - Compare two runs: equity rebased to one start, every metric and check side by side, winner highlighted
@@ -271,7 +274,7 @@ pytest -q
 
 - One position at a time, long or short (no simultaneous long/short or borrow fees)
 - Single-asset per run
-- Integer share sizing
+- Whole-unit sizing when at least one unit fits; fractional units otherwise (e.g. BTC on a small sleeve)
 - Built-in parser covers common quant phrasings; LLM expands coverage
 - Conservative same-bar stop/take assumption
 - Sample CSV is synthetic

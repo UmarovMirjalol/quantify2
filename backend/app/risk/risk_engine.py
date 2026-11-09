@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import floor
 
 from app.backtesting.orders import Order, OrderSide
 from app.backtesting.portfolio import Portfolio
@@ -129,9 +130,10 @@ class RiskEngine:
         max_qty_by_cash = max_buying_power / (fill_price * (1.0 + self.commission))
         quantity = min(quantity, max_qty_by_cash)
 
-        # Integer shares for simplicity (MVP)
-        quantity = float(int(quantity))
-        if quantity < 1:
+        # Whole units when at least one fits; otherwise fractional units (crypto, high-priced stocks)
+        # rounded down to 1e-6 so the size never exceeds the limits above.
+        quantity = float(int(quantity)) if quantity >= 1 else floor(quantity * 1e6) / 1e6
+        if quantity <= 0:
             return RiskDecision(False, 0.0, "Position size rounded to zero under risk constraints")
 
         cost = fill_price * quantity * (1.0 + self.commission)

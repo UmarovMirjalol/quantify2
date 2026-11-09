@@ -112,26 +112,76 @@ class PortfolioBacktestEngine:
 
         equity_curve_out = [
             {
-                "date": str(row["date"])[:10],
+                "date": pd.Timestamp(row["date"]).isoformat(),
                 "equity": round(float(row["portfolio_equity"]), 2),
                 "drawdown": round(float(row["drawdown"]), 4),
             }
             for _, row in merged.iterrows()
         ]
 
-        per_asset_summary = {
-            name: {
+        per_asset_summary = {}
+        for name, res in asset_runs.items():
+            final = float(merged[f"equity_{name}"].iloc[-1])
+            pnl = final - capital_per_asset
+            per_asset_summary[name] = {
                 "total_return": res["metrics"].get("total_return"),
                 "sharpe_ratio": res["metrics"].get("sharpe_ratio"),
                 "max_drawdown": res["metrics"].get("max_drawdown"),
                 "trades_count": len(res["trades"]),
+                "final_equity": round(final, 2),
+                "pnl": round(pnl, 2),
+                "contribution": round(pnl / self.initial_capital, 4),
+                "buy_hold_return": _buy_hold_return(asset_data[name]),
             }
-            for name, res in asset_runs.items()
-        }
+
+        sleeve_returns = merged[eq_cols].pct_change().iloc[1:]
+        names = [c.removeprefix("equity_") for c in eq_cols]
+        corr = sleeve_returns.corr().fillna(0.0).to_numpy() if len(eq_cols) > 1 else np.ones((1, 1))
+        off_diag = corr[~np.eye(len(names), dtype=bool)] if len(names) > 1 else np.array([])
+        sleeve_vol = sleeve_returns.std().to_numpy()
+        port_vol = float(merged["portfolio_equity"].pct_change().iloc[1:].std())
+        weights = np.full(len(names), 1.0 / len(names))
+        div_ratio = float(weights @ np.nan_to_num(sleeve_vol)) / port_vol if port_vol > 0 else None
+
+        benchmark = self._benchmark(asset_data, merged["date"], capital_per_asset)
 
         return {
             "portfolio_metrics": metrics,
             "portfolio_equity_curve": equity_curve_out,
+            "benchmark_equity_curve": benchmark,
             "asset_results": per_asset_summary,
+            "correlation": {
+                "assets": names,
+                "matrix": [[round(float(v), 3) for v in row] for row in corr],
+                "average": round(float(off_diag.mean()), 3) if off_diag.size else None,
+            },
+            "diversification_ratio": None if div_ratio is None else round(div_ratio, 3),
             "trades": sorted(all_trades, key=lambda x: str(x.get("entry_date", ""))),
         }
+
+    @staticmethod
+    def _benchmark(
+        asset_data: dict[str, pd.DataFrame], dates: pd.Series, capital_per_asset: float
+    ) -> list[dict[str, Any]]:
+        frame = pd.DataFrame({"date": pd.to_datetime(dates)})
+        cols = []
+        for name, df in asset_data.items():
+            px = df[["date", "close"]].copy()
+            px["date"] = pd.to_datetime(px["date"])
+            first = float(px["close"].iloc[0]) or 1.0
+            px[f"bh_{name}"] = capital_per_asset * px["close"] / first
+            frame = frame.merge(px[["date", f"bh_{name}"]], on="date", how="left")
+            cols.append(f"bh_{name}")
+        frame[cols] = frame[cols].ffill().fillna(capital_per_asset)
+        total = frame[cols].sum(axis=1)
+        return [
+            {"date": d.isoformat(), "equity": round(float(v), 2)}
+            for d, v in zip(frame["date"], total)
+        ]
+
+
+def _buy_hold_return(df: pd.DataFrame) -> float | None:
+    if df.empty:
+        return None
+    first = float(df["close"].iloc[0])
+    return round(float(df["close"].iloc[-1]) / first - 1.0, 4) if first else None

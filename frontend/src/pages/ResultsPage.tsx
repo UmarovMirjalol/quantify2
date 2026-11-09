@@ -12,6 +12,8 @@ import {
 import { ExportButtons } from '../components/ExportButtons';
 import { KpiCard } from '../components/KpiCard';
 import { MarketExposure } from '../components/MarketExposure';
+import { Optimizer } from '../components/Optimizer';
+import { SyntheticMarkets } from '../components/SyntheticMarkets';
 import { RegimeSplit } from '../components/RegimeSplit';
 import { Robustness } from '../components/Robustness';
 import { StressAudit } from '../components/StressAudit';
@@ -34,9 +36,11 @@ type Tab =
   | 'regimes'
   | 'walk'
   | 'robust'
+  | 'synthetic'
+  | 'optimize'
   | 'alpha';
 
-const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust'];
+const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust', 'synthetic', 'optimize'];
 
 export function reportUrl(token: string): string {
   return `${window.location.origin}/r/${token}`;
@@ -77,6 +81,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'regimes', label: 'Regimes' },
   { id: 'walk', label: 'Walk-forward' },
   { id: 'robust', label: 'Robustness' },
+  { id: 'synthetic', label: 'Synthetic markets' },
+  { id: 'optimize', label: 'Optimizer' },
   { id: 'alpha', label: 'Alpha & beta' },
 ];
 
@@ -544,6 +550,18 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
       {tab === 'robust' ? (
         <div className="tab-pane" key="robust">
           <Robustness backtestId={result.id} />
+        </div>
+      ) : null}
+
+      {tab === 'synthetic' ? (
+        <div className="tab-pane" key="synthetic">
+          <SyntheticMarkets backtestId={result.id} />
+        </div>
+      ) : null}
+
+      {tab === 'optimize' ? (
+        <div className="tab-pane" key="optimize">
+          <Optimizer result={result} />
         </div>
       ) : null}
 

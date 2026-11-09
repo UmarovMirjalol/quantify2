@@ -66,7 +66,7 @@ def test_share_link_is_public_owner_only_and_revocable(monkeypatch):
     body = report.json()
     assert body["id"] == run_id
     assert body["verdict"]["grade"] in {"robust", "promising", "overfit", "no_edge", "insufficient"}
-    assert len(body["verdict"]["checks"]) == 8
+    assert len(body["verdict"]["checks"]) == 9
 
     monkeypatch.setenv("APP_ACCESS_TOKEN", "secret-token-xyz")
     get_settings.cache_clear()
