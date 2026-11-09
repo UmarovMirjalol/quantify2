@@ -220,7 +220,7 @@ export function LandingPage() {
       <section className="hero">
         <div className="hero-copy">
           <p className="wordmark reveal" style={{ ['--d' as string]: '0ms' }}>
-            Quantify
+            Quantify <span className="wordmark-est mono">Est. 2025</span>
           </p>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
             Your edge — proven before you risk a dollar.
@@ -626,7 +626,7 @@ export function LandingPage() {
       </section>
 
       <footer className="landing-footer">
-        <span>Quantify</span>
+        <span>Quantify · Established 2025</span>
         <span className="mono">No API key · Signal at close → execute next open</span>
       </footer>
     </div>

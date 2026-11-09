@@ -23,7 +23,7 @@ function pct(v: number): string {
 
 export function MarketExposure({ report }: { report: MarketReport | undefined }) {
   if (!report) {
-    return <div className="banner warn">Alpha and beta are computed for runs saved after this feature shipped.</div>;
+    return <div className="banner warn">Alpha and beta are not available for this run. Rerun it to compute them.</div>;
   }
   return (
     <div className="stress-audit">

@@ -5085,3 +5085,19 @@ h2 {
 .form-panel > .tabs {
   overflow: visible;
 }
+
+.hero-copy .wordmark .wordmark-est {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.6rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  -webkit-text-fill-color: var(--text-muted);
+  background: none;
+}

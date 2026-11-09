@@ -424,9 +424,3 @@ export interface PulseItem {
   created_at: string;
   sample: boolean;
 }
-
-export interface ReleaseItem {
-  version: string;
-  title: string;
-  body: string;
-}

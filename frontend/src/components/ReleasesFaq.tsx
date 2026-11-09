@@ -1,78 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
-import { getReleases } from '../services/api';
-import type { ReleaseItem } from '../types';
 
-const FALLBACK_RELEASES: ReleaseItem[] = [
+const CAPABILITIES = [
   {
-    version: '0.21',
-    title: 'Price Action, Volume & Code Export',
-    body: 'TradingView Pine Script v5 & Python export, candlestick patterns (Hammer, Pin-bar, Engulfing), VWAP/OBV volume indicators, MTF intraday testing, and portfolio backtest.',
-  },
-  {
-    version: '0.20',
-    title: 'Durable live counters',
-    body: 'Upstash-backed visitor and backtest totals so public stats stay consistent on Vercel.',
-  },
-  {
-    version: '0.19',
-    title: 'Brand pack for quantifylab.xyz',
-    body: 'favicon.ico, 48px+ PNGs, OG image, and shorter tab title for search surfaces.',
-  },
-  {
-    version: '0.11',
-    title: 'Parse preview & exports',
-    body: 'Live parsed-spec preview, buy-and-hold overlay, CSV/JSON export, history search, edit & re-run.',
-  },
-  {
-    version: '0.10',
-    title: 'Public free mode',
-    body: 'Open landing with built-in parser, no signup, no API key required for core strategies.',
-  },
-  {
-    version: '0.9',
-    title: 'Strategy of the day',
-    body: 'Daily rotating preset plus Instant Try handoff into the workspace.',
-  },
-  {
-    version: '0.8',
-    title: 'Guide & SEO surface',
-    body: 'Crawlable guide, robots/sitemap, and FAQ structured data on the landing.',
-  },
-  {
-    version: '0.7',
-    title: 'Daily fact',
-    body: 'Rotating quant research notes on the public landing page.',
-  },
-  {
-    version: '0.6',
-    title: 'Live stats',
-    body: 'Public counters for users, backtests, and releases with visitor ping.',
-  },
-  {
-    version: '0.5',
-    title: 'Activity pulse',
-    body: 'Anonymized recent-run feed for the landing page.',
-  },
-  {
-    version: '0.4',
-    title: 'Interactive demo',
-    body: 'Chip-driven demo console with equity, metrics, and blotter.',
-  },
-  {
-    version: '0.3',
-    title: 'Live pulse & playbook',
-    body: 'Public activity feed, strategy gallery, and playbook presets.',
-  },
-  {
-    version: '0.2',
-    title: 'Production edge',
-    body: 'Docker Compose deploy, optional access gate, rate limits, smoke tests.',
-  },
-  {
-    version: '0.1',
     title: 'Research core',
-    body: 'Plain-English strategies, look-ahead-safe engine, risk sizing, metrics, SQLite history.',
+    body: 'Plain-English strategies, look-ahead-safe engine, risk sizing, full metrics and saved history.',
+  },
+  {
+    title: 'Overfitting checks',
+    body: 'Holdout, walk-forward, synthetic markets, Deflated Sharpe, cost break-even and Monte Carlo graded into one verdict.',
+  },
+  {
+    title: 'Position management',
+    body: 'Trailing stop, partial take-profits, stop to breakeven, pyramiding, long or short.',
+  },
+  {
+    title: 'Python strategies',
+    body: 'Any logic and dynamic sizing in code, sandboxed, with a look-ahead guard on every run.',
+  },
+  {
+    title: 'Portfolio & optimizer',
+    body: 'One rule on a basket of assets, and a parameter search judged only on data it never saw.',
+  },
+  {
+    title: 'Exports',
+    body: 'TradingView Pine Script v5, a standalone Python file that reproduces every trade, CSV and JSON.',
+  },
+  {
+    title: 'Accounts & sharing',
+    body: 'Optional sign-in so history follows you, public report links, PDF and side-by-side comparison.',
+  },
+  {
+    title: 'Open and self-hostable',
+    body: 'MIT-licensed. Run the whole stack yourself with one Docker Compose command.',
   },
 ];
 
@@ -82,33 +42,36 @@ const FAQ = [
     a: 'No. The built-in parser runs offline. Add an OpenAI-compatible key only if you want broader natural-language coverage.',
   },
   {
+    q: 'Where does the market data come from?',
+    a: 'One-click tickers load daily bars for the last year from Yahoo Finance, with Binance as a fallback for crypto. Prices are split-adjusted; dividends are not added, so the strategy and the buy-and-hold benchmark are compared on the same price series. For longer or institutional-grade history, upload your own CSV.',
+  },
+  {
+    q: 'How do you make sure the data is clean?',
+    a: 'Every dataset is validated before a backtest: unparseable dates, duplicate bars, missing or non-numeric values, zero or negative prices and negative volume are rejected with the exact rows named. Bars where high/low contradict open/close are flagged, unsorted data is sorted, and duplicates are never silently averaged.',
+  },
+  {
+    q: 'What should my CSV look like?',
+    a: 'Columns date, open, high, low, close, volume — one row per bar, oldest to newest, in one timezone. Use split-adjusted prices, keep halted or missing days out rather than filling them with copies of the previous bar, and include delisted symbols if you test a universe, otherwise survivorship bias inflates results.',
+  },
+  {
     q: 'Is the sample data real market data?',
-    a: 'No — sample_data.csv is synthetic for demos and tests. Upload your own OHLCV CSV for research.',
+    a: 'No — sample_data.csv is synthetic, for demos and tests. Use a live ticker or your own CSV for research.',
   },
   {
     q: 'How do you avoid look-ahead bias?',
-    a: 'Signals form on the close; fills execute on the next open. Commission and slippage hit every trade before equity updates.',
+    a: 'Signals form on the close; fills execute on the next open. Indicators only use past bars, Python code is rerun on cut-off history to catch peeking, and commission and slippage hit every trade before equity updates.',
   },
   {
     q: 'Who can see my runs?',
-    a: 'Your full history stays scoped to this browser’s client id. The public pulse shows anonymized strategy snippets only.',
+    a: 'Only you. History is tied to your browser, or to your account if you sign in. Public report links are created only when you share a run, and the public pulse shows anonymized strategy snippets.',
   },
 ] as const;
 
 export function ReleasesFaq() {
   const reduced = usePrefersReducedMotion();
-  const [releases, setReleases] = useState<ReleaseItem[]>(FALLBACK_RELEASES);
   const [open, setOpen] = useState(0);
   const [inView, setInView] = useState(reduced);
   const ref = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    getReleases()
-      .then((data) => {
-        if (data.items?.length) setReleases(data.items);
-      })
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     if (reduced) {
@@ -136,16 +99,14 @@ export function ReleasesFaq() {
       <div className="releases-faq-grid">
         <div>
           <div className="section-head">
-            <p className="eyebrow">Releases</p>
-            <h2>Version history.</h2>
-            <p className="section-lede">
-              From the research core through parse preview, exports, and public free mode.
-            </p>
+            <p className="eyebrow">Platform</p>
+            <h2>What's inside.</h2>
+            <p className="section-lede">Everything below is free, in the browser, with no API key.</p>
           </div>
           <ol className="release-list">
-            {releases.map((r, i) => (
-              <li key={r.version} style={{ ['--i' as string]: i }}>
-                <span className="release-ver mono">v{r.version}</span>
+            {CAPABILITIES.map((r, i) => (
+              <li key={r.title} style={{ ['--i' as string]: i }}>
+                <span className="release-ver mono">{String(i + 1).padStart(2, '0')}</span>
                 <div>
                   <h3>{r.title}</h3>
                   <p>{r.body}</p>

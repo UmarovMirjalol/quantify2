@@ -3,7 +3,7 @@ import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 /**
  * Lightweight canvas atmosphere — perspective data-floor + drifting lanes.
- * Inspired by 2026 fintech heroes (restrained WebGL moment) without Three.js.
+ * A restrained WebGL moment without Three.js.
  */
 export function HeroDepthCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

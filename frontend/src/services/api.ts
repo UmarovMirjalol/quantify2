@@ -10,7 +10,6 @@ import type {
   PortfolioResult,
   PublicStats,
   PulseItem,
-  ReleaseItem,
   RobustnessReport,
   StrategySpec,
   StressReport,
@@ -79,10 +78,6 @@ export async function getPulse(): Promise<{ items: PulseItem[]; updated_at: stri
 
 export async function getPlaybook(): Promise<{ items: PlaybookItem[]; count: number }> {
   return request('/api/playbook');
-}
-
-export async function getReleases(): Promise<{ items: ReleaseItem[]; count: number }> {
-  return request('/api/releases');
 }
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
