@@ -152,6 +152,22 @@ export async function listBacktests(): Promise<BacktestSummary[]> {
   return request('/api/backtests');
 }
 
+export async function exportAllBacktests(): Promise<{ count: number; backtests: BacktestResult[] }> {
+  return request('/api/backtests/export-all');
+}
+
+export async function getPythonStrategyInfo(): Promise<{ enabled: boolean; template: string }> {
+  return request('/api/python-strategy');
+}
+
+export async function checkPythonStrategy(code: string): Promise<{ ok: boolean; errors: string[] }> {
+  return request('/api/python-strategy/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+}
+
 export async function getBacktest(id: number): Promise<BacktestResult> {
   return request(`/api/backtests/${id}`);
 }

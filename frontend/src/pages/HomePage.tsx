@@ -361,7 +361,8 @@ export function HomePage({ health }: Props) {
           <h1>New Backtest</h1>
           <p className="lede">
             Describe SMA / EMA / RSI / MACD / Bollinger rules in plain English. Preview the parsed
-            spec before you run.
+            spec before you run. Need custom logic or dynamic sizing?{' '}
+            <Link to="/code">Write it in Python →</Link>
           </p>
         </div>
         {health?.llm_enabled ? (

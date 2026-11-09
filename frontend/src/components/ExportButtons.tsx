@@ -12,6 +12,7 @@ export function ExportButtons({ strategy, title }: ExportButtonsProps) {
   const [loading, setLoading] = useState<'pine' | 'python' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const pineAvailable = !strategy.custom_code;
 
   async function handleExport(format: 'pine' | 'python') {
     setLoading(format);
@@ -47,29 +48,33 @@ export function ExportButtons({ strategy, title }: ExportButtonsProps) {
       <div className="export-group">
         <span className="export-label">Export strategy code:</span>
         <div className="export-actions">
-          <button
-            className="btn btn-export btn-pine"
-            disabled={loading !== null}
-            onClick={() => handleExport('pine')}
-            title="Download Pine Script v5 for TradingView"
-          >
-            {loading === 'pine' ? '⏳' : '📊'} Pine Script v5
-          </button>
-          <button
-            className="btn btn-export btn-copy"
-            onClick={() => handleCopy('pine')}
-            title="Copy Pine Script to clipboard"
-          >
-            {copied === 'pine' ? '✅' : '📋'}
-          </button>
+          {pineAvailable ? (
+            <>
+              <button
+                className="btn btn-export btn-pine"
+                disabled={loading !== null}
+                onClick={() => handleExport('pine')}
+                title="Download Pine Script v5 for TradingView"
+              >
+                {loading === 'pine' ? '⏳' : '📊'} Pine Script v5
+              </button>
+              <button
+                className="btn btn-export btn-copy"
+                onClick={() => handleCopy('pine')}
+                title="Copy Pine Script to clipboard"
+              >
+                {copied === 'pine' ? '✅' : '📋'}
+              </button>
+            </>
+          ) : null}
 
           <button
             className="btn btn-export btn-python"
             disabled={loading !== null}
             onClick={() => handleExport('python')}
-            title="Download Python bot script"
+            title="Standalone backtest: needs only numpy + pandas, reproduces these trades on your CSV"
           >
-            {loading === 'python' ? '⏳' : '🐍'} Python Bot
+            {loading === 'python' ? '⏳' : '🐍'} Standalone Python
           </button>
           <button
             className="btn btn-export btn-copy"

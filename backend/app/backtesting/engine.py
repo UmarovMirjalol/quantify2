@@ -27,6 +27,7 @@ from app.research.regimes import classify_regimes
 from app.metrics.performance import compute_performance_metrics
 from app.risk.risk_engine import RiskEngine
 from app.strategies.interpreter import generate_signals, validate_strategy_spec
+from app.strategies.sandbox import CustomSignals, SandboxError, run_custom
 
 
 class BacktestError(Exception):
@@ -44,7 +45,8 @@ class BacktestEngine:
         self.short = strategy.side == Side.SHORT
         self.risk_engine = RiskEngine(strategy)
 
-    def run(self, data: pd.DataFrame) -> dict[str, Any]:
+    def run(self, data: pd.DataFrame, signals: CustomSignals | None = None) -> dict[str, Any]:
+        """``signals`` lets callers pass precomputed Python-strategy output (batched or checked)."""
         if data is None or len(data) < 5:
             raise BacktestError("Dataset too short for backtesting (need at least 5 bars)")
 
@@ -53,7 +55,17 @@ class BacktestEngine:
         if not required.issubset(set(df.columns)):
             raise BacktestError(f"Data missing columns: {required - set(df.columns)}")
 
-        entry_signals, exit_signals = generate_signals(df, self.strategy)
+        sizes = None
+        if self.strategy.is_custom:
+            try:
+                custom = signals or run_custom(self.strategy.custom_code or "", df)
+            except SandboxError as exc:
+                raise BacktestError(str(exc)) from exc
+            entry_flags, exit_flags, sizes = custom.entry, custom.exit, custom.size
+        else:
+            entry_signals, exit_signals = generate_signals(df, self.strategy)
+            entry_flags = entry_signals.to_numpy(dtype=bool)
+            exit_flags = exit_signals.to_numpy(dtype=bool)
         portfolio = Portfolio(initial_capital=self.strategy.initial_capital)
 
         pending_order: Order | None = None
@@ -66,8 +78,6 @@ class BacktestEngine:
         highs = df["high"].to_numpy(dtype=float)
         lows = df["low"].to_numpy(dtype=float)
         closes = df["close"].to_numpy(dtype=float)
-        entry_flags = entry_signals.to_numpy(dtype=bool)
-        exit_flags = exit_signals.to_numpy(dtype=bool)
         for i in range(n):
             bar_date = dates[i]
             o, h, l, c = float(opens[i]), float(highs[i]), float(lows[i]), float(closes[i])
@@ -110,8 +120,11 @@ class BacktestEngine:
 
             # 3) Generate new signal at close — queue for next bar open
             if i < n - 1:  # cannot execute after last bar
-                if not portfolio.position.is_open and entry_flags[i]:
-                    decision = self.risk_engine.size_entry(portfolio, c, short=self.short)
+                fraction = float(sizes[i]) if sizes is not None else None
+                if not portfolio.position.is_open and entry_flags[i] and fraction != 0.0:
+                    decision = self.risk_engine.size_entry(
+                        portfolio, c, short=self.short, fraction=fraction
+                    )
                     if decision.allowed:
                         pending_order = Order(
                             side=OrderSide.SELL if self.short else OrderSide.BUY,

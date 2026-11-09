@@ -544,6 +544,8 @@ export function LandingPage() {
             { k: 'Alpha & beta', d: 'What is left after paying for market exposure' },
             { k: 'Long or short', d: '"Short SPY when…" runs a real short with mirrored stops' },
             { k: 'Share & compare', d: 'Public report link, PDF, and two runs side by side' },
+            { k: 'Python strategies', d: 'Any logic and dynamic sizing in code, with a look-ahead guard' },
+            { k: 'No lock-in', d: 'MIT, self-hostable, and a standalone .py that reproduces every trade' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>

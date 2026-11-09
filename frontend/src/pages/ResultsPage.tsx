@@ -92,7 +92,10 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   const [shareToken, setShareToken] = useState<string | null>(result.share_token ?? null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState('');
-  const tabs = readOnly ? TABS.filter((t) => !OWNER_ONLY.includes(t.id)) : TABS;
+  const isCustom = Boolean(result.strategy.custom_code);
+  const tabs = TABS.filter(
+    (t) => !(readOnly && OWNER_ONLY.includes(t.id)) && !(isCustom && t.id === 'optimize'),
+  );
   const isShort = result.strategy.side === 'short';
   const m = result.metrics;
   const strategyJson = useMemo(
@@ -189,6 +192,24 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   }
 
   function rerunInWorkspace() {
+    if (isCustom) {
+      const s = result.strategy;
+      navigate('/code', {
+        state: {
+          draft: {
+            code: s.custom_code ?? '',
+            dataset_id: result.dataset_name,
+            side: s.side,
+            stop_loss: s.stop_loss,
+            take_profit: s.take_profit,
+            initial_capital: s.initial_capital,
+            commission: s.commission,
+            slippage: s.slippage,
+          },
+        },
+      });
+      return;
+    }
     let config: {
       initial_capital?: number;
       risk_per_trade?: number;
@@ -259,7 +280,9 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           <div className="meta-row">
             <span className="mono">{result.dataset_name}</span>
             <span>{result.created_at?.slice(0, 19).replace('T', ' ')} UTC</span>
-            {result.parser === 'llm' ? (
+            {isCustom ? (
+              <span className="tag llm">Python</span>
+            ) : result.parser === 'llm' ? (
               <span className="tag llm">LLM parser</span>
             ) : (
               <span className="tag">Built-in parser</span>
@@ -420,6 +443,12 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
               ) : null}
             </section>
           </div>
+          {isCustom ? (
+            <section className="panel">
+              <h2>Strategy code</h2>
+              <pre className="code-block">{result.strategy.custom_code}</pre>
+            </section>
+          ) : null}
           <section className="panel">
             <h2>Price & trades</h2>
             <PriceTradeChart prices={result.price_series} markers={result.markers} />

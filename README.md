@@ -7,7 +7,10 @@
 ## Features
 
 - Natural-language strategy input with a **built-in parser** (works offline) and optional OpenAI-compatible LLM
-- Strict Pydantic strategy specifications — no arbitrary code execution
+- Strict Pydantic strategy specifications; LLM output is validated JSON, never executed
+- **Python strategies** (`/code`): write `strategy(df)` returning entry, exit and an optional per-entry size. Runs in a sandboxed child process through the same engine and every overfitting check; a look-ahead guard rejects code whose past signals change when future bars are removed
+- **Standalone export**: any run downloads as one `.py` file (numpy + pandas only) that reproduces the site's trades on your CSV, tested to match the engine exactly
+- **Export everything**: trades CSV, equity CSV, result JSON per run, and the full history as one JSON archive
 - Custom bar-by-bar backtesting engine
 - Risk engine: position sizing, stops, exposure, cash, leverage, costs, slippage
 - CSV upload with validation
@@ -75,6 +78,35 @@ Commission is a fraction of fill notional. Slippage worsens the fill (higher for
 
 **Side:** long (default) or short. A short sells at the next open, holds a cash credit plus a liability marked to market, and covers on the exit rule, a stop above entry, or a take-profit below it.
 
+## Python strategies
+
+Open **Python** in the sidebar (`/code`) and define one function:
+
+```python
+def strategy(df):
+    # df: date, open, high, low, close, volume
+    fast, slow = ta.ema(df["close"], 20), ta.ema(df["close"], 50)
+    trend_up = fast > slow
+    entry = trend_up & ~trend_up.shift(1, fill_value=False)
+    exit = ~trend_up
+    size = (0.02 / (ta.atr(df, 14) / df["close"])).clip(0.1, 1.0)  # volatility targeting
+    return entry, exit, size          # size is optional: 0..1 of equity per entry
+```
+
+Available: `np`, `pd`, `math`, and `ta.sma / ema / rsi / atr / macd / bollinger / vwap / obv` (the engine's own indicators). Stops, take-profit, direction, costs and capital are set in the form; the engine applies them exactly as for plain-English rules.
+
+**Sandbox.** The code runs in a separate `python -I` process with a stripped environment, a 20 s timeout, restricted builtins, imports limited to numpy/pandas/math, and AST checks that block dunder access, file/format I/O and pandas string dispatch (`df.agg("to_csv")`). On Linux the child also gets memory, CPU, file-size and process limits. Results come back as plain JSON and raw floats; the parent never unpickles child output. This is defence in depth, not a hard security boundary: on a public multi-tenant server, run the API in a container (the provided Docker setup) or set `ALLOW_CUSTOM_CODE=false`.
+
+**Look-ahead guard.** Every run reruns the function on the first 50% and 80% of the history. If any signal on those bars changes, the code read the future (`shift(-1)`, whole-series max/mean, centered windows) and the run is rejected with the first offending bar.
+
+## No lock-in
+
+Quantify is MIT-licensed ([LICENSE](LICENSE)), and nothing you build in it is trapped in it:
+
+- **Self-host the whole thing**: `docker compose up --build` (see [Docker Compose](#docker-compose-dev-overlay)) or the plain backend/frontend commands below. No account, no license key, no telemetry you can't turn off.
+- **Take your strategies**: the Standalone Python export runs with only numpy and pandas (`python strategy.py prices.csv --trades trades.csv`) and matches the site's trades; rule strategies also export to Pine Script v5.
+- **Take your results**: per-run trades CSV, equity CSV and JSON; **Results → Export all (JSON)** downloads every saved run with trades, equity curves and specs (`GET /api/backtests/export-all`).
+
 ## Project structure
 
 ```
@@ -126,6 +158,7 @@ npm install
 | `DATABASE_URL` | SQLAlchemy URL (default SQLite) |
 | `CORS_ORIGINS` | Allowed frontend origins |
 | `FORCE_BUILTIN_PARSER` | Force built-in parser even if a key is set |
+| `ALLOW_CUSTOM_CODE` | `true` by default; `false` turns off Python strategies on this server |
 
 Never commit real secrets. `.env` / `.env.production` are gitignored. Full key guide: [DEPLOY.md](DEPLOY.md).
 
@@ -258,7 +291,11 @@ Buy when price closes below the lower Bollinger Band and sell when it crosses ab
 | POST | `/api/parse-strategy` | NL → StrategySpec |
 | POST | `/api/backtest` | Parse + run + save |
 | GET | `/api/backtests` | History |
+| GET | `/api/backtests/export-all` | Every saved run of this browser as one JSON archive |
 | GET | `/api/backtests/{id}` | Full result |
+| GET | `/api/backtests/{id}/export/{pine\|python}` | Pine Script or standalone Python file |
+| GET | `/api/python-strategy` | Python template and whether code runs on this server |
+| POST | `/api/python-strategy/check` | Static checks on code (nothing executed) |
 | POST | `/api/data/upload` | Upload CSV |
 | GET | `/api/datasets` | List datasets |
 
@@ -281,4 +318,4 @@ pytest -q
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).

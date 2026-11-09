@@ -33,6 +33,7 @@ def test_python_export():
     py_code = generate_python_script(parsed.strategy)
 
     assert "import pandas as pd" in py_code
-    assert "def run_backtest" in py_code
-    assert "STRATEGY_SPEC" in py_code
+    assert "def backtest" in py_code
+    assert "SPEC = " in py_code
+    compile(py_code, "exported.py", "exec")
 

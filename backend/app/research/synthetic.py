@@ -17,6 +17,7 @@ import pandas as pd
 
 from app.backtesting.engine import BacktestEngine, BacktestError
 from app.llm.schemas import StrategySpec
+from app.strategies.sandbox import run_custom_batch
 
 MIN_BARS = 120
 PATHS = 100
@@ -93,10 +94,13 @@ def run_synthetic(
     sharpes: list[float] = []
     trades: list[int] = []
     holds: list[float] = []
-    for _ in range(paths):
-        frame = synthetic_path(df, rng, block)
+    frames = [synthetic_path(df, rng, block) for _ in range(paths)]
+    precomputed = (
+        run_custom_batch(strategy.custom_code or "", frames) if strategy.is_custom else [None] * len(frames)
+    )
+    for frame, signals in zip(frames, precomputed):
         try:
-            metrics = BacktestEngine(strategy).run(frame)["metrics"]
+            metrics = BacktestEngine(strategy).run(frame, signals=signals)["metrics"]
         except (BacktestError, ValueError):
             continue
         returns.append(float(metrics.get("total_return") or 0.0))

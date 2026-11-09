@@ -5,12 +5,14 @@ export interface StrategySpec {
   initial_capital: number;
   entry_conditions: unknown[];
   exit_conditions: unknown[];
+  custom_code?: string | null;
   entry_logic?: string;
   exit_logic?: string;
   risk: {
     risk_per_trade: number;
     max_position_pct?: number;
     max_portfolio_exposure?: number;
+    percent_capital?: number;
   };
   stop_loss: number | null;
   take_profit: number | null;

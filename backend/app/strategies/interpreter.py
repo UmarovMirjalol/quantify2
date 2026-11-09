@@ -144,6 +144,11 @@ def generate_signals(df: pd.DataFrame, strategy: StrategySpec) -> tuple[pd.Serie
     Signals at bar t use only data available at or before bar t.
     Execution is deferred to the next bar's open by the backtesting engine.
     """
+    if strategy.is_custom:
+        from app.strategies.sandbox import run_custom
+
+        custom = run_custom(strategy.custom_code or "", df)
+        return pd.Series(custom.entry, index=df.index), pd.Series(custom.exit, index=df.index)
     entry_parts = [evaluate_condition(df, c) for c in strategy.entry_conditions]
     exit_parts = [evaluate_condition(df, c) for c in strategy.exit_conditions]
     entries = combine_signals(entry_parts, strategy.entry_logic)
@@ -206,6 +211,11 @@ def validate_strategy_spec(strategy: StrategySpec) -> list[str]:
         errors.append("take_profit must be positive")
     if strategy.initial_capital <= 0:
         errors.append("initial_capital must be positive")
+    if strategy.is_custom:
+        from app.strategies.sandbox import validate_code
+
+        errors.extend(validate_code(strategy.custom_code or ""))
+        return errors
     if not strategy.entry_conditions:
         errors.append("At least one entry condition required")
     if not strategy.exit_conditions:

@@ -70,6 +70,8 @@ def _condition_to_pine(cond: Condition) -> str:
 
 def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> str:
     """Generate TradingView Pine Script v5 code from a StrategySpec."""
+    if strategy.is_custom:
+        raise ValueError("Pine Script cannot express arbitrary Python. Use the Python export instead.")
     strat_title = title or f"Quantify Strategy - {strategy.asset}"
     initial_cap = strategy.initial_capital
     commission_pct = (strategy.commission or 0.001) * 100.0

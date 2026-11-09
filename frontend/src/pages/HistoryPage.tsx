@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { listBacktests } from '../services/api';
+import { exportAllBacktests, listBacktests } from '../services/api';
 import type { BacktestSummary } from '../types';
+import { downloadText } from '../utils/download';
 
 function pct(v: number | null): string {
   if (v === null || v === undefined) return '—';
@@ -19,12 +20,26 @@ export function HistoryPage() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [picked, setPicked] = useState<number[]>([]);
+  const [archiving, setArchiving] = useState(false);
   const navigate = useNavigate();
 
   function togglePick(id: number) {
     setPicked((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-2),
     );
+  }
+
+  async function downloadArchive() {
+    setArchiving(true);
+    try {
+      const archive = await exportAllBacktests();
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadText(`quantify-archive-${stamp}.json`, JSON.stringify(archive, null, 2), 'application/json;charset=utf-8');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setArchiving(false);
+    }
   }
 
   useEffect(() => {
@@ -80,9 +95,22 @@ export function HistoryPage() {
             Runs saved for this browser. Search and sort, then open a row for charts and trades.
           </p>
         </div>
-        <Link className="btn primary" to="/app">
-          New Backtest
-        </Link>
+        <div className="btn-row">
+          {items.length > 0 ? (
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={downloadArchive}
+              disabled={archiving}
+              title="Every saved run with trades, equity curves and strategy specs as one JSON file"
+            >
+              {archiving ? 'Preparing…' : 'Export all (JSON)'}
+            </button>
+          ) : null}
+          <Link className="btn primary" to="/app">
+            New Backtest
+          </Link>
+        </div>
       </div>
 
       {loading ? (

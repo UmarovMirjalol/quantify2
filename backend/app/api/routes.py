@@ -47,10 +47,16 @@ from app.research.robustness import cost_breakeven, deflated_sharpe, parameter_h
 from app.research.stress import run_stress
 from app.research.verdict import build_verdict
 from app.research.walkforward import run_walk_forward
+from app.strategies.sandbox import TEMPLATE, SandboxError, run_custom, validate_code
 from app.stats_drift import daily_user_offset
 from app.stats_store import record_backtest, record_visitor, redis_counts, sqlite_counts
 
 router = APIRouter(prefix="/api")
+
+
+def _require_custom_code() -> None:
+    if not get_settings().allow_custom_code:
+        raise HTTPException(status_code=403, detail="Python strategies are disabled on this server.")
 
 
 def _truncate_strategy(text: str, limit: int = 96) -> str:
@@ -259,6 +265,23 @@ def strategy_playbook() -> dict[str, Any]:
     return {"items": PLAYBOOK, "count": len(PLAYBOOK)}
 
 
+@router.get("/python-strategy")
+def python_strategy_info() -> dict[str, Any]:
+    """Starter template and whether this server runs Python strategies."""
+    return {"enabled": get_settings().allow_custom_code, "template": TEMPLATE}
+
+
+class CheckCodeRequest(BaseModel):
+    code: str = Field(max_length=20_000)
+
+
+@router.post("/python-strategy/check")
+def python_strategy_check(body: CheckCodeRequest) -> dict[str, Any]:
+    """Static checks only (imports, banned names); nothing is executed."""
+    errors = validate_code(body.code)
+    return {"ok": not errors, "errors": errors}
+
+
 @router.get("/releases")
 def product_releases() -> dict[str, Any]:
     settings = get_settings()
@@ -445,9 +468,16 @@ async def api_run_backtest(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=404, detail=f"Dataset not found: {exc}") from exc
 
+    if strategy.is_custom:
+        _require_custom_code()
     try:
+        signals = None
+        if strategy.is_custom:
+            signals = run_custom(strategy.custom_code or "", data, check_lookahead=True)
         engine = BacktestEngine(strategy)
-        result = engine.run(data)
+        result = engine.run(data, signals=signals)
+    except SandboxError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except BacktestError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
@@ -514,6 +544,8 @@ async def api_run_portfolio_backtest(req: PortfolioBacktestRequest) -> dict[str,
     except StrategyParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     strategy = strategy.model_copy(update={"commission": req.commission, "slippage": req.slippage})
+    if strategy.is_custom:
+        _require_custom_code()
 
     loaded_datasets: dict[str, Any] = {}
     for ds_id in dict.fromkeys(req.datasets):
@@ -567,6 +599,28 @@ def api_list_backtests(
         )
         for r in rows
     ]
+
+
+@router.get("/backtests/export-all")
+def api_export_all_backtests(
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Every saved run of this browser with full results, as one JSON archive."""
+    scope = "" if client_id == "_anonymous" else client_id
+    rows = (
+        db.query(BacktestRecord)
+        .filter(BacktestRecord.client_id == scope)
+        .order_by(BacktestRecord.created_at.asc())
+        .all()
+    )
+    return {
+        "format": "quantify-archive",
+        "version": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(rows),
+        "backtests": [_backtest_payload(r, json.loads(r.results_json)) for r in rows],
+    }
 
 
 @router.get("/backtests/{backtest_id}")
@@ -651,6 +705,13 @@ def _research(backtest_id: int, db: Session, client_id: str, label: str, run: An
     try:
         strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
         data = load_dataset(record.dataset_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DataValidationError as exc:
+        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
+    if strategy.is_custom:
+        _require_custom_code()
+    try:
         return run(record, strategy, data)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -827,12 +888,15 @@ class ExportStrategyResponse(BaseModel):
 
 @router.post("/export", response_model=ExportStrategyResponse)
 def api_export_strategy(req: ExportStrategyRequest) -> ExportStrategyResponse:
-    if req.format == "pine":
-        code = generate_pine_script(req.strategy, title=req.title)
-        filename = f"{req.strategy.asset.lower()}_strategy.pine"
-    else:
-        code = generate_python_script(req.strategy, title=req.title)
-        filename = f"{req.strategy.asset.lower()}_bot.py"
+    try:
+        if req.format == "pine":
+            code = generate_pine_script(req.strategy, title=req.title)
+            filename = f"{req.strategy.asset.lower()}_strategy.pine"
+        else:
+            code = generate_python_script(req.strategy, title=req.title)
+            filename = f"{req.strategy.asset.lower()}_backtest.py"
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return ExportStrategyResponse(code=code, format=req.format, filename=filename)
 
 
@@ -856,12 +920,15 @@ def api_export_backtest(
         raise HTTPException(status_code=400, detail="Backtest record has no strategy spec")
     strategy = StrategySpec.model_validate(strategy_raw)
 
-    if format == "pine":
-        code = generate_pine_script(strategy, title=record.strategy_description)
-        filename = f"quantify_backtest_{backtest_id}.pine"
-    else:
-        code = generate_python_script(strategy, title=record.strategy_description)
-        filename = f"quantify_backtest_{backtest_id}.py"
+    try:
+        if format == "pine":
+            code = generate_pine_script(strategy, title=record.strategy_description)
+            filename = f"quantify_backtest_{backtest_id}.pine"
+        else:
+            code = generate_python_script(strategy, title=record.strategy_description)
+            filename = f"quantify_backtest_{backtest_id}.py"
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return ExportStrategyResponse(code=code, format=format, filename=filename)
 
 

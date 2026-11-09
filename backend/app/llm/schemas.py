@@ -320,8 +320,10 @@ class StrategySpec(BaseModel):
     timeframe: str = Field(default="1d", pattern=r"^(1m|5m|15m|1h|4h|1d|1w|1D)$")
     side: Side = Side.LONG
     initial_capital: float = Field(default=100_000.0, gt=0, le=1e9)
-    entry_conditions: list[Condition] = Field(min_length=1, max_length=5)
-    exit_conditions: list[Condition] = Field(min_length=1, max_length=5)
+    entry_conditions: list[Condition] = Field(default_factory=list, max_length=5)
+    exit_conditions: list[Condition] = Field(default_factory=list, max_length=5)
+    # Python source defining strategy(df); replaces entry/exit conditions when set.
+    custom_code: str | None = Field(default=None, max_length=20_000)
     entry_logic: LogicOp = LogicOp.AND
     exit_logic: LogicOp = LogicOp.AND
     risk: RiskConfig = Field(default_factory=RiskConfig)
@@ -349,7 +351,15 @@ class StrategySpec(BaseModel):
                 pass
         if len(self.entry_conditions) + len(self.exit_conditions) > 8:
             raise ValueError("Strategy too complex: max 8 total conditions for MVP")
+        if self.custom_code is not None and not self.custom_code.strip():
+            self.custom_code = None
+        if self.custom_code is None and (not self.entry_conditions or not self.exit_conditions):
+            raise ValueError("Strategy needs at least one entry and one exit condition")
         return self
+
+    @property
+    def is_custom(self) -> bool:
+        return bool(self.custom_code)
 
 
 class ParseStrategyRequest(BaseModel):

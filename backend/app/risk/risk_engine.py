@@ -66,9 +66,13 @@ class RiskEngine:
         portfolio: Portfolio,
         raw_price: float,
         short: bool = False,
+        fraction: float | None = None,
     ) -> RiskDecision:
         """
         Calculate how many shares to buy (long) or sell short.
+
+        ``fraction`` (0..1 of equity, from a Python strategy's size output) overrides the
+        configured sizing mode; position, exposure and leverage limits still apply.
 
         Risk-based example:
             capital=100_000, risk_per_trade=1%, stop_loss=2%
@@ -94,7 +98,10 @@ class RiskEngine:
         quantity = 0.0
         dollar_risk = None
 
-        if sizing == PositionSizing.FIXED:
+        if fraction is not None:
+            quantity = (equity * max(0.0, min(1.0, fraction))) / (fill_price * (1.0 + self.commission))
+
+        elif sizing == PositionSizing.FIXED:
             quantity = float(self.risk.fixed_shares or 100)
 
         elif sizing == PositionSizing.PERCENT_CAPITAL:

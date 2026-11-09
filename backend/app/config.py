@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     )
     max_upload_size_mb: int = 25
     force_builtin_parser: bool = False
+    # User-written Python strategies run in a sandboxed child process; set false to turn them off.
+    allow_custom_code: bool = True
     data_dir: str = str(DEFAULT_DATA_DIR)
     upload_dir: str = str(DEFAULT_UPLOAD_DIR)
     # Public live counters = baseline + daily drift + real activity.

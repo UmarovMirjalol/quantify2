@@ -54,6 +54,8 @@ def _with_threshold(strategy: StrategySpec, value: float) -> StrategySpec:
 
 def search_space(strategy: StrategySpec) -> tuple[list[str], list[dict[str, Any]]]:
     """Return parameter names and candidates as {label, params, spec, original}."""
+    if strategy.is_custom:
+        raise ValueError("The optimizer tunes visual rules. A Python strategy owns its parameters in code.")
     if not strategy.entry_conditions:
         raise ValueError("The strategy has no entry rule to tune.")
     cond = strategy.entry_conditions[0]

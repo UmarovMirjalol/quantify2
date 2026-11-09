@@ -1,163 +1,120 @@
-"""Python backtest script generator from StrategySpec."""
+"""Standalone Python backtest generator.
+
+The exported file needs only numpy and pandas. It carries Quantify's indicator module
+verbatim, the strategy (rules interpreter + spec, or the user's own ``strategy(df)``),
+and a compact copy of the engine with the same fill rules, so a run on the same CSV
+reproduces the site's trades without the site.
+"""
 
 from __future__ import annotations
 
-import json
+import re
+from pathlib import Path
+from pprint import pformat
+
 from app.llm.schemas import StrategySpec
 
+_HERE = Path(__file__).resolve().parent
+_INDICATORS = _HERE.parent / "backtesting" / "indicators.py"
+_MARKED = re.compile(r"# --- standalone:start ---\n(.*?)# --- standalone:end ---", re.S)
 
-def generate_python_script(strategy: StrategySpec, title: str | None = None) -> str:
-    """Generate standalone Python backtesting / bot script."""
-    strat_dict = strategy.model_dump()
-    strat_json = json.dumps(strat_dict, indent=4)
-    asset = strategy.asset
-    stop_loss = strategy.stop_loss
-    take_profit = strategy.take_profit
+_TA_SHIM = '''class ta:
+    """Same helpers the Quantify sandbox exposes to Python strategies."""
+    sma = staticmethod(sma)
+    ema = staticmethod(ema)
+    rsi = staticmethod(rsi)
+    macd = staticmethod(macd)
+    bollinger = staticmethod(bollinger_bands)
+    atr = staticmethod(atr)
+    vwap = staticmethod(vwap)
+    obv = staticmethod(obv)
+'''
 
-    script = f'''"""
-Quantify Trading Strategy Bot - {title or asset}
-Generated automatically by Quantify Platform.
-Requires: pandas, numpy
-Run: python strategy_bot.py --data market_data.csv
-"""
-
-import argparse
-import numpy as np
-import pandas as pd
-
-# Strategy configuration
-STRATEGY_SPEC = {strat_json}
-
-
-def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate all technical indicators and Price Action patterns."""
-    data = df.copy()
-    close = data["close"]
-    high = data["high"]
-    low = data["low"]
-    open_ = data["open"]
-    volume = data["volume"]
-
-    # Basic moving averages
-    data["sma_20"] = close.rolling(20).mean()
-    data["sma_50"] = close.rolling(50).mean()
-    data["ema_12"] = close.ewm(span=12, adjust=False).mean()
-    data["ema_26"] = close.ewm(span=26, adjust=False).mean()
-
-    # RSI (14)
-    delta = close.diff()
-    gain = delta.clip(lower=0.0)
-    loss = (-delta).clip(lower=0.0)
-    avg_gain = gain.ewm(alpha=1/14, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/14, adjust=False).mean()
-    rs = avg_gain / avg_loss.replace(0, np.nan)
-    data["rsi_14"] = 100 - (100 / (1 + rs))
-
-    # MACD
-    data["macd_line"] = data["ema_12"] - data["ema_26"]
-    data["macd_signal"] = data["macd_line"].ewm(span=9, adjust=False).mean()
-
-    # VWAP
-    typical_price = (high + low + close) / 3.0
-    data["vwap"] = (typical_price * volume).cumsum() / volume.cumsum().replace(0, np.nan)
-
-    # OBV
-    direction = np.sign(close.diff()).fillna(0.0)
-    data["obv"] = (direction * volume).cumsum()
-
-    # Price Action: Pin-bar
-    total_range = high - low
-    body = (close - open_).abs()
-    lower_shadow = open_.combine(close, min) - low
-    upper_shadow = high - open_.combine(close, max)
-    data["bullish_pinbar"] = (
-        (total_range > 0)
-        & (lower_shadow >= 0.55 * total_range)
-        & (upper_shadow <= 0.25 * total_range)
-        & (body <= 0.35 * total_range)
-    ).astype(float)
-    data["bearish_pinbar"] = (
-        (total_range > 0)
-        & (upper_shadow >= 0.55 * total_range)
-        & (lower_shadow <= 0.25 * total_range)
-        & (body <= 0.35 * total_range)
-    ).astype(float)
-
-    # Price Action: Hammer
-    data["hammer"] = (
-        (total_range > 0)
-        & (lower_shadow >= 2.0 * body)
-        & (upper_shadow <= 0.25 * total_range)
-        & (body >= 0.05 * total_range)
-    ).astype(float)
-
-    return data
+_MAIN = '''
+def load_csv(path):
+    df = pd.read_csv(path)
+    df.columns = [str(c).strip().lower() for c in df.columns]
+    if "date" not in df.columns:
+        for alt in ("datetime", "timestamp", "time"):
+            if alt in df.columns:
+                df = df.rename(columns={alt: "date"})
+                break
+    if "volume" not in df.columns:
+        df["volume"] = 0.0
+    df["date"] = pd.to_datetime(df["date"])
+    return df.sort_values("date").reset_index(drop=True)
 
 
-def run_backtest(df: pd.DataFrame, initial_capital: float = {strategy.initial_capital:.1f}):
-    """Execute strategy simulation with risk management."""
-    data = calculate_indicators(df)
-    capital = initial_capital
-    position = 0
-    entry_price = 0.0
-    trades = []
-    equity_curve = [capital]
-
-    stop_pct = {stop_loss if stop_loss is not None else "None"}
-    take_pct = {take_profit if take_profit is not None else "None"}
-
-    for i in range(1, len(data)):
-        row = data.iloc[i]
-        prev = data.iloc[i - 1]
-        price = row["open"]  # Next-open fill
-
-        # Check existing position for SL/TP
-        if position > 0:
-            hit_stop = stop_pct is not None and row["low"] <= entry_price * (1.0 - stop_pct)
-            hit_take = take_pct is not None and row["high"] >= entry_price * (1.0 + take_pct)
-
-            if hit_stop or hit_take:
-                exit_price = entry_price * (1.0 - stop_pct) if hit_stop else entry_price * (1.0 + take_pct)
-                pnl = position * (exit_price - entry_price)
-                capital += position * exit_price
-                trades.append({{"type": "EXIT_BRACKET", "price": exit_price, "pnl": pnl}})
-                position = 0
-                entry_price = 0.0
-
-        equity = capital + position * row["close"]
-        equity_curve.append(equity)
-
-    total_return = (equity_curve[-1] - initial_capital) / initial_capital * 100.0
-    print(f"=== BACKTEST COMPLETE ===")
-    print(f"Initial Capital: ${{initial_capital:,.2f}}")
-    print(f"Final Capital:   ${{equity_curve[-1]:,.2f}}")
-    print(f"Total Return:    {{total_return:.2f}}%")
-    print(f"Trades count:    {{len(trades)}}")
+def run(df):
+    signals = strategy(df.copy())
+    entry, exit_ = (np.nan_to_num(np.asarray(s, dtype=float), nan=0.0) != 0 for s in signals[:2])
+    size = None
+    if len(signals) == 3 and signals[2] is not None:
+        size = np.clip(np.nan_to_num(np.broadcast_to(np.asarray(signals[2], dtype=float), len(df)), nan=0.0), 0.0, 1.0)
+    trades, equity = backtest(df, SPEC, entry, exit_, size)
+    return trades, equity, summarize(equity, trades, SPEC["initial_capital"])
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Quantify Strategy Bot Runner")
-    parser.add_argument("--data", type=str, default="sample_data.csv", help="Path to OHLCV CSV file")
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    parser.add_argument("csv", help="OHLCV CSV with date, open, high, low, close[, volume]")
+    parser.add_argument("--trades", help="optional path to write the trade list as CSV")
     args = parser.parse_args()
 
-    print(f"Loading data from {{args.data}}...")
-    try:
-        df = pd.read_csv(args.data)
-        run_backtest(df)
-    except FileNotFoundError:
-        print(f"File {{args.data}} not found. Generating synthetic demo data...")
-        dates = pd.date_range("2023-01-01", periods=100, freq="D")
-        np.random.seed(42)
-        close = 100.0 + np.cumsum(np.random.randn(100) * 1.5)
-        df_demo = pd.DataFrame({{
-            "date": dates,
-            "open": close + np.random.randn(100) * 0.5,
-            "high": close + np.random.rand(100) * 2.0,
-            "low": close - np.random.rand(100) * 2.0,
-            "close": close,
-            "volume": np.random.randint(1000, 50000, size=100),
-        }})
-        run_backtest(df_demo)
+    trades, equity, stats = run(load_csv(args.csv))
+    for key, value in stats.items():
+        shown = "n/a" if value is None else (f"{value:.4f}" if isinstance(value, float) else value)
+        print(f"{key:>18}: {shown}")
+    if args.trades:
+        pd.DataFrame(trades).to_csv(args.trades, index=False)
+        print(f"Trades written to {args.trades}")
 '''
-    return script
 
+
+def _marked(path: Path) -> str:
+    match = _MARKED.search(path.read_text(encoding="utf-8"))
+    if not match:
+        raise RuntimeError(f"standalone markers missing in {path.name}")
+    return match.group(1).rstrip() + "\n"
+
+
+def _indicator_source() -> str:
+    text = _INDICATORS.read_text(encoding="utf-8")
+    body = text.split("import pandas as pd", 1)[1]
+    return body.strip() + "\n"
+
+
+def generate_python_script(strategy: StrategySpec, title: str | None = None) -> str:
+    """Self-contained script: python script.py data.csv [--trades trades.csv]."""
+    spec = strategy.model_dump(mode="json")
+    code = spec.pop("custom_code", None)
+    name = (title or strategy.asset).replace('"""', "'''").strip().splitlines()[0][:120]
+
+    if code:
+        strategy_block = "# ---- your strategy (unchanged) ----\n" + code.rstrip() + "\n"
+    else:
+        strategy_block = (
+            "# ---- rule interpreter ----\n"
+            + _marked(_HERE / "standalone_rules.py")
+            + "\n\ndef strategy(df):\n"
+            + '    entry, exit_ = rule_signals(df, SPEC)\n'
+            + "    return entry, exit_\n"
+        )
+
+    parts = [
+        f'"""\nQuantify standalone backtest: {name}\n\n'
+        "Exported from Quantify. Needs only numpy and pandas; no account, no server.\n"
+        "Usage: python this_file.py prices.csv [--trades trades.csv]\n\n"
+        "Fill rules match the site: signals at the close of bar t fill at the open of bar t+1,\n"
+        "stops and takes are checked intrabar (stop first when both are touched), and every\n"
+        "fill pays the slippage and commission below.\n"
+        '"""\n',
+        "from __future__ import annotations\n\nimport argparse\nimport math\n\nimport numpy as np\nimport pandas as pd\n",
+        "\n# ---- strategy settings ----\nSPEC = " + pformat(spec, sort_dicts=False, width=100) + "\n",
+        "\n# ---- indicators (verbatim from Quantify) ----\n" + _indicator_source(),
+        "\n" + _TA_SHIM,
+        "\n" + strategy_block,
+        "\n# ---- engine ----\n" + _marked(_HERE / "standalone_engine.py"),
+        _MAIN,
+    ]
+    return "\n".join(parts)

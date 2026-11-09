@@ -4977,3 +4977,76 @@ h2 {
   background: var(--bg-input);
   color: var(--text);
 }
+
+.python-page .form-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim, #8b95a1);
+}
+
+.code-head .btn-row {
+  margin: 0;
+}
+
+.code-editor {
+  width: 100%;
+  min-height: 420px;
+  padding: 0.95rem;
+  background: #010203;
+  color: #c2cad4;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  tab-size: 4;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+}
+
+.code-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.check-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+}
+
+.error-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+}
+
+.python-help h3 {
+  margin: 1rem 0 0.35rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #8b95a1);
+}
+
+.python-help p {
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.python-help code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
