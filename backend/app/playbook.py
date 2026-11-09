@@ -132,6 +132,11 @@ PLAYBOOK: list[dict[str, Any]] = [
 
 RELEASES: list[dict[str, str]] = [
     {
+        "version": "0.21",
+        "title": "Price Action, Volume & Code Export",
+        "body": "TradingView Pine Script v5 & Python export, candlestick patterns (Hammer, Pin-bar, Engulfing), VWAP/OBV volume indicators, MTF intraday testing, and portfolio backtest.",
+    },
+    {
         "version": "0.20",
         "title": "Durable live counters",
         "body": "Upstash-backed visitor and backtest totals so public stats stay consistent on Vercel.",

@@ -6,6 +6,22 @@ import type { PlaybookItem } from '../types';
 
 const FALLBACK: PlaybookItem[] = [
   {
+    id: 'pinbar-support',
+    title: 'Pin-bar Rejection',
+    tag: 'Price Action',
+    blurb: 'Rejection candle signal with tight stop-loss and 2:1 profit target.',
+    text: 'Buy SPY when a Bullish Pin-bar pattern forms on daily chart.',
+    indicators: ['Pin-bar', 'Stop', 'TP'],
+  },
+  {
+    id: 'vwap-crossover',
+    title: 'VWAP Bounce',
+    tag: 'Volume Flow',
+    blurb: 'Trade alongside institutional volume-weighted benchmark.',
+    text: 'Buy when price crosses above VWAP and sell when price crosses below.',
+    indicators: ['VWAP', 'Volume'],
+  },
+  {
     id: 'sma-cross',
     title: 'SMA crossover',
     tag: 'Trend',
@@ -20,14 +36,6 @@ const FALLBACK: PlaybookItem[] = [
     blurb: 'Buy oversold, sell overbought — simple threshold rules.',
     text: 'Buy when RSI falls below 30 and sell when RSI rises above 70.',
     indicators: ['RSI'],
-  },
-  {
-    id: 'ema-stops',
-    title: 'EMA trend + stops',
-    tag: 'Trend',
-    blurb: '12/26 EMA cross with hard stop-loss and take-profit.',
-    text: 'Buy when the 12-day EMA crosses above the 26-day EMA.',
-    indicators: ['EMA', 'Stop'],
   },
 ];
 
