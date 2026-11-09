@@ -12,6 +12,7 @@ import {
 import { ExportButtons } from '../components/ExportButtons';
 import { KpiCard } from '../components/KpiCard';
 import { RegimeSplit } from '../components/RegimeSplit';
+import { Robustness } from '../components/Robustness';
 import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
 import type { BacktestResult } from '../types';
@@ -20,7 +21,16 @@ import { classifyRegimes } from '../utils/regimes';
 import { WalkForward } from '../components/WalkForward';
 import { downloadText, toCsv } from '../utils/download';
 
-type Tab = 'overview' | 'risk' | 'monte_carlo' | 'trades' | 'statistics' | 'stress' | 'regimes' | 'walk';
+type Tab =
+  | 'overview'
+  | 'risk'
+  | 'monte_carlo'
+  | 'trades'
+  | 'statistics'
+  | 'stress'
+  | 'regimes'
+  | 'walk'
+  | 'robust';
 
 function pct(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
@@ -56,6 +66,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'stress', label: 'Holdout' },
   { id: 'regimes', label: 'Regimes' },
   { id: 'walk', label: 'Walk-forward' },
+  { id: 'robust', label: 'Robustness' },
 ];
 
 export function ResultsView({ result }: { result: BacktestResult }) {
@@ -448,6 +459,12 @@ export function ResultsView({ result }: { result: BacktestResult }) {
       {tab === 'walk' ? (
         <div className="tab-pane" key="walk">
           <WalkForward backtestId={result.id} />
+        </div>
+      ) : null}
+
+      {tab === 'robust' ? (
+        <div className="tab-pane" key="robust">
+          <Robustness backtestId={result.id} />
         </div>
       ) : null}
 

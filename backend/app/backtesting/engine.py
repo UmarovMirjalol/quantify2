@@ -59,10 +59,16 @@ class BacktestEngine:
         markers: list[dict[str, Any]] = []
 
         n = len(df)
+        dates = list(pd.to_datetime(df["date"]).dt.to_pydatetime())
+        opens = df["open"].to_numpy(dtype=float)
+        highs = df["high"].to_numpy(dtype=float)
+        lows = df["low"].to_numpy(dtype=float)
+        closes = df["close"].to_numpy(dtype=float)
+        entry_flags = entry_signals.to_numpy(dtype=bool)
+        exit_flags = exit_signals.to_numpy(dtype=bool)
         for i in range(n):
-            row = df.iloc[i]
-            bar_date = pd.Timestamp(row["date"]).to_pydatetime()
-            o, h, l, c = float(row["open"]), float(row["high"]), float(row["low"]), float(row["close"])
+            bar_date = dates[i]
+            o, h, l, c = float(opens[i]), float(highs[i]), float(lows[i]), float(closes[i])
 
             # 1) Execute pending order from previous bar's signal at today's open
             if pending_order is not None:
@@ -100,7 +106,7 @@ class BacktestEngine:
 
             # 3) Generate new signal at close — queue for next bar open
             if i < n - 1:  # cannot execute after last bar
-                if not portfolio.position.is_open and bool(entry_signals.iloc[i]):
+                if not portfolio.position.is_open and entry_flags[i]:
                     decision = self.risk_engine.size_long_entry(portfolio, c)
                     if decision.allowed:
                         pending_order = Order(
@@ -113,7 +119,7 @@ class BacktestEngine:
                         pending_order.stop_loss_price = decision.stop_loss_price  # type: ignore[attr-defined]
                         pending_order.take_profit_price = decision.take_profit_price  # type: ignore[attr-defined]
                         entry_reason = "entry_signal"
-                elif portfolio.position.is_open and bool(exit_signals.iloc[i]):
+                elif portfolio.position.is_open and exit_flags[i]:
                     pending_order = Order(
                         side=OrderSide.SELL,
                         quantity=portfolio.position.quantity,
@@ -132,13 +138,13 @@ class BacktestEngine:
 
         price_series = [
             {
-                "date": pd.Timestamp(df.iloc[i]["date"]).isoformat(),
-                "open": float(df.iloc[i]["open"]),
-                "high": float(df.iloc[i]["high"]),
-                "low": float(df.iloc[i]["low"]),
-                "close": float(df.iloc[i]["close"]),
+                "date": pd.Timestamp(dates[i]).isoformat(),
+                "open": float(opens[i]),
+                "high": float(highs[i]),
+                "low": float(lows[i]),
+                "close": float(closes[i]),
             }
-            for i in range(len(df))
+            for i in range(n)
         ]
 
         equity_series = [

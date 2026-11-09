@@ -39,6 +39,7 @@ from app.llm.schemas import (
 from app.models.backtest import BacktestRecord
 from app.models.stats import Visitor
 from app.playbook import PLAYBOOK, RELEASES
+from app.research.robustness import cost_breakeven, deflated_sharpe, parameter_heatmap
 from app.research.stress import run_stress
 from app.research.walkforward import run_walk_forward
 from app.stats_drift import daily_user_offset
@@ -609,6 +610,42 @@ def api_backtest_walk_forward(
         raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Walk-forward failed: {exc}") from exc
+
+
+@router.get("/backtests/{backtest_id}/robustness")
+def api_backtest_robustness(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Deflated Sharpe over this browser's tries, cost break-even, and a parameter heatmap."""
+    record = _owned_backtest(db, backtest_id, client_id)
+    trials = (
+        db.query(BacktestRecord.sharpe_ratio)
+        .filter(
+            BacktestRecord.client_id == (record.client_id or ""),
+            BacktestRecord.dataset_name == record.dataset_name,
+        )
+        .all()
+    )
+    trial_sharpes = [float(row[0]) for row in trials if row[0] is not None]
+    if not trial_sharpes:
+        trial_sharpes = [float(record.sharpe_ratio or 0.0)]
+    try:
+        strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
+        data = load_dataset(record.dataset_name)
+        equity = [float(pt["equity"]) for pt in json.loads(record.results_json).get("equity_curve", [])]
+        return {
+            "deflated": deflated_sharpe(equity, trial_sharpes),
+            "costs": cost_breakeven(strategy, data),
+            "heatmap": parameter_heatmap(strategy, data),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DataValidationError as exc:
+        raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Robustness check failed: {exc}") from exc
 
 
 def _owned_backtest(db: Session, backtest_id: int, client_id: str) -> BacktestRecord:

@@ -9,6 +9,7 @@ import type {
   PublicStats,
   PulseItem,
   ReleaseItem,
+  RobustnessReport,
   StrategySpec,
   StressReport,
   WalkForwardReport,
@@ -157,6 +158,10 @@ export async function getStress(id: number): Promise<StressReport> {
 
 export async function getWalkForward(id: number): Promise<WalkForwardReport> {
   return request(`/api/backtests/${id}/walk-forward`);
+}
+
+export async function getRobustness(id: number): Promise<RobustnessReport> {
+  return request(`/api/backtests/${id}/robustness`);
 }
 
 export async function getLLMStatus(): Promise<LLMStatus> {

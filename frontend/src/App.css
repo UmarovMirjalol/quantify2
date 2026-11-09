@@ -4498,6 +4498,85 @@ h2 {
   gap: 0.4rem;
 }
 
+.robust-block {
+  margin-top: 0.85rem;
+}
+
+.robust-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin-top: 0.75rem;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.cost-curve {
+  width: 100%;
+  height: 110px;
+  margin-top: 0.85rem;
+}
+
+.cost-curve path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.cost-curve line {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.cost-curve .zero {
+  stroke: var(--border-strong);
+}
+
+.cost-curve .current {
+  stroke: var(--text-secondary);
+  stroke-dasharray: 3 3;
+}
+
+.cost-curve .breakeven {
+  stroke: var(--negative);
+}
+
+.heat-wrap {
+  overflow-x: auto;
+  margin-top: 0.85rem;
+}
+
+.heat-grid {
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: 12px;
+}
+
+.heat-grid th {
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: 0.2rem 0.4rem;
+  text-align: center;
+}
+
+.heat-grid td {
+  min-width: 46px;
+  height: 32px;
+  text-align: center;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.heat-grid td.chosen {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
+.heat-grid td.heat-empty {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .walk-folds {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -16,6 +16,10 @@
 - Holdout audit: same rules on the unseen last 30% of bars, plus a nearby-parameter Sharpe check
 - Regime split: trade profit above and below a causal moving average
 - Walk-forward: refit the entry parameter on past bars and score only the next unseen slice
+- Deflated Sharpe (Bailey & López de Prado): discounts the Sharpe for how many variants this browser tried on the same data
+- Cost break-even: the per-side cost at which total return turns non-positive
+- Parameter heatmap: Sharpe across every fast × slow crossover pair, with a plateau-or-peak verdict
+- Engine loop runs on NumPy arrays (~90× faster than row-wise pandas), which keeps grid sweeps interactive
 - SQLite backtest history
 - Live landing counters (users / backtests / releases) that update as people visit and run tests
 - Strategy playbook gallery with deep-links into the workspace

@@ -95,6 +95,43 @@ export interface MonteCarloResult {
   error?: string;
 }
 
+export interface RobustnessReport {
+  deflated: {
+    verdict: 'survives' | 'weak' | 'luck' | 'thin';
+    headline: string;
+    trials: number;
+    sharpe: number | null;
+    expected_max_sharpe: number | null;
+    probability: number | null;
+  };
+  costs: {
+    verdict: 'no_edge' | 'room' | 'gone' | 'thin';
+    headline: string;
+    current_cost: number;
+    breakeven: number | null;
+    points: { cost: number; total_return: number | null }[];
+  };
+  heatmap:
+    | { available: false; headline: string }
+    | {
+        available: true;
+        indicator: string;
+        fast_values: number[];
+        slow_values: number[];
+        chosen: { fast: number; slow: number };
+        cells: {
+          fast: number;
+          slow: number;
+          sharpe: number | null;
+          total_return: number | null;
+          chosen: boolean;
+        }[];
+        verdict: 'plateau' | 'peak' | 'no_edge';
+        headline: string;
+        neighbor_share: number | null;
+      };
+}
+
 export interface WalkForwardFold {
   fold: number;
   parameter: string | null;

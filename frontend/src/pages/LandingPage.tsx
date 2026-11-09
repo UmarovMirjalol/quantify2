@@ -534,6 +534,9 @@ export function LandingPage() {
             { k: 'Holdout audit', d: 'Same rules on the unseen tail, plus nearby parameters' },
             { k: 'Regime split', d: 'Profit above the moving average, and profit below it' },
             { k: 'Walk-forward', d: 'Refit the parameter on the past, score only the next slice' },
+            { k: 'Deflated Sharpe', d: 'Discounts the Sharpe for every variant you already tried' },
+            { k: 'Cost break-even', d: 'The fee level at which the edge disappears' },
+            { k: 'Parameter heatmap', d: 'Plateau or lucky spike, across every fast × slow pair' },
           ].map((m, i) => (
             <div key={m.k} style={{ ['--i' as string]: i }}>
               <strong>{m.k}</strong>
