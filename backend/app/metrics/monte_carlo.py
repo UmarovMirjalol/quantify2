@@ -91,3 +91,4 @@ def run_monte_carlo_simulation(
         "confidence_95_upper": round(p95_return, 4),
         "fan_chart": percentiles_over_time,
     }
+

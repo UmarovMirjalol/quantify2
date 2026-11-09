@@ -9,3 +9,4 @@ def test_normalize_symbol():
     assert _normalize_symbol("SOLUSDT") == ("SOLUSDT", "SOL-USD")
     assert _normalize_symbol("SPY") == ("SPYUSDT", "SPY")
     assert _normalize_symbol("AAPL") == ("AAPLUSDT", "AAPL")
+

@@ -126,3 +126,4 @@ def fetch_and_save_market_data(
         "date_start": str(df["date"].iloc[0]),
         "date_end": str(df["date"].iloc[-1]),
     }
+

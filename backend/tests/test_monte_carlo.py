@@ -28,3 +28,4 @@ def test_monte_carlo_with_trades():
     assert "fan_chart" in res
     assert len(res["fan_chart"]["p50"]) > 0
     assert len(res["fan_chart"]["steps"]) > 0
+
