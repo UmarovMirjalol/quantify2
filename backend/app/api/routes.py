@@ -15,11 +15,13 @@ from sqlalchemy.orm import Session
 from app.config import UPLOAD_DIR, get_settings
 from app.database import get_db
 from app.data.loader import list_available_datasets, load_dataset
+from app.data.market_fetcher import fetch_and_save_market_data
 from app.data.validators import DataValidationError, load_ohlcv_bytes
 from app.backtesting.engine import BacktestEngine, BacktestError
 from app.backtesting.portfolio_engine import PortfolioBacktestEngine
 from app.export.pine_generator import generate_pine_script
 from app.export.python_generator import generate_python_script
+from app.metrics.monte_carlo import run_monte_carlo_simulation
 from app.llm.client import LLMClient
 from app.llm.parser import StrategyParseError, parse_strategy
 from app.llm.runtime_config import (
@@ -374,6 +376,19 @@ async def api_upload_data(file: UploadFile = File(...)) -> dict[str, Any]:
     }
 
 
+class FetchMarketDataRequest(BaseModel):
+    ticker: str = Field(min_length=1, max_length=20, default="BTCUSDT")
+    interval: str = Field(default="1d", pattern=r"^(5m|15m|1h|4h|1d|1D)$")
+
+
+@router.post("/market/fetch")
+def api_fetch_market_data(req: FetchMarketDataRequest) -> dict[str, Any]:
+    try:
+        return fetch_and_save_market_data(req.ticker, interval=req.interval)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/backtest")
 async def api_run_backtest(
     body: BacktestRequest,
@@ -612,3 +627,26 @@ def api_export_backtest(
         code = generate_python_script(strategy, title=record.strategy_description)
         filename = f"quantify_backtest_{backtest_id}.py"
     return ExportStrategyResponse(code=code, format=format, filename=filename)
+
+
+@router.get("/backtests/{backtest_id}/monte-carlo")
+def api_get_monte_carlo(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    record = db.query(BacktestRecord).filter(BacktestRecord.id == backtest_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    scope = "" if client_id == "_anonymous" else client_id
+    if (record.client_id or "") != scope:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+
+    results = json.loads(record.results_json)
+    if "monte_carlo" in results and results["monte_carlo"].get("num_simulations", 0) > 0:
+        return results["monte_carlo"]
+
+    trades = results.get("trades", [])
+    config = json.loads(record.config_json)
+    initial_cap = float(config.get("initial_capital", 100_000.0))
+    return run_monte_carlo_simulation(trades, initial_capital=initial_cap)

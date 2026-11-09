@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  fetchMarketData,
   getPlaybook,
   listDatasets,
   parseStrategy,
@@ -107,6 +108,27 @@ export function HomePage({ health }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [errorKind, setErrorKind] = useState<'run' | 'load' | 'upload' | 'form'>('run');
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
+  const [fetchingMarket, setFetchingMarket] = useState(false);
+  const [fetchMsg, setFetchMsg] = useState<string | null>(null);
+
+  async function handleFetchTicker(ticker: string) {
+    setFetchingMarket(true);
+    setFetchMsg(null);
+    setError(null);
+    try {
+      const res = await fetchMarketData(ticker);
+      const items = await listDatasets();
+      setDatasets(items);
+      setDatasetId(res.dataset_id);
+      setFetchMsg(`Loaded ${res.rows} bars for ${ticker} (${res.source})!`);
+    } catch (err) {
+      setErrorKind('load');
+      setError(err instanceof Error ? err.message : 'Failed to fetch market data');
+    } finally {
+      setFetchingMarket(false);
+    }
+  }
+
   const [parse, setParse] = useState<ParseState>({
     status: 'idle',
     strategy: null,
@@ -383,6 +405,42 @@ export function HomePage({ health }: Props) {
               All →
             </Link>
           </div>
+
+          <div
+            className="live-data-bar"
+            style={{
+              margin: '0.8rem 0 0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>
+              ⚡ 1-Click Live Market:
+            </span>
+            {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL'].map((sym) => (
+              <button
+                key={sym}
+                type="button"
+                className="chip"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.5rem',
+                  borderColor: 'rgba(79, 214, 160, 0.35)',
+                }}
+                disabled={loading || fetchingMarket}
+                onClick={() => handleFetchTicker(sym)}
+              >
+                {fetchingMarket ? '...' : sym}
+              </button>
+            ))}
+          </div>
+          {fetchMsg ? (
+            <div className="banner ok" style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', margin: '0.4rem 0' }}>
+              {fetchMsg}
+            </div>
+          ) : null}
 
           <div className="param-grid">
             <label className="field">

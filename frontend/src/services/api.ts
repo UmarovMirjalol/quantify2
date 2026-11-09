@@ -92,6 +92,21 @@ export async function uploadDataset(file: File): Promise<{
   return request('/api/data/upload', { method: 'POST', body: form });
 }
 
+export async function fetchMarketData(ticker: string, interval = '1d'): Promise<{
+  dataset_id: string;
+  name: string;
+  rows: number;
+  source: string;
+  date_start: string;
+  date_end: string;
+}> {
+  return request('/api/market/fetch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticker, interval }),
+  });
+}
+
 export async function parseStrategy(payload: {
   text: string;
   initial_capital?: number;

@@ -304,3 +304,82 @@ export function ExposureChart({ data }: { data: EquityPoint[] }) {
     />
   );
 }
+
+export function MonteCarloChart({
+  fanChart,
+}: {
+  fanChart: {
+    p5: number[];
+    p25: number[];
+    p50: number[];
+    p75: number[];
+    p95: number[];
+    steps: number[];
+  };
+}) {
+  const { p5, p25, p50, p75, p95, steps } = fanChart;
+  if (!steps?.length) return null;
+
+  const traces: Record<string, unknown>[] = [
+    {
+      x: steps,
+      y: p95,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: 'rgba(79, 214, 160, 0.35)', width: 1.2 },
+      name: '95th Percentile (Optimistic)',
+      hovertemplate: 'Step %{x}: $%{y:,.0f}<extra>95% Best</extra>',
+    },
+    {
+      x: steps,
+      y: p75,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: 'rgba(79, 214, 160, 0.65)', width: 1.5 },
+      name: '75th Percentile',
+      hovertemplate: 'Step %{x}: $%{y:,.0f}<extra>75%</extra>',
+    },
+    {
+      x: steps,
+      y: p50,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#4fd6a0', width: 2.2 },
+      name: '50th Percentile (Median)',
+      hovertemplate: 'Step %{x}: $%{y:,.0f}<extra>Median</extra>',
+    },
+    {
+      x: steps,
+      y: p25,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: 'rgba(255, 193, 74, 0.7)', width: 1.5 },
+      name: '25th Percentile',
+      hovertemplate: 'Step %{x}: $%{y:,.0f}<extra>25%</extra>',
+    },
+    {
+      x: steps,
+      y: p5,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#ff6b7a', width: 1.8 },
+      name: '5th Percentile (Worst-case)',
+      hovertemplate: 'Step %{x}: $%{y:,.0f}<extra>5% Worst</extra>',
+    },
+  ];
+
+  return (
+    <Plot
+      data={traces as any}
+      layout={{
+        ...layoutBase,
+        height: 320,
+        xaxis: { ...layoutBase.xaxis, title: 'Trade Step (Resampled)' },
+        yaxis: { ...layoutBase.yaxis, tickprefix: '$' },
+      }}
+      config={{ displayModeBar: false, responsive: true }}
+      style={{ width: '100%' }}
+      useResizeHandler
+    />
+  );
+}

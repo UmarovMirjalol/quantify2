@@ -75,6 +75,26 @@ export interface PriceBar {
   close: number;
 }
 
+export interface MonteCarloResult {
+  num_simulations: number;
+  num_trades: number;
+  risk_of_ruin: number;
+  worst_drawdown_p95: number;
+  median_return: number;
+  median_final_equity: number;
+  confidence_95_lower: number;
+  confidence_95_upper: number;
+  fan_chart: {
+    p5: number[];
+    p25: number[];
+    p50: number[];
+    p75: number[];
+    p95: number[];
+    steps: number[];
+  };
+  error?: string;
+}
+
 export interface BacktestResult {
   id: number;
   parser: string;
@@ -92,6 +112,7 @@ export interface BacktestResult {
   total_commission?: number;
   total_slippage?: number;
   execution_convention?: string;
+  monte_carlo?: MonteCarloResult;
 }
 
 export interface ExportResult {

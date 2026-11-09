@@ -5,6 +5,7 @@ import {
   EquityChart,
   ExposureChart,
   MonthlyReturnsChart,
+  MonteCarloChart,
   PriceTradeChart,
   ReturnsDistributionChart,
 } from '../components/Charts';
@@ -15,7 +16,7 @@ import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
 import { downloadText, toCsv } from '../utils/download';
 
-type Tab = 'overview' | 'risk' | 'trades' | 'statistics';
+type Tab = 'overview' | 'risk' | 'monte_carlo' | 'trades' | 'statistics';
 
 function pct(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
@@ -45,6 +46,7 @@ function toneFor(v: number | null | undefined): 'positive' | 'negative' | 'neutr
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'risk', label: 'Risk' },
+  { id: 'monte_carlo', label: '🎲 Monte Carlo' },
   { id: 'trades', label: 'Trades' },
   { id: 'statistics', label: 'Statistics' },
 ];
@@ -345,6 +347,63 @@ export function ResultsView({ result }: { result: BacktestResult }) {
             <KpiCard label="Max Drawdown" value={pct(m.max_drawdown)} tone="negative" />
             <KpiCard label="Sortino" value={num(m.sortino_ratio)} />
           </section>
+        </div>
+      ) : null}
+
+      {tab === 'monte_carlo' ? (
+        <div className="tab-pane" key="monte_carlo">
+          {result.monte_carlo && result.monte_carlo.num_simulations > 0 ? (
+            <>
+              <section className="kpi-grid">
+                <KpiCard
+                  label="Risk of Ruin (>40% DD)"
+                  value={pct(result.monte_carlo.risk_of_ruin)}
+                  tone={
+                    result.monte_carlo.risk_of_ruin === 0
+                      ? 'positive'
+                      : result.monte_carlo.risk_of_ruin > 0.1
+                        ? 'negative'
+                        : 'neutral'
+                  }
+                  hint="Simulated severe drawdown risk"
+                />
+                <KpiCard
+                  label="95% Worst Drawdown"
+                  value={pct(result.monte_carlo.worst_drawdown_p95)}
+                  tone="negative"
+                  hint="Pessimistic stress outcome"
+                />
+                <KpiCard
+                  label="Median Return"
+                  value={pct(result.monte_carlo.median_return)}
+                  tone={toneFor(result.monte_carlo.median_return)}
+                  hint="50th percentile expectation"
+                />
+                <KpiCard
+                  label="95% Confidence Band"
+                  value={`${pct(result.monte_carlo.confidence_95_lower)} … ${pct(result.monte_carlo.confidence_95_upper)}`}
+                  hint="Expected return range"
+                />
+              </section>
+
+              <section className="panel">
+                <div className="page-header" style={{ marginBottom: '0.75rem' }}>
+                  <div>
+                    <h2 style={{ margin: 0 }}>Monte Carlo Fan Chart (1,000 Resamplings)</h2>
+                    <p className="hint">
+                      Simulates 1,000 alternative market paths by randomly permuting your trade outcomes.
+                    </p>
+                  </div>
+                </div>
+                <MonteCarloChart fanChart={result.monte_carlo.fan_chart} />
+              </section>
+            </>
+          ) : (
+            <div className="banner warn">
+              {result.monte_carlo?.error ||
+                'At least 3 closed trades are required to run Monte Carlo stress simulations.'}
+            </div>
+          )}
         </div>
       ) : null}
 
