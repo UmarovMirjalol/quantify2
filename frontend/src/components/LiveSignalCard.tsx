@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { refreshLiveSignal } from '../services/api';
 import type { LiveSignal } from '../types';
+import { price } from '../utils/signal';
 
 const TONE: Record<LiveSignal['action'], string> = {
   enter: 'holds',
@@ -32,11 +33,6 @@ function detail(s: LiveSignal): string {
   if (s.action === 'add') return 'The entry rule fired again while in a position, and pyramiding allows another entry.';
   if (s.action === 'hold') return 'In a position and no exit rule fired on the latest close. Stops and targets still apply intrabar.';
   return 'No position and no entry signal on the latest close. Nothing to do until the rule fires.';
-}
-
-function price(v: number | null | undefined): string {
-  if (v == null) return '—';
-  return v.toLocaleString(undefined, { maximumFractionDigits: v < 10 ? 4 : 2 });
 }
 
 export function LiveSignalCard({

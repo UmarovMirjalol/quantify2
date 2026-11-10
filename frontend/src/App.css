@@ -5144,3 +5144,144 @@ h2 {
   margin-top: 0.35rem;
   font-size: 0.78rem;
 }
+
+.sig-badge {
+  display: inline-block;
+  min-width: 3.4rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 650;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border);
+}
+
+.sig-buy {
+  color: #06120d;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.sig-sell {
+  color: #fff;
+  background: var(--negative);
+  border-color: var(--negative);
+}
+
+.sig-hold {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.sig-wait {
+  color: var(--text-muted);
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+.screener-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.screener-head h2 {
+  margin: 0;
+}
+
+.inline-check {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.data-table tr.row-active td {
+  background: rgba(79, 214, 160, 0.06);
+}
+
+.forward-name {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discover-split {
+  margin-top: 0.6rem !important;
+  font-size: 0.8rem;
+}
+
+.discover .data-table td .hint {
+  max-width: 340px;
+  white-space: normal;
+  font-size: 0.72rem;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.tool-card h2 {
+  margin-top: 0;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.6rem 0.9rem;
+  margin: 0.8rem 0;
+}
+
+.tool-outs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.tool-out {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tool-out span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.tool-out strong {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+}
+
+.recovery-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-top: 0.8rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.data-table.compact {
+  margin-top: 0.8rem;
+}

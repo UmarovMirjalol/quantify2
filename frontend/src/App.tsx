@@ -28,6 +28,14 @@ const PortfolioPage = lazy(() =>
   import('./pages/PortfolioPage').then((m) => ({ default: m.PortfolioPage })),
 );
 const PythonPage = lazy(() => import('./pages/PythonPage').then((m) => ({ default: m.PythonPage })));
+const ScreenerPage = lazy(() =>
+  import('./pages/ScreenerPage').then((m) => ({ default: m.ScreenerPage })),
+);
+const ForwardPage = lazy(() => import('./pages/ForwardPage').then((m) => ({ default: m.ForwardPage })));
+const DiscoverPage = lazy(() =>
+  import('./pages/DiscoverPage').then((m) => ({ default: m.DiscoverPage })),
+);
+const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })));
 const AccountPage = lazy(() =>
   import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })),
 );
@@ -218,6 +226,10 @@ export default function App() {
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/code" element={<PythonPage />} />
+          <Route path="/screener" element={<ScreenerPage />} />
+          <Route path="/forward" element={<ForwardPage />} />
+          <Route path="/discover" element={<DiscoverPage />} />
+          <Route path="/tools" element={<ToolsPage />} />
           <Route path="/r/:token" element={<ReportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/account" element={<AccountPage />} />

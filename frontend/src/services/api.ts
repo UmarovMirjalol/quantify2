@@ -3,8 +3,13 @@ import type {
   BacktestSummary,
   DatasetInfo,
   ExportResult,
+  DiscoveryResult,
+  ForwardDetail,
+  ForwardSummary,
   HealthStatus,
   LiveSignal,
+  ScreenerResult,
+  ScreenerUniverse,
   LLMStatus,
   OptimizerReport,
   PlaybookItem,
@@ -250,6 +255,56 @@ export async function getVerdict(id: number): Promise<VerdictReport> {
 
 export async function shareBacktest(id: number): Promise<{ token: string }> {
   return request(`/api/backtests/${id}/share`, { method: 'POST' });
+}
+
+const json = (body: unknown): RequestInit => ({
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+export async function listScreenerUniverses(): Promise<ScreenerUniverse[]> {
+  return request('/api/screener/universes');
+}
+
+export async function runScreener(payload: {
+  strategy_text?: string;
+  strategy?: StrategySpec;
+  universe?: string | null;
+  tickers?: string[];
+  history?: string;
+}): Promise<ScreenerResult> {
+  return request('/api/screener', json(payload));
+}
+
+export async function runDiscovery(dataset_id: string): Promise<DiscoveryResult> {
+  return request('/api/discover', json({ dataset_id }));
+}
+
+export async function createForwardTest(payload: {
+  backtest_id?: number;
+  strategy_text?: string;
+  strategy?: StrategySpec;
+  ticker?: string;
+  name?: string;
+}): Promise<ForwardDetail> {
+  return request('/api/forward', json(payload));
+}
+
+export async function listForwardTests(): Promise<ForwardSummary[]> {
+  return request('/api/forward');
+}
+
+export async function getForwardTest(id: number): Promise<ForwardDetail> {
+  return request(`/api/forward/${id}`);
+}
+
+export async function refreshForwardTest(id: number): Promise<ForwardDetail> {
+  return request(`/api/forward/${id}/refresh`, { method: 'POST' });
+}
+
+export async function deleteForwardTest(id: number): Promise<{ deleted: boolean }> {
+  return request(`/api/forward/${id}`, { method: 'DELETE' });
 }
 
 export async function refreshLiveSignal(id: number): Promise<LiveSignal> {

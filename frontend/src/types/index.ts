@@ -443,3 +443,112 @@ export interface PulseItem {
   created_at: string;
   sample: boolean;
 }
+
+export interface ScreenerRow {
+  ticker: string;
+  symbol: string;
+  source: string;
+  bars: number;
+  start: string;
+  action: LiveSignal['action'];
+  in_position: boolean;
+  as_of: string;
+  last_close: number;
+  change_1d: number | null;
+  entry_price: number | null;
+  entry_date: string | null;
+  unrealized_pct: number;
+  total_return: number | null;
+  buy_hold_return: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+  win_rate: number | null;
+  trades: number;
+}
+
+export interface ScreenerResult {
+  rows: ScreenerRow[];
+  failed: { ticker: string; error: string }[];
+  counts: Record<LiveSignal['action'], number>;
+  scanned: number;
+  history: string;
+  side: 'long' | 'short';
+  strategy: StrategySpec;
+}
+
+export interface ScreenerUniverse {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface DiscoveryScore {
+  sharpe_ratio: number | null;
+  total_return: number | null;
+  max_drawdown: number | null;
+  trades: number;
+}
+
+export interface DiscoveryCandidate {
+  family: string;
+  label: string;
+  text: string;
+  train: DiscoveryScore;
+  test: DiscoveryScore | null;
+  passes: boolean;
+  beats_hold_test: boolean;
+  strategy: StrategySpec;
+}
+
+export interface DiscoveryResult {
+  dataset_id: string;
+  asset: string;
+  live_ticker: string | null;
+  tried: number;
+  eligible: number;
+  verdict: 'found' | 'mixed' | 'none' | 'thin';
+  headline: string;
+  split: {
+    train_bars: number;
+    test_bars: number;
+    train_start: string;
+    train_end: string;
+    test_start: string;
+    test_end: string;
+    train_hold: number;
+    test_hold: number;
+  };
+  candidates: DiscoveryCandidate[];
+  deflated: { verdict: string; probability: number | null; expected_max_sharpe: number | null } | null;
+}
+
+export interface ForwardSummary {
+  id: number;
+  name: string;
+  ticker: string;
+  strategy_text: string;
+  start_date: string;
+  start_close: number;
+  backtest_cagr: number | null;
+  backtest_sharpe: number | null;
+  created_at: string | null;
+  checked_at: string | null;
+  as_of: string | null;
+  days_live: number;
+  forward_return: number;
+  hold_return: number;
+  max_drawdown: number;
+  closed_trades: number;
+  action: LiveSignal['action'] | null;
+  in_position: boolean;
+}
+
+export interface ForwardDetail extends ForwardSummary {
+  bars_live: number;
+  win_rate: number | null;
+  trades: Trade[];
+  live_signal: LiveSignal;
+  equity: { date: string; equity: number }[];
+  hold: { date: string; equity: number }[];
+  strategy: StrategySpec;
+}

@@ -15,7 +15,12 @@ from app.data.validators import validate_ohlcv_dataframe
 
 def _normalize_symbol(ticker: str) -> tuple[str, str]:
     """Normalize input ticker into (binance_symbol, yahoo_symbol)."""
-    raw = ticker.strip().upper().replace("/", "").replace("-", "")
+    cleaned = ticker.strip().upper()
+    if any(ch in cleaned for ch in "-.^="):
+        # Already a Yahoo symbol: BRK-B, BTC-USD, ^GSPC, EURUSD=X.
+        base = cleaned.split("-")[0].replace(".", "").replace("^", "")
+        return f"{base}USDT", cleaned
+    raw = cleaned.replace("/", "")
     crypto_bases = {"BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "NEAR", "TON"}
     if raw in crypto_bases:
         return f"{raw}USDT", f"{raw}-USD"
@@ -111,15 +116,17 @@ def _binance_klines(symbol: str, interval: str, history: str) -> list[list[Any]]
     return klines[-wanted:]
 
 
-def fetch_and_save_market_data(
+def fetch_market_frame(
     ticker: str,
     interval: str = "1d",
     history: str = "10y",
-) -> dict[str, Any]:
-    """Fetch market data from Yahoo Finance / Binance and save as a dataset."""
+    yahoo_symbol: str | None = None,
+) -> tuple[pd.DataFrame, str]:
+    """Validated OHLCV bars and a source label, without writing a dataset file."""
     if history not in HISTORY_RANGES:
         history = "10y"
     binance_sym, yahoo_sym = _normalize_symbol(ticker)
+    yahoo_sym = yahoo_symbol or yahoo_sym
     df: pd.DataFrame | None = None
     source_used = "yahoo"
 
@@ -154,6 +161,18 @@ def fetch_and_save_market_data(
     validation = validate_ohlcv_dataframe(df)
     if not validation.valid:
         raise ValueError("; ".join(validation.errors))
+    return df.reset_index(drop=True), source_used
+
+
+def fetch_and_save_market_data(
+    ticker: str,
+    interval: str = "1d",
+    history: str = "10y",
+) -> dict[str, Any]:
+    """Fetch market data from Yahoo Finance / Binance and save as a dataset."""
+    if history not in HISTORY_RANGES:
+        history = "10y"
+    df, source_used = fetch_market_frame(ticker, interval=interval, history=history)
 
     clean_sym = ticker.strip().upper().replace("/", "_").replace("-", "_")
     filename = f"{clean_sym}_{interval}.csv" if history == "1y" else f"{clean_sym}_{interval}_{history}.csv"

@@ -14,6 +14,10 @@
 - **Position management**: trailing stop, up to three partial take-profits, stop-to-breakeven after the first partial exit, and pyramiding (up to 10 entries into one position). Set them in the form or just write "trailing stop 3%, take half at 5%, pyramid up to 3"; Pine and standalone Python exports reproduce them
 - **Long history**: one-click market data for 1, 5 or 10 years, or the full history (SPY daily back to 1993, BTC to 2014); 10 years by default
 - **Signal today**: every run ends with what the rules say now (flat or in a position, entry price, open P&L, stop/target, and the order for the next open); live-market runs refresh it with the latest bars in one click
+- **Screener** (`/screener`): run one rule across up to 40 tickers (US mega caps, ETFs, crypto or your own list) and see who gets a Buy/Sell at the next open today, ranked with Sharpe, return vs buy & hold and drawdown; one click backtests or tracks any row
+- **Discover** (`/discover`): tries 30 classic rule sets (MA crosses, Donchian, MACD, ADX, RSI, Bollinger, Stochastic) on an asset, ranks them on the first 70% of history only and shows which held up on the unseen 30%, with a Deflated-Sharpe luck check
+- **Forward tests** (`/forward`): freeze a strategy today and score it only on bars that arrive afterwards (paper trading); start from text, any live-market backtest or a screener row, compare with buy & hold and the backtest's CAGR
+- **Tools** (`/tools`): position size from stop distance, break-even win rate and expectancy for a reward:risk, Kelly fraction, drawdown recovery and compound growth
 - **More indicators**: Stochastic %K/%D, ADX and +DI/−DI, Donchian/turtle breakouts, all in plain English or Russian ("turtle breakout 55 days", "ADX above 25", "стохастик ниже 20"), exported to Pine (`ta.stoch`, `ta.dmi`, `ta.highest`) and standalone Python
 - **Accounts** (optional, username + password, no email): history follows you to any browser or device; runs you made before signing up move into the account
 - Custom bar-by-bar backtesting engine
@@ -318,6 +322,13 @@ Buy when price closes below the lower Bollinger Band and sell when it crosses ab
 | POST | `/api/python-strategy/check` | Static checks on code (nothing executed) |
 | POST | `/api/data/upload` | Upload CSV |
 | GET | `/api/datasets` | List datasets |
+| POST | `/api/backtests/{id}/live-signal` | Refetch latest bars and recompute today's signal |
+| GET | `/api/screener/universes` | Built-in ticker lists |
+| POST | `/api/screener` | One rule across many tickers: today's action + metrics |
+| POST | `/api/discover` | Try 30 classic rule sets, ranked in-sample, judged out-of-sample |
+| GET, POST | `/api/forward` | List / start forward tests (from text + ticker or a backtest) |
+| GET, DELETE | `/api/forward/{id}` | Forward test detail (auto-refreshed) / delete |
+| POST | `/api/forward/{id}/refresh` | Re-score with the latest bars |
 
 ## Tests
 

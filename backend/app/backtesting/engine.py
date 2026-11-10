@@ -15,6 +15,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from app.backtesting.orders import Order, OrderSide
@@ -51,10 +52,15 @@ class BacktestEngine:
         signals: CustomSignals | None = None,
         *,
         metrics_only: bool = False,
+        trade_from: int | None = None,
+        join_at_start: bool = False,
     ) -> dict[str, Any]:
         """``signals`` lets callers pass precomputed Python-strategy output (batched or checked).
 
         ``metrics_only`` skips the chart series and side reports for research loops.
+        ``trade_from`` ignores entry signals before that bar, so indicators warm up on
+        older history while trading starts at a fixed date (forward tests).
+        ``join_at_start`` also enters at that bar when the rules are already holding there.
         """
         if data is None or len(data) < 5:
             raise BacktestError("Dataset too short for backtesting (need at least 5 bars)")
@@ -75,6 +81,13 @@ class BacktestEngine:
             entry_signals, exit_signals = generate_signals(df, self.strategy)
             entry_flags = entry_signals.to_numpy(dtype=bool)
             exit_flags = exit_signals.to_numpy(dtype=bool)
+        if trade_from:
+            k = min(trade_from, len(entry_flags) - 1)
+            holding = join_at_start and self._holding_at(df, k, signals)
+            entry_flags = np.array(entry_flags, dtype=bool, copy=True)
+            entry_flags[:k] = False
+            if holding and not exit_flags[k]:
+                entry_flags[k] = True
         portfolio = Portfolio(initial_capital=self.strategy.initial_capital)
 
         pending_order: Order | None = None
@@ -187,8 +200,13 @@ class BacktestEngine:
             trades=portfolio.trades,
             initial_capital=self.strategy.initial_capital,
         )
+        live_signal = self._live_signal(
+            portfolio.position, dates[-1], float(closes[-1]),
+            bool(entry_flags[-1]), bool(exit_flags[-1]),
+            float(sizes[-1]) if sizes is not None else None,
+        )
         if metrics_only:
-            return {"metrics": metrics}
+            return {"metrics": metrics, "live_signal": live_signal}
 
         price_series = [
             {
@@ -251,11 +269,7 @@ class BacktestEngine:
             "total_commission": portfolio.total_commission,
             "total_slippage": portfolio.total_slippage,
             "monte_carlo": monte_carlo_res,
-            "live_signal": self._live_signal(
-                portfolio.position, dates[-1], float(closes[-1]),
-                bool(entry_flags[-1]), bool(exit_flags[-1]),
-                float(sizes[-1]) if sizes is not None else None,
-            ),
+            "live_signal": live_signal,
             "regimes": classify_regimes(price_series, trades_out),
             "market": market_exposure(
                 [pt["equity"] for pt in equity_series],
@@ -267,6 +281,13 @@ class BacktestEngine:
                 "This prevents look-ahead bias."
             ),
         }
+
+    def _holding_at(self, df: pd.DataFrame, k: int, signals: CustomSignals | None) -> bool:
+        """Whether an unrestricted run is in a position after bar ``k``'s close."""
+        if signals is not None or k < 1:
+            return False
+        sig = BacktestEngine(self.strategy).run(df.iloc[: k + 1], metrics_only=True)["live_signal"]
+        return bool(sig["in_position"] and sig["action"] != "exit")
 
     def _live_signal(
         self,

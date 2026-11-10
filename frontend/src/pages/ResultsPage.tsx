@@ -21,7 +21,7 @@ import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
 import { VerdictCard } from '../components/VerdictCard';
 import { LiveSignalCard } from '../components/LiveSignalCard';
-import { shareBacktest, unshareBacktest } from '../services/api';
+import { createForwardTest, shareBacktest, unshareBacktest } from '../services/api';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
 import { classifyRegimes } from '../utils/regimes';
@@ -263,6 +263,18 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
     }
   }
 
+  async function trackForward() {
+    setShareBusy(true);
+    setShareNote('Freezing the rules and loading the latest bars…');
+    try {
+      await createForwardTest({ backtest_id: result.id });
+      navigate('/forward');
+    } catch (err) {
+      setShareNote(err instanceof Error ? err.message : 'Could not start the forward test.');
+      setShareBusy(false);
+    }
+  }
+
   async function revoke() {
     setShareBusy(true);
     try {
@@ -321,6 +333,11 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
               <button type="button" className="btn secondary" onClick={rerunInWorkspace}>
                 Edit & re-run
               </button>
+              {!isCustom ? (
+                <button type="button" className="btn secondary" onClick={trackForward} disabled={shareBusy}>
+                  Track forward
+                </button>
+              ) : null}
               <Link className="btn primary" to="/app">
                 New Backtest
               </Link>

@@ -15,6 +15,14 @@ const CAPABILITIES = [
     body: 'Every run ends with what the rules say now: flat or in a position, entry, open P&L, and the order for the next open.',
   },
   {
+    title: 'Screener & discovery',
+    body: 'Scan one rule across 40 tickers for today’s signals, or let Quantify try 30 classic strategies and keep only those that held up on unseen data.',
+  },
+  {
+    title: 'Forward tests & tools',
+    body: 'Freeze a strategy today and watch it trade only new bars, plus position-size, Kelly, reward:risk and recovery calculators.',
+  },
+  {
     title: 'Overfitting checks',
     body: 'Holdout, walk-forward, synthetic markets, Deflated Sharpe, cost break-even and Monte Carlo graded into one verdict.',
   },

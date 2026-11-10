@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.account import Account, AccountSession
 from app.models.backtest import BacktestRecord
+from app.models.forward import ForwardTest
 
 router = APIRouter(prefix="/api/auth")
 
@@ -70,6 +71,9 @@ def _claim(db: Session, account: Account, claim: str | None) -> int:
         db.query(BacktestRecord)
         .filter(BacktestRecord.client_id == cleaned)
         .update({BacktestRecord.client_id: account.client_id}, synchronize_session=False)
+    )
+    db.query(ForwardTest).filter(ForwardTest.client_id == cleaned).update(
+        {ForwardTest.client_id: account.client_id}, synchronize_session=False
     )
     db.commit()
     return int(moved)
