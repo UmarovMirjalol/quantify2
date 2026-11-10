@@ -7,7 +7,7 @@
 }
 
 .app-shell.landing-mode {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* —— Sidebar —— */
@@ -610,6 +610,7 @@ h2 {
 
 .export-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
@@ -2608,7 +2609,7 @@ h2 {
 
 .side-kpis {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.45rem;
 }
 
@@ -3371,7 +3372,7 @@ h2 {
 
 @media (max-width: 860px) {
   .sotd-inner {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -3495,7 +3496,7 @@ h2 {
 
 @media (max-width: 900px) {
   .gallery-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .gallery-grid article {
@@ -3711,7 +3712,7 @@ h2 {
 
 @media (max-width: 900px) {
   .releases-faq-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
   }
 }
@@ -3761,7 +3762,7 @@ h2 {
 
 @media (max-width: 780px) {
   .playbook-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -3857,7 +3858,7 @@ h2 {
 
 @media (max-width: 720px) {
   .live-stats-board {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .live-stat {
@@ -3903,7 +3904,7 @@ h2 {
 
 @media (max-width: 980px) {
   .deploy-strip-inner {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -3968,7 +3969,7 @@ h2 {
   .exec-timeline,
   .invariant-grid,
   .metric-board {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero {
@@ -4049,7 +4050,7 @@ h2 {
 
 @media (max-width: 780px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
@@ -4095,7 +4096,7 @@ h2 {
   .param-grid,
   .kpi-grid,
   .side-kpis {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .kpi-card {
@@ -4134,7 +4135,7 @@ h2 {
   }
 
   .demo-kpi-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .landing-footer {
@@ -4694,7 +4695,7 @@ h2 {
 
 @media (max-width: 800px) {
   .stress-slices {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -4887,7 +4888,7 @@ h2 {
 
 @media (max-width: 800px) {
   .compare-heads {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .verdict-head {
@@ -5230,7 +5231,7 @@ h2 {
 
 .tools-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -5240,14 +5241,14 @@ h2 {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 0.6rem 0.9rem;
   margin: 0.8rem 0;
 }
 
 .tool-outs {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 0.6rem;
   margin-top: 0.4rem;
 }
@@ -5423,7 +5424,7 @@ h2 {
 
 .about-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -5516,5 +5517,13 @@ h2 {
 
   .research-figure svg circle {
     opacity: 0.7;
+  }
+}
+
+@media (max-width: 780px), (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }

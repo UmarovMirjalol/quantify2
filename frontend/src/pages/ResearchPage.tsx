@@ -447,6 +447,7 @@ export function ResearchPage() {
           first price, while backtrader and TradingView start from the average of the first N prices, the convention in
           Wilder's original definition. We switched to the standard, and every case now matches.
         </p>
+        <div className="table-wrap">
         <table className="data-table compact">
           <thead>
             <tr>
@@ -475,6 +476,7 @@ export function ResearchPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="panel research-text">
