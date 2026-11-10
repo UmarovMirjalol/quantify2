@@ -20,6 +20,7 @@ import { Robustness } from '../components/Robustness';
 import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
 import { VerdictCard } from '../components/VerdictCard';
+import { LiveSignalCard } from '../components/LiveSignalCard';
 import { shareBacktest, unshareBacktest } from '../services/api';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
@@ -360,6 +361,8 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
       {readOnly ? null : <ExportButtons strategy={result.strategy} title={result.strategy_description} />}
 
       <VerdictCard backtestId={result.id} initial={result.verdict} />
+
+      <LiveSignalCard backtestId={result.id} initial={result.live_signal} canRefresh={!readOnly} />
 
       <section className="kpi-grid">
         <KpiCard label="Total Return" value={pct(m.total_return)} tone={toneFor(m.total_return)} />

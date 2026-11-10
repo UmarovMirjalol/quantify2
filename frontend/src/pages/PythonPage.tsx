@@ -7,6 +7,7 @@ import {
   listDatasets,
   runBacktest,
 } from '../services/api';
+import { HistoryPicker } from '../components/HistoryPicker';
 import {
   applyManagement,
   managementFromSpec,
@@ -256,6 +257,7 @@ export function PythonPage() {
           <PositionManagement value={management} onChange={setManagement} disabled={running} />
           <div className="chip-row">
             <span className="hint">Load live daily data:</span>
+            <HistoryPicker disabled={fetching} />
             {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL'].map((sym) => (
               <button key={sym} type="button" className="chip" disabled={fetching} onClick={() => loadTicker(sym)}>
                 {sym}
@@ -289,7 +291,7 @@ export function PythonPage() {
               <code>np</code>, <code>pd</code>, <code>math</code>
             </li>
             <li>
-              <code>ta.sma / ema / rsi / atr / macd / bollinger / vwap / obv</code> — the same indicators the engine
+              <code>ta.sma / ema / rsi / atr / macd / bollinger / stochastic / adx / donchian / vwap / obv</code> — the same indicators the engine
               uses
             </li>
           </ul>

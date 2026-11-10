@@ -171,6 +171,39 @@ PLAYBOOK: list[dict[str, Any]] = [
         ),
         "indicators": ["OBV", "SMA", "Trend"],
     },
+    {
+        "id": "turtle-breakout",
+        "title": "Turtle breakout",
+        "tag": "Breakout",
+        "blurb": "Donchian channel: buy a new 20-day high, exit on a 10-day low.",
+        "text": (
+            "Buy when price breaks above the 20-day high and sell when it breaks below the 10-day low. "
+            "Risk 1% per trade."
+        ),
+        "indicators": ["Donchian", "Breakout"],
+    },
+    {
+        "id": "stochastic-swing",
+        "title": "Stochastic swing",
+        "tag": "Mean reversion",
+        "blurb": "%K crossing %D in oversold territory, out when overbought.",
+        "text": (
+            "Buy when Stochastic %K crosses above %D below 20 and sell when %K crosses below %D above 80. "
+            "Risk 1% per trade."
+        ),
+        "indicators": ["Stochastic"],
+    },
+    {
+        "id": "trend-strength",
+        "title": "Trend with ADX filter",
+        "tag": "Trend",
+        "blurb": "Take SMA crosses only when ADX says the market is trending.",
+        "text": (
+            "Buy when the 20-day SMA crosses above the 50-day SMA and ADX above 25. "
+            "Sell when the 20-day SMA crosses below the 50-day SMA. Risk 1% per trade."
+        ),
+        "indicators": ["SMA", "ADX"],
+    },
 ]
 
 

@@ -24,6 +24,9 @@ class IndicatorType(str, Enum):
     HAMMER = "HAMMER"
     PINBAR = "PINBAR"
     ENGULFING = "ENGULFING"
+    STOCH = "STOCH"
+    ADX = "ADX"
+    DONCHIAN = "DONCHIAN"
 
 
 class ConditionOp(str, Enum):
@@ -76,6 +79,10 @@ class IndicatorRef(BaseModel):
         "bullish",
         "bearish",
         "sma",
+        "k",
+        "d",
+        "plus",
+        "minus",
     ] = "value"
     # Base bars per higher-timeframe bar. 1 means the chart timeframe.
     bar_factor: int | None = Field(default=None, ge=1, le=2000)
@@ -113,6 +120,19 @@ class IndicatorRef(BaseModel):
         if ind in (IndicatorType.PINBAR, IndicatorType.ENGULFING):
             if self.component not in ("bullish", "bearish", "value"):
                 self.component = "bullish"
+        if ind == IndicatorType.STOCH:
+            self.period = self.period or 14
+            self.signal_period = self.signal_period or 3
+            if self.component != "d":
+                self.component = "k"
+        if ind == IndicatorType.ADX:
+            self.period = self.period or 14
+            if self.component not in ("plus", "minus"):
+                self.component = "value"
+        if ind == IndicatorType.DONCHIAN:
+            self.period = self.period or 20
+            if self.component not in ("lower", "middle"):
+                self.component = "upper"
         return self
 
 

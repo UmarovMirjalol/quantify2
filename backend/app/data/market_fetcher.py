@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+import time
 import urllib.request
 from typing import Any
 import pandas as pd
@@ -23,21 +25,41 @@ def _normalize_symbol(ticker: str) -> tuple[str, str]:
     return f"{raw}USDT", raw
 
 
-def fetch_from_yahoo(symbol: str, interval: str = "1d", range_param: str = "1y") -> pd.DataFrame:
+HISTORY_RANGES = ("1y", "5y", "10y", "max")
+# Daily bars per year, used to cap the Binance fallback (crypto trades every day).
+_BINANCE_DAYS = {"1y": 365, "5y": 365 * 5, "10y": 365 * 10, "max": 365 * 20}
+
+
+_MARKET_FILE = re.compile(r"^([A-Z0-9_.^=]+?)_(5m|15m|1h|4h|1d|1D)(?:_(5y|10y|max))?\.csv$")
+
+
+def market_dataset_source(dataset_id: str) -> tuple[str, str, str] | None:
+    """(ticker, interval, history) for a file written by ``fetch_and_save_market_data``, else None."""
+    match = _MARKET_FILE.match(dataset_id)
+    if not match:
+        return None
+    sym, interval, history = match.groups()
+    return sym.replace("_", "-"), interval, history or "1y"
+
+
+def fetch_from_yahoo(symbol: str, interval: str = "1d", range_param: str = "10y") -> pd.DataFrame:
     """Fetch OHLCV data from Yahoo Finance."""
     interval_map = {"5m": "5m", "15m": "15m", "1h": "1h", "1d": "1d", "1D": "1d"}
     inv = interval_map.get(interval, "1d")
+    # Yahoo only serves intraday bars for recent history.
     if inv in ("5m", "15m"):
         range_param = "1mo"
     elif inv == "1h":
-        range_param = "3mo"
+        range_param = "2y" if range_param != "1y" else "1y"
 
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={inv}&range={range_param}"
+    # range=max silently downsamples to monthly bars; an explicit window keeps the requested interval.
+    span = f"period1=0&period2={int(time.time())}" if range_param == "max" else f"range={range_param}"
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={inv}&{span}"
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"},
     )
-    with urllib.request.urlopen(req, timeout=8) as resp:
+    with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.loads(resp.read().decode())
 
     result = data["chart"]["result"][0]
@@ -68,24 +90,45 @@ def fetch_from_yahoo(symbol: str, interval: str = "1d", range_param: str = "1y")
     return df
 
 
+def _binance_klines(symbol: str, interval: str, history: str) -> list[list[Any]]:
+    """Newest-first pages of 1000 bars, walking back until the requested span or the listing date."""
+    wanted = _BINANCE_DAYS.get(history, 365 * 10) if interval in ("1d", "1D") else 1000
+    klines: list[list[Any]] = []
+    end_time: int | None = None
+    while len(klines) < wanted:
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=1000"
+        if end_time is not None:
+            url += f"&endTime={end_time}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            page = json.loads(resp.read().decode())
+        if not page:
+            break
+        klines = page + klines
+        if len(page) < 1000:
+            break
+        end_time = int(page[0][0]) - 1
+    return klines[-wanted:]
+
+
 def fetch_and_save_market_data(
     ticker: str,
     interval: str = "1d",
+    history: str = "10y",
 ) -> dict[str, Any]:
     """Fetch market data from Yahoo Finance / Binance and save as a dataset."""
+    if history not in HISTORY_RANGES:
+        history = "10y"
     binance_sym, yahoo_sym = _normalize_symbol(ticker)
     df: pd.DataFrame | None = None
     source_used = "yahoo"
 
     try:
-        df = fetch_from_yahoo(yahoo_sym, interval=interval)
+        df = fetch_from_yahoo(yahoo_sym, interval=interval, range_param=history)
         source_used = f"Yahoo Finance ({yahoo_sym})"
     except Exception as exc1:
         try:
-            url = f"https://api.binance.com/api/v3/klines?symbol={binance_sym}&interval={interval}&limit=500"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=6) as resp:
-                raw_klines = json.loads(resp.read().decode())
+            raw_klines = _binance_klines(binance_sym, interval, history)
             date_fmt = "%Y-%m-%d %H:%M:%S" if interval in ("5m", "15m", "1h") else "%Y-%m-%d"
             df = pd.DataFrame(
                 {
@@ -113,7 +156,7 @@ def fetch_and_save_market_data(
         raise ValueError("; ".join(validation.errors))
 
     clean_sym = ticker.strip().upper().replace("/", "_").replace("-", "_")
-    filename = f"{clean_sym}_{interval}.csv"
+    filename = f"{clean_sym}_{interval}.csv" if history == "1y" else f"{clean_sym}_{interval}_{history}.csv"
     save_path = UPLOAD_DIR / filename
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(save_path, index=False)

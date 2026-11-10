@@ -21,6 +21,8 @@ from app.strategies.sandbox import run_custom_batch
 
 MIN_BARS = 120
 PATHS = 100
+MIN_PATHS = 40
+BAR_BUDGET_PER_PATH = 2_600
 BLOCK = 20
 
 
@@ -85,10 +87,12 @@ def run_synthetic(
     df = data.reset_index(drop=True)
     if len(df) < MIN_BARS:
         raise ValueError(f"Need at least {MIN_BARS} bars to build synthetic markets.")
-    real = BacktestEngine(strategy).run(df)["metrics"]
+    real = BacktestEngine(strategy).run(df, metrics_only=True)["metrics"]
     real_return = float(real.get("total_return") or 0.0)
     real_sharpe = float(real.get("sharpe_ratio") or 0.0)
 
+    # Long histories cost more per path; keep the total work near PATHS x BAR_BUDGET_PER_PATH bars.
+    paths = min(paths, max(MIN_PATHS, (PATHS * BAR_BUDGET_PER_PATH) // len(df)))
     rng = np.random.default_rng(seed)
     returns: list[float] = []
     sharpes: list[float] = []
@@ -100,7 +104,7 @@ def run_synthetic(
     )
     for frame, signals in zip(frames, precomputed):
         try:
-            metrics = BacktestEngine(strategy).run(frame, signals=signals)["metrics"]
+            metrics = BacktestEngine(strategy).run(frame, signals=signals, metrics_only=True)["metrics"]
         except (BacktestError, ValueError):
             continue
         returns.append(float(metrics.get("total_return") or 0.0))

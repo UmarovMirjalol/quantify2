@@ -45,6 +45,19 @@ function formatInd(ind: IndLike | undefined): string {
   if (name === 'PRICE') {
     return (ind.component ?? 'close').toUpperCase();
   }
+  if (name === 'STOCH') {
+    return `Stoch(${ind.period ?? 14},${ind.signal_period ?? 3}).%${ind.component === 'd' ? 'D' : 'K'}`;
+  }
+  if (name === 'ADX') {
+    const label = ind.component === 'plus' ? '+DI' : ind.component === 'minus' ? '-DI' : 'ADX';
+    return `${label}(${ind.period ?? 14})`;
+  }
+  if (name === 'DONCHIAN') {
+    const p = ind.period ?? 20;
+    if (ind.component === 'lower') return `${p}-bar low`;
+    if (ind.component === 'middle') return `${p}-bar channel mid`;
+    return `${p}-bar high`;
+  }
   if (ind.period != null) return `${name}(${ind.period})`;
   return name;
 }

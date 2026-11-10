@@ -33,7 +33,7 @@ matching this schema (no markdown, JSON only):
   "position_sizing": "risk_based"
 }
 
-Supported indicators: SMA, EMA, RSI, MACD, BOLLINGER, ATR, PRICE, VOLUME, VWAP, OBV, HAMMER, ENGULFING, PINBAR
+Supported indicators: SMA, EMA, RSI, MACD, BOLLINGER, ATR, PRICE, VOLUME, VWAP, OBV, HAMMER, ENGULFING, PINBAR, STOCH, ADX, DONCHIAN
 Supported timeframes: 5m, 15m, 1h, 4h, 1d, 1w
 Patterns are true/false series: compare HAMMER, ENGULFING, or PINBAR greater_than 0.5.
 For a higher-timeframe filter set bar_factor (base bars per higher bar), e.g. 16 when trading 15m with a 4h SMA filter.
@@ -52,6 +52,12 @@ Optional position management (omit when not asked for):
 For RSI use period and threshold, e.g. {"indicator":"RSI","period":14,"condition":"less_than","threshold":30}
 For MACD crossover use {"indicator":"MACD","condition":"cross_above"}
 For Bollinger use {"indicator":"BOLLINGER","period":20,"condition":"less_than","component":"lower"}
+STOCH (slow stochastic): period 14, signal_period 3, component "k" or "d".
+  Oversold: {"left":{"indicator":"STOCH","period":14,"component":"k"},"operator":"less_than","right":20}
+ADX: period 14, component "value" (trend strength), "plus" (+DI) or "minus" (-DI).
+  Trend filter: {"left":{"indicator":"ADX","period":14},"operator":"greater_than","right":25}
+DONCHIAN: highest high / lowest low of the PREVIOUS N bars, component "upper", "lower" or "middle".
+  20-day high breakout: {"left":{"indicator":"PRICE","component":"close"},"operator":"greater_than","right":{"indicator":"DONCHIAN","period":20,"component":"upper"}}
 """
 
 

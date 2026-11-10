@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { EquityChart } from '../components/Charts';
 import { KpiCard } from '../components/KpiCard';
+import { HistoryPicker } from '../components/HistoryPicker';
 import { fetchMarketData, listDatasets, runPortfolio } from '../services/api';
 import type { DatasetInfo, EquityPoint, PortfolioResult } from '../types';
 
@@ -155,6 +156,7 @@ export function PortfolioPage() {
               if (e.key === 'Enter') addTickers();
             }}
           />
+          <HistoryPicker disabled={fetching} />
           <button type="button" className="btn secondary" onClick={addTickers} disabled={fetching}>
             {fetching ? 'Fetching…' : 'Fetch daily data'}
           </button>

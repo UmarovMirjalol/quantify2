@@ -8,6 +8,7 @@ import {
   runBacktest,
   uploadDataset,
 } from '../services/api';
+import { HistoryPicker } from '../components/HistoryPicker';
 import {
   applyManagement,
   EMPTY_MANAGEMENT,
@@ -50,6 +51,24 @@ const EXAMPLE_STRATEGIES: PresetStrategy[] = [
     label: '📉 Bollinger bounce',
     tag: 'Volatility',
     text: 'Buy when price closes below the lower Bollinger Band and sell when it crosses above the middle band. Risk 1% per trade.',
+  },
+  {
+    id: 'turtle-breakout',
+    label: '🐢 Turtle breakout',
+    tag: 'Breakout',
+    text: 'Buy when price breaks above the 20-day high and sell when it breaks below the 10-day low. Risk 1% per trade.',
+  },
+  {
+    id: 'stochastic-swing',
+    label: '〰️ Stochastic swing',
+    tag: 'Mean Reversion',
+    text: 'Buy when Stochastic %K crosses above %D below 20 and sell when %K crosses below %D above 80. Risk 1% per trade.',
+  },
+  {
+    id: 'adx-trend',
+    label: '🧭 Trend + ADX filter',
+    tag: 'Trend',
+    text: 'Buy when the 20-day SMA crosses above the 50-day SMA and ADX above 25. Sell when the 20-day SMA crosses below the 50-day SMA. Risk 1% per trade.',
   },
   {
     id: 'pinbar-support',
@@ -127,7 +146,9 @@ export function HomePage({ health }: Props) {
       const items = await listDatasets();
       setDatasets(items);
       setDatasetId(res.dataset_id);
-      setFetchMsg(`Loaded ${res.rows} bars for ${ticker} (${res.source})!`);
+      setFetchMsg(
+        `Loaded ${res.rows.toLocaleString()} daily bars for ${ticker}, ${res.date_start.slice(0, 10)} → ${res.date_end.slice(0, 10)} (${res.source}).`,
+      );
     } catch (err) {
       setErrorKind('load');
       setError(err instanceof Error ? err.message : 'Failed to fetch market data');
@@ -372,7 +393,7 @@ export function HomePage({ health }: Props) {
           <p className="eyebrow">Research workspace</p>
           <h1>New Backtest</h1>
           <p className="lede">
-            Describe SMA / EMA / RSI / MACD / Bollinger rules in plain English. Preview the parsed
+            Describe SMA / EMA / RSI / MACD / Bollinger / Stochastic / ADX / breakout rules in plain English. Preview the parsed
             spec before you run. Need custom logic or dynamic sizing?{' '}
             <Link to="/code">Write it in Python →</Link>
           </p>
@@ -432,6 +453,7 @@ export function HomePage({ health }: Props) {
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>
               ⚡ 1-Click Live Market:
             </span>
+            <HistoryPicker disabled={loading || fetchingMarket} />
             {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL'].map((sym) => (
               <button
                 key={sym}

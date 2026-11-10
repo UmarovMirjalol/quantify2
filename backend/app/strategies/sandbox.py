@@ -38,7 +38,8 @@ import pandas as pd
 
 # df: pandas DataFrame with columns date, open, high, low, close, volume.
 # Return boolean Series: entry, exit and optionally size (0..1 of equity per entry).
-# Helpers: ta.sma, ta.ema, ta.rsi, ta.atr, ta.macd, ta.bollinger, ta.vwap, ta.obv
+# Helpers: ta.sma, ta.ema, ta.rsi, ta.atr, ta.macd, ta.bollinger, ta.vwap, ta.obv,
+#          ta.stochastic, ta.adx, ta.donchian
 # Signals at bar t may use only bars <= t; orders fill at the next open.
 
 def strategy(df):

@@ -5101,3 +5101,46 @@ h2 {
   -webkit-text-fill-color: var(--text-muted);
   background: none;
 }
+
+.history-select {
+  width: auto;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+}
+
+.live-signal {
+  margin-top: 1rem;
+}
+
+.live-signal-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.live-signal-facts dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.live-signal-facts dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+}
+
+.live-signal-facts .positive {
+  color: var(--accent);
+}
+
+.live-signal-facts .negative {
+  color: var(--negative);
+}
+
+.live-signal .hint {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+}

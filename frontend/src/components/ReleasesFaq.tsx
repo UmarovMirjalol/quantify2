@@ -7,6 +7,14 @@ const CAPABILITIES = [
     body: 'Plain-English strategies, look-ahead-safe engine, risk sizing, full metrics and saved history.',
   },
   {
+    title: 'Indicators & data',
+    body: 'SMA, EMA, RSI, MACD, Bollinger, Stochastic, ADX/DMI, Donchian breakouts, VWAP, OBV, candlestick patterns, on up to 30+ years of daily bars.',
+  },
+  {
+    title: 'Signal today',
+    body: 'Every run ends with what the rules say now: flat or in a position, entry, open P&L, and the order for the next open.',
+  },
+  {
     title: 'Overfitting checks',
     body: 'Holdout, walk-forward, synthetic markets, Deflated Sharpe, cost break-even and Monte Carlo graded into one verdict.',
   },
@@ -43,7 +51,7 @@ const FAQ = [
   },
   {
     q: 'Where does the market data come from?',
-    a: 'One-click tickers load daily bars for the last year from Yahoo Finance, with Binance as a fallback for crypto. Prices are split-adjusted; dividends are not added, so the strategy and the buy-and-hold benchmark are compared on the same price series. For longer or institutional-grade history, upload your own CSV.',
+    a: 'One-click tickers load daily bars from Yahoo Finance (1, 5 or 10 years, or the full listing history; 10 years by default), with Binance as a fallback for crypto. Prices are split-adjusted; dividends are not added, so the strategy and the buy-and-hold benchmark are compared on the same price series. For longer or institutional-grade history, upload your own CSV.',
   },
   {
     q: 'How do you make sure the data is clean?',

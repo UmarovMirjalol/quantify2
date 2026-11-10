@@ -194,8 +194,27 @@ export interface BacktestResult {
   regimes?: RegimeReport;
   market?: MarketReport;
   verdict?: VerdictReport;
+  live_signal?: LiveSignal;
   share_token?: string | null;
   shared?: boolean;
+}
+
+export interface LiveSignal {
+  as_of: string;
+  last_close: number;
+  side: 'long' | 'short';
+  in_position: boolean;
+  action: 'enter' | 'wait' | 'hold' | 'exit' | 'add';
+  entry_date: string | null;
+  entry_price: number | null;
+  quantity: number;
+  unrealized_pnl: number;
+  unrealized_pct: number;
+  stop_loss_price: number | null;
+  take_profit_price: number | null;
+  refreshed?: boolean;
+  note?: string;
+  bars?: number;
 }
 
 export interface MarketReport {

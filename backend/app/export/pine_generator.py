@@ -39,6 +39,13 @@ def _var_name(ref: IndicatorRef) -> str:
     if ind == "engulfing":
         comp = ref.component if ref.component in ("bullish", "bearish") else "bullish"
         return f"is_{comp}_engulfing"
+    if ind == "stoch":
+        return f"stoch_{'d' if ref.component == 'd' else 'k'}_{ref.period}_{ref.signal_period}"
+    if ind == "adx":
+        return {"plus": "di_plus", "minus": "di_minus"}.get(ref.component, "adx") + f"_{ref.period}"
+    if ind == "donchian":
+        comp = ref.component if ref.component in ("lower", "middle") else "upper"
+        return f"dc_{comp}_{ref.period}"
     return f"{ind}_val"
 
 
@@ -153,6 +160,26 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
                     "is_bullish_pinbar = (pb_range > 0) and (pb_lower >= 0.55 * pb_range) and (pb_upper <= 0.25 * pb_range) and (pb_body <= 0.35 * pb_range)",
                     "is_bearish_pinbar = (pb_range > 0) and (pb_upper >= 0.55 * pb_range) and (pb_lower <= 0.25 * pb_range) and (pb_body <= 0.35 * pb_range)",
                 ])
+        elif ind == "STOCH":
+            p, s = ref.period, ref.signal_period
+            if f"stoch_calc_{p}_{s}" not in indicators_seen:
+                indicators_seen.add(f"stoch_calc_{p}_{s}")
+                lines.append(f"stoch_k_{p}_{s} = ta.sma(ta.stoch(close, high, low, {p}), {s})")
+                lines.append(f"stoch_d_{p}_{s} = ta.sma(stoch_k_{p}_{s}, {s})")
+        elif ind == "ADX":
+            p = ref.period
+            if f"dmi_calc_{p}" not in indicators_seen:
+                indicators_seen.add(f"dmi_calc_{p}")
+                lines.append(f"[di_plus_{p}, di_minus_{p}, adx_{p}] = ta.dmi({p}, {p})")
+        elif ind == "DONCHIAN":
+            p = ref.period
+            if f"dc_calc_{p}" not in indicators_seen:
+                indicators_seen.add(f"dc_calc_{p}")
+                lines.append(f"dc_upper_{p} = ta.highest(high, {p})[1]")
+                lines.append(f"dc_lower_{p} = ta.lowest(low, {p})[1]")
+                lines.append(f"dc_middle_{p} = (dc_upper_{p} + dc_lower_{p}) / 2")
+                lines.append(f'plot(dc_upper_{p}, color=color.teal, title="Donchian high {p}")')
+                lines.append(f'plot(dc_lower_{p}, color=color.teal, title="Donchian low {p}")')
         elif ind == "ENGULFING":
             if "engulfing_calc" not in indicators_seen:
                 indicators_seen.add("engulfing_calc")

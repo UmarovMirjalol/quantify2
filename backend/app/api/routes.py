@@ -17,7 +17,7 @@ from app.api.accounts import account_for_session, is_account_id
 from app.config import UPLOAD_DIR, get_settings
 from app.database import get_db
 from app.data.loader import list_available_datasets, load_dataset
-from app.data.market_fetcher import fetch_and_save_market_data
+from app.data.market_fetcher import fetch_and_save_market_data, market_dataset_source
 from app.data.validators import DataValidationError, load_ohlcv_bytes
 from app.backtesting.engine import BacktestEngine, BacktestError
 from app.backtesting.portfolio_engine import PortfolioBacktestEngine
@@ -420,12 +420,13 @@ async def api_upload_data(file: UploadFile = File(...)) -> dict[str, Any]:
 class FetchMarketDataRequest(BaseModel):
     ticker: str = Field(min_length=1, max_length=20, default="BTCUSDT")
     interval: str = Field(default="1d", pattern=r"^(5m|15m|1h|4h|1d|1D)$")
+    history: str = Field(default="10y", pattern=r"^(1y|5y|10y|max)$")
 
 
 @router.post("/market/fetch")
 def api_fetch_market_data(req: FetchMarketDataRequest) -> dict[str, Any]:
     try:
-        return fetch_and_save_market_data(req.ticker, interval=req.interval)
+        return fetch_and_save_market_data(req.ticker, interval=req.interval, history=req.history)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -963,3 +964,41 @@ def api_get_monte_carlo(
     config = json.loads(record.config_json)
     initial_cap = float(config.get("initial_capital", 100_000.0))
     return run_monte_carlo_simulation(trades, initial_capital=initial_cap)
+
+
+@router.post("/backtests/{backtest_id}/live-signal")
+def api_refresh_live_signal(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Re-pull the latest bars for live-market datasets and re-run to get today's signal."""
+    record = db.query(BacktestRecord).filter(BacktestRecord.id == backtest_id).first()
+    scope = "" if client_id == "_anonymous" else client_id
+    if not record or (record.client_id or "") != scope:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    strategy = StrategySpec.model_validate(json.loads(record.parsed_strategy_json))
+
+    refreshed = False
+    note = "Uploaded data is not live; the signal is computed on its last bar."
+    source = market_dataset_source(record.dataset_name)
+    if source is not None:
+        ticker, interval, history = source
+        try:
+            fetch_and_save_market_data(ticker, interval=interval, history=history)
+            refreshed = True
+            note = f"Pulled the latest {ticker} bars."
+        except Exception as exc:  # noqa: BLE001
+            note = f"Could not pull fresh {ticker} bars ({exc}); using the saved data."
+
+    try:
+        data = load_dataset(record.dataset_name)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=404, detail=f"Dataset not found: {exc}") from exc
+    if strategy.is_custom:
+        _require_custom_code()
+    try:
+        signal = BacktestEngine(strategy).run(data)["live_signal"]
+    except (BacktestError, SandboxError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {**signal, "refreshed": refreshed, "note": note, "bars": len(data)}

@@ -4,6 +4,7 @@ import type {
   DatasetInfo,
   ExportResult,
   HealthStatus,
+  LiveSignal,
   LLMStatus,
   OptimizerReport,
   PlaybookItem,
@@ -17,6 +18,7 @@ import type {
   VerdictReport,
   WalkForwardReport,
 } from '../types';
+import { getHistoryRange } from '../components/HistoryPicker';
 import { authHeaders, clearAccount, getAccount, getClientId, setAccount } from './session';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
@@ -97,7 +99,7 @@ export async function uploadDataset(file: File): Promise<{
   return request('/api/data/upload', { method: 'POST', body: form });
 }
 
-export async function fetchMarketData(ticker: string, interval = '1d'): Promise<{
+export async function fetchMarketData(ticker: string, interval = '1d', history = getHistoryRange()): Promise<{
   dataset_id: string;
   name: string;
   rows: number;
@@ -108,7 +110,7 @@ export async function fetchMarketData(ticker: string, interval = '1d'): Promise<
   return request('/api/market/fetch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ticker, interval }),
+    body: JSON.stringify({ ticker, interval, history }),
   });
 }
 
@@ -248,6 +250,10 @@ export async function getVerdict(id: number): Promise<VerdictReport> {
 
 export async function shareBacktest(id: number): Promise<{ token: string }> {
   return request(`/api/backtests/${id}/share`, { method: 'POST' });
+}
+
+export async function refreshLiveSignal(id: number): Promise<LiveSignal> {
+  return request(`/api/backtests/${id}/live-signal`, { method: 'POST' });
 }
 
 export async function unshareBacktest(id: number): Promise<{ token: null }> {

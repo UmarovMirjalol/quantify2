@@ -215,6 +215,7 @@ def run(request: dict[str, Any]) -> dict[str, Any]:
     ta = {
         "sma": ind.sma, "ema": ind.ema, "rsi": ind.rsi, "macd": ind.macd,
         "bollinger": ind.bollinger_bands, "atr": ind.atr, "vwap": ind.vwap, "obv": ind.obv,
+        "stochastic": ind.stochastic, "adx": ind.adx, "donchian": ind.donchian,
     }
     namespace: dict[str, Any] = {
         "__builtins__": {**SAFE_BUILTINS, "__import__": _safe_import},

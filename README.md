@@ -12,6 +12,9 @@
 - **Standalone export**: any run downloads as one `.py` file (numpy + pandas only) that reproduces the site's trades on your CSV, tested to match the engine exactly
 - **Export everything**: trades CSV, equity CSV, result JSON per run, and the full history as one JSON archive
 - **Position management**: trailing stop, up to three partial take-profits, stop-to-breakeven after the first partial exit, and pyramiding (up to 10 entries into one position). Set them in the form or just write "trailing stop 3%, take half at 5%, pyramid up to 3"; Pine and standalone Python exports reproduce them
+- **Long history**: one-click market data for 1, 5 or 10 years, or the full history (SPY daily back to 1993, BTC to 2014); 10 years by default
+- **Signal today**: every run ends with what the rules say now (flat or in a position, entry price, open P&L, stop/target, and the order for the next open); live-market runs refresh it with the latest bars in one click
+- **More indicators**: Stochastic %K/%D, ADX and +DI/−DI, Donchian/turtle breakouts, all in plain English or Russian ("turtle breakout 55 days", "ADX above 25", "стохастик ниже 20"), exported to Pine (`ta.stoch`, `ta.dmi`, `ta.highest`) and standalone Python
 - **Accounts** (optional, username + password, no email): history follows you to any browser or device; runs you made before signing up move into the account
 - Custom bar-by-bar backtesting engine
 - Risk engine: position sizing, stops, exposure, cash, leverage, costs, slippage
@@ -25,7 +28,7 @@
 - Cost break-even: the per-side cost at which total return turns non-positive
 - Parameter heatmap: Sharpe across every fast × slow crossover pair, with a plateau-or-peak verdict
 - Unified verdict: holdout, walk-forward, synthetic markets, Deflated Sharpe, costs, heatmap, regimes, alpha, and Monte Carlo graded into one 0–100 score; a failure on unseen data caps the grade
-- Synthetic markets: 100 block-bootstrapped alternate histories of the asset (20-bar blocks), with the share of paths that pay and where the real history ranks
+- Synthetic markets: 100 block-bootstrapped alternate histories (scaled down to 40 on multi-decade data to keep the verdict fast) of the asset (20-bar blocks), with the share of paths that pay and where the real history ranks
 - No-peek optimizer: grid-search the entry parameters (crossover fast × slow, oscillator period × threshold, or a single period) on the first 70% only, judge the winner once on the last 30%, and deflate its Sharpe for the number of candidates; the tuned setting can be rerun in one click
 - Portfolio: one rule set on up to 12 assets (samples, uploads, or tickers fetched live) with equal-capital sleeves, an equal-weight buy-and-hold benchmark, per-asset contribution, a sleeve correlation matrix, and the diversification ratio
 - Alpha & beta vs buy-and-hold of the same asset: per-bar regression with alpha t-stat, R², and up/down capture
@@ -70,7 +73,7 @@ Commission is a fraction of fill notional. Slippage worsens the fill (higher for
 
 ## Supported strategy components
 
-**Indicators:** SMA, EMA, RSI, MACD, Bollinger Bands, ATR, PRICE  
+**Indicators:** SMA, EMA, RSI, MACD, Bollinger Bands, ATR, Stochastic (%K/%D), ADX with +DI/−DI, Donchian channel (prior N-bar high/low/mid), VWAP, OBV, volume, candlestick patterns, PRICE  
 
 **Conditions:** greater_than, less_than, cross_above, cross_below, equals  
 

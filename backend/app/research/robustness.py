@@ -174,7 +174,7 @@ def parameter_heatmap(strategy: StrategySpec, data: pd.DataFrame) -> dict[str, A
 
 def _run(spec: StrategySpec, data: pd.DataFrame) -> dict[str, Any] | None:
     try:
-        return BacktestEngine(spec).run(data.reset_index(drop=True))["metrics"]
+        return BacktestEngine(spec).run(data.reset_index(drop=True), metrics_only=True)["metrics"]
     except (BacktestError, ValueError):
         return None
 

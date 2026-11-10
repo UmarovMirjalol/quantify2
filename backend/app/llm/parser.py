@@ -41,7 +41,7 @@ def _extract_asset(text: str, override: str | None) -> str:
         "SMA", "EMA", "RSI", "ATR", "MACD", "AND", "OR", "BUY", "SELL", "WHEN",
         "THE", "DAY", "FOR", "WITH", "FROM", "INTO", "OVER", "UNDER", "BELOW",
         "ABOVE", "CROSS", "RISK", "STOP", "TAKE", "BAND", "PRICE", "CLOSE",
-        "SHORT", "COVER",
+        "SHORT", "COVER", "ADX", "DMI", "DI", "STOCH", "HIGH", "LOW",
     }
     for t in tickers:
         if t not in skip:
@@ -183,6 +183,79 @@ def _apply_management(spec: dict[str, Any], management: dict[str, Any]) -> dict[
     return spec
 
 
+_UNIT = r"(?:day|bar|period|session|дн\w*|бар\w*|период\w*)s?"
+_BREAKOUT_HIGH = [
+    re.compile(r"(\d+)[-\s]?" + _UNIT + r"\s+(?:high|highs|max(?:imum)?)", re.I),
+    re.compile(r"(?:high|max(?:imum)?)\s+of\s+(?:the\s+)?(?:last|past|previous|prior)\s+(\d+)", re.I),
+    re.compile(r"максимум\w*\s+(?:за\s+)?(?:последни[хе]\s+)?(\d+)", re.I),
+    re.compile(r"(\d+)[-\s]?дневн\w+\s+максимум", re.I),
+]
+_BREAKOUT_LOW = [
+    re.compile(r"(\d+)[-\s]?" + _UNIT + r"\s+(?:low|lows|min(?:imum)?)", re.I),
+    re.compile(r"(?:low|min(?:imum)?)\s+of\s+(?:the\s+)?(?:last|past|previous|prior)\s+(\d+)", re.I),
+    re.compile(r"минимум\w*\s+(?:за\s+)?(?:последни[хе]\s+)?(\d+)", re.I),
+    re.compile(r"(\d+)[-\s]?дневн\w+\s+минимум", re.I),
+]
+_DONCHIAN = re.compile(
+    r"\b(?:donchian|дончиан\w*|turtle|черепах\w*)(?:\s+(?:channel|breakout|канал\w*|пробо\w*))?\s*\(?\s*(\d+)?", re.I
+)
+_STOCH = re.compile(r"\b(?:stoch\w*|стохастик\w*)|%\s*k\b", re.I)
+_ADX_FILTER = re.compile(r"\badx\s*\(?\s*(\d+)?\s*\)?[^.;]*?(?:above|over|greater\s+than|>|exceeds|выше|больше)\s*(\d+(?:\.\d+)?)", re.I)
+_DMI = re.compile(r"\+\s*di|\bdmi\b|directional\s+(?:movement|index)", re.I)
+
+
+def _first_int(patterns: list[re.Pattern[str]], text: str) -> int | None:
+    for pattern in patterns:
+        match = pattern.search(text)
+        if match and match.group(1):
+            return int(match.group(1))
+    return None
+
+
+def _breakout_rules(text: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+    """Donchian / N-day high breakout: enter above the prior N-bar high, exit below the prior M-bar low."""
+    named = _DONCHIAN.search(text)
+    high_n = _first_int(_BREAKOUT_HIGH, text)
+    low_n = _first_int(_BREAKOUT_LOW, text)
+    breaks_low = low_n is not None and re.search(r"break\w*\s+(?:down\s+)?below|пробо\w*\s+минимум|пробива\w*\s+минимум", text, re.I)
+    if high_n is None and not named and not breaks_low:
+        return None
+    if high_n is None and not named:
+        # Only a breakdown is named ("short when price breaks below the 20-day low"): that is the bearish rule.
+        entry_n, exit_n = max(2, low_n // 2), low_n
+    else:
+        entry_n = high_n or (int(named.group(1)) if named and named.group(1) else 20)
+        exit_n = low_n or max(2, entry_n // 2)
+    close = {"indicator": "PRICE", "component": "close"}
+    return (
+        [{"left": close, "operator": "greater_than", "right": {"indicator": "DONCHIAN", "period": entry_n, "component": "upper"}}],
+        [{"left": close, "operator": "less_than", "right": {"indicator": "DONCHIAN", "period": exit_n, "component": "lower"}}],
+    )
+
+
+def _stochastic_rules(text: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+    if not _STOCH.search(text):
+        return None
+    period_m = re.search(r"(?:stoch\w*|стохастик\w*)\s*\(?\s*(\d+)", text, re.I)
+    period = int(period_m.group(1)) if period_m else 14
+    low = re.search(r"(?:stoch\w*|стохастик\w*|%k)[^.;]*?(?:below|under|less\s+than|<|ниже|меньше)\s*(\d+(?:\.\d+)?)", text, re.I)
+    high = re.search(r"(?:stoch\w*|стохастик\w*|%k)[^;]*?(?:above|over|greater\s+than|>|выше|больше)\s*(\d+(?:\.\d+)?)", text, re.I)
+    k = {"indicator": "STOCH", "period": period, "signal_period": 3, "component": "k"}
+    d = {**k, "component": "d"}
+    if re.search(r"%\s*k|%\s*d|\bk\s+cross|cross\w*\s+(?:above|over)\s+(?:the\s+)?(?:%\s*d|d\s+line|signal)|пересека", text, re.I):
+        entry = [{"left": k, "operator": "cross_above", "right": d}]
+        exit_ = [{"left": k, "operator": "cross_below", "right": d}]
+        if low:
+            entry.append({"left": k, "operator": "less_than", "right": float(low.group(1))})
+        if high:
+            exit_.append({"left": k, "operator": "greater_than", "right": float(high.group(1))})
+        return entry, exit_
+    return (
+        [{"left": k, "operator": "less_than", "right": float(low.group(1)) if low else 20.0}],
+        [{"left": k, "operator": "greater_than", "right": float(high.group(1)) if high else 80.0}],
+    )
+
+
 _SHORT_PATTERN = re.compile(
     r"\b(?:sell\s+short|go\s+short|short[-\s]?sell\w*|shorting|"
     r"short\s+(?:when|if|on|after|once|the|it)\b|шорт\w*|продава\w+\s+в\s+шорт)"
@@ -240,15 +313,20 @@ def parse_builtin(
     exit_: list[dict[str, Any]] | None = None
     warnings: list[str] = []
 
+    # --- Channel breakout (Donchian / N-day high) and stochastic ---
+    for rules in (_breakout_rules(text), _stochastic_rules(text)):
+        if rules and entry is None:
+            entry, exit_ = rules
+
     # --- SMA / EMA / MA crossover with captured periods ---
-    ma = re.search(
+    ma = None if entry is not None else re.search(
         r"(\d+)\s*[-\s]?day\s*(sma|ema|ma|moving\s+average).*?"
         r"cross(?:es|ing)?\s+(?:above|over).*?"
         r"(\d+)\s*[-\s]?day",
         text,
         re.IGNORECASE | re.DOTALL,
     )
-    if not ma:
+    if not ma and entry is None:
         ma = re.search(
             r"(sma|ema|ma)\s*\(?\s*(\d+)\s*\).*?"
             r"cross(?:es|ing)?\s+(?:above|over).*?"
@@ -516,6 +594,19 @@ def parse_builtin(
         ]
         warnings.append("Detected Volume condition: Volume > SMA(Volume, 20).")
 
+    # --- DMI: +DI crossing -DI ---
+    adx_only = re.search(r"\badx\b", text, re.I) and not re.search(
+        r"\b(?:sma|ema|ma|moving\s+average|rsi|macd|bollinger|скользящ\w*)\b", text, re.I
+    )
+    if entry is None and (_DMI.search(text) or adx_only):
+        period_m = re.search(r"\b(?:adx|dmi)\s*\(?\s*(\d+)", text, re.I)
+        period = int(period_m.group(1)) if period_m else 14
+        plus = {"indicator": "ADX", "period": period, "component": "plus"}
+        minus = {**plus, "component": "minus"}
+        entry = [{"left": plus, "operator": "cross_above", "right": minus}]
+        exit_ = [{"left": plus, "operator": "cross_below", "right": minus}]
+        warnings.append(f"Directional movement: +DI({period}) crossing -DI({period}).")
+
     # --- Free-mode safety net: never block a runnable idea ---
     # Any non-empty strategy text falls back to a classic SMA cross so users can
     # always get a backtest without an API key.
@@ -540,6 +631,13 @@ def parse_builtin(
         # condition. A short enters on the bearish one and covers on the bullish one.
         entry, exit_ = exit_, entry
         warnings.append("Short side: entering on the bearish rule and covering on the bullish rule.")
+
+    adx_filter = _ADX_FILTER.search(text)
+    if adx_filter:
+        period = int(adx_filter.group(1)) if adx_filter.group(1) else 14
+        entry = list(entry) + [
+            {"left": {"indicator": "ADX", "period": period}, "operator": "greater_than", "right": float(adx_filter.group(2))}
+        ]
 
     tf = "1d"
     if re.search(r"\b(?:5m|5[-\s]?мин\w*)\b", text, re.IGNORECASE):

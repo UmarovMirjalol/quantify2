@@ -117,6 +117,49 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return tr.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
 
 
+def stochastic(
+    df: pd.DataFrame, period: int = 14, smooth: int = 3
+) -> tuple[pd.Series, pd.Series]:
+    """Slow stochastic: %K is the smoothed position of the close in the N-bar range, %D its average."""
+    if period < 1 or smooth < 1:
+        raise ValueError("Stochastic periods must be >= 1")
+    low_n = df["low"].astype(float).rolling(period, min_periods=period).min()
+    high_n = df["high"].astype(float).rolling(period, min_periods=period).max()
+    span = (high_n - low_n).replace(0, np.nan)
+    raw = 100.0 * (df["close"].astype(float) - low_n) / span
+    k = raw.rolling(smooth, min_periods=smooth).mean()
+    d = k.rolling(smooth, min_periods=smooth).mean()
+    return k, d
+
+
+def adx(df: pd.DataFrame, period: int = 14) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Wilder's ADX with +DI and -DI."""
+    if period < 1:
+        raise ValueError("ADX period must be >= 1")
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    up = high.diff()
+    down = -low.diff()
+    plus_dm = up.where((up > down) & (up > 0), 0.0)
+    minus_dm = down.where((down > up) & (down > 0), 0.0)
+    alpha = 1 / period
+    tr = atr(df, 1)
+    smooth_tr = tr.ewm(alpha=alpha, adjust=False, min_periods=period).mean().replace(0, np.nan)
+    plus_di = 100.0 * plus_dm.ewm(alpha=alpha, adjust=False, min_periods=period).mean() / smooth_tr
+    minus_di = 100.0 * minus_dm.ewm(alpha=alpha, adjust=False, min_periods=period).mean() / smooth_tr
+    dx = 100.0 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
+    return dx.ewm(alpha=alpha, adjust=False, min_periods=period).mean(), plus_di, minus_di
+
+
+def donchian(df: pd.DataFrame, period: int = 20) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Highest high and lowest low of the previous N bars (the current bar excluded, so a close can break out)."""
+    if period < 1:
+        raise ValueError("Donchian period must be >= 1")
+    upper = df["high"].astype(float).rolling(period, min_periods=period).max().shift(1)
+    lower = df["low"].astype(float).rolling(period, min_periods=period).min().shift(1)
+    return upper, (upper + lower) / 2.0, lower
+
+
 def volume_indicator(
     df: pd.DataFrame, period: int | None = None, component: str = "value"
 ) -> pd.Series:
@@ -329,6 +372,18 @@ def compute_indicator_series(
 
     if ind == "ATR":
         return atr(df, period or 14)
+
+    if ind == "STOCH":
+        k, d = stochastic(df, period or 14, signal_period or 3)
+        return d if component == "d" else k
+
+    if ind == "ADX":
+        adx_line, plus_di, minus_di = adx(df, period or 14)
+        return {"plus": plus_di, "minus": minus_di}.get(component, adx_line)
+
+    if ind == "DONCHIAN":
+        upper, middle, lower = donchian(df, period or 20)
+        return {"lower": lower, "middle": middle}.get(component, upper)
 
     if ind == "VOLUME":
         return volume_indicator(df, period=period, component=component)

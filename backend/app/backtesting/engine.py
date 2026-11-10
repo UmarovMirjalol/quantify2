@@ -45,8 +45,17 @@ class BacktestEngine:
         self.short = strategy.side == Side.SHORT
         self.risk_engine = RiskEngine(strategy)
 
-    def run(self, data: pd.DataFrame, signals: CustomSignals | None = None) -> dict[str, Any]:
-        """``signals`` lets callers pass precomputed Python-strategy output (batched or checked)."""
+    def run(
+        self,
+        data: pd.DataFrame,
+        signals: CustomSignals | None = None,
+        *,
+        metrics_only: bool = False,
+    ) -> dict[str, Any]:
+        """``signals`` lets callers pass precomputed Python-strategy output (batched or checked).
+
+        ``metrics_only`` skips the chart series and side reports for research loops.
+        """
         if data is None or len(data) < 5:
             raise BacktestError("Dataset too short for backtesting (need at least 5 bars)")
 
@@ -178,6 +187,8 @@ class BacktestEngine:
             trades=portfolio.trades,
             initial_capital=self.strategy.initial_capital,
         )
+        if metrics_only:
+            return {"metrics": metrics}
 
         price_series = [
             {
@@ -240,6 +251,11 @@ class BacktestEngine:
             "total_commission": portfolio.total_commission,
             "total_slippage": portfolio.total_slippage,
             "monte_carlo": monte_carlo_res,
+            "live_signal": self._live_signal(
+                portfolio.position, dates[-1], float(closes[-1]),
+                bool(entry_flags[-1]), bool(exit_flags[-1]),
+                float(sizes[-1]) if sizes is not None else None,
+            ),
             "regimes": classify_regimes(price_series, trades_out),
             "market": market_exposure(
                 [pt["equity"] for pt in equity_series],
@@ -250,6 +266,56 @@ class BacktestEngine:
                 "at that time. Orders are executed at the next bar's open. "
                 "This prevents look-ahead bias."
             ),
+        }
+
+    def _live_signal(
+        self,
+        pos: Any,
+        last_date: Any,
+        last_close: float,
+        entry_now: bool,
+        exit_now: bool,
+        fraction: float | None,
+    ) -> dict[str, Any]:
+        """What the strategy says after the final bar: state plus the order for the next open."""
+        side = "short" if self.short else "long"
+        if pos.is_open:
+            unrealized = pos.unrealized_pnl(last_close)
+            cost = pos.entry_price * pos.quantity
+            if exit_now:
+                action = "exit"
+            elif entry_now and fraction != 0.0 and pos.entries < self.strategy.max_entries:
+                action = "add"
+            else:
+                action = "hold"
+            return {
+                "as_of": pd.Timestamp(last_date).isoformat(),
+                "last_close": last_close,
+                "side": side,
+                "in_position": True,
+                "action": action,
+                "entry_date": pos.entry_date.isoformat() if pos.entry_date else None,
+                "entry_price": pos.entry_price,
+                "quantity": pos.quantity,
+                "unrealized_pnl": unrealized,
+                "unrealized_pct": unrealized / cost if cost > 0 else 0.0,
+                "stop_loss_price": pos.stop_loss_price,
+                "take_profit_price": pos.take_profit_price,
+            }
+        action = "enter" if entry_now and fraction != 0.0 else "wait"
+        return {
+            "as_of": pd.Timestamp(last_date).isoformat(),
+            "last_close": last_close,
+            "side": side,
+            "in_position": False,
+            "action": action,
+            "entry_date": None,
+            "entry_price": None,
+            "quantity": 0.0,
+            "unrealized_pnl": 0.0,
+            "unrealized_pct": 0.0,
+            "stop_loss_price": None,
+            "take_profit_price": None,
         }
 
     def _scale_out(self, pos: Any, short: bool, h: float, l: float, o: float, fill: Any) -> None:
