@@ -86,13 +86,16 @@ def test_sma_calculation():
 
 
 def test_ema_calculation():
-    s = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
+    s = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 20.0])
     out = ema(s, 3)
     assert pd.isna(out.iloc[1])
-    assert np.isfinite(out.iloc[2])
-    # On a rising series, EMA(3) stays above SMA(3) after warmup
+    # Seeded with the first 3-bar SMA, as TradingView's ta.ema and backtrader do
+    assert out.iloc[2] == pytest.approx(2.0)
+    expected = 2.0
+    for x in s.iloc[3:]:
+        expected = 0.5 * x + 0.5 * expected
+    assert out.iloc[-1] == pytest.approx(expected)
     assert out.iloc[-1] > sma(s, 3).iloc[-1]
-    assert out.iloc[-1] == pytest.approx(7.0078125, abs=1e-6)
 
 
 def test_rsi_calculation():

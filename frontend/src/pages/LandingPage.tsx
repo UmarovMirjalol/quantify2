@@ -208,6 +208,9 @@ export function LandingPage() {
           <a className="btn ghost" href="#try">
             Try
           </a>
+          <Link className="btn ghost" to="/research">
+            Research
+          </Link>
           <Link className="btn ghost" to="/guide">
             Guide
           </Link>
@@ -620,6 +623,8 @@ export function LandingPage() {
         <div className="seo-links">
           <Link to="/guide">How to backtest →</Link>
           <Link to="/playbook">Strategy playbook →</Link>
+          <Link to="/research">Study: do backtest winners keep winning? →</Link>
+          <Link to="/about">About →</Link>
           <a href="/robots.txt">robots.txt</a>
           <a href="/sitemap.xml">sitemap.xml</a>
         </div>

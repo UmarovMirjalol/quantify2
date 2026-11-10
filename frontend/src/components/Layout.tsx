@@ -93,6 +93,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             <Icon d="M5 3h14v18H5zM8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v6" />
             Tools
           </NavLink>
+          <NavLink to="/research">
+            <Icon d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3M7.5 15h9" />
+            Research
+          </NavLink>
           <NavLink to="/playbook">
             <Icon d="M4 5h16v14H4zM8 9h8M8 13h5" />
             Playbook
@@ -104,6 +108,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
           <NavLink to="/history">
             <Icon d="M4 6h16M4 12h16M4 18h10" />
             Results
+          </NavLink>
+          <NavLink to="/about">
+            <Icon d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v6M12 7.5v.01" />
+            About
           </NavLink>
           <NavLink to="/settings">
             <Icon d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.4 1.4M16.1 16.1l1.4 1.4M6.5 17.5l1.4-1.4M16.1 7.9l1.4-1.4" />

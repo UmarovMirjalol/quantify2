@@ -36,6 +36,8 @@ const DiscoverPage = lazy(() =>
   import('./pages/DiscoverPage').then((m) => ({ default: m.DiscoverPage })),
 );
 const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })));
+const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const AccountPage = lazy(() =>
   import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })),
 );
@@ -230,6 +232,8 @@ export default function App() {
           <Route path="/forward" element={<ForwardPage />} />
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/tools" element={<ToolsPage />} />
+          <Route path="/research" element={<ResearchPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/r/:token" element={<ReportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/account" element={<AccountPage />} />

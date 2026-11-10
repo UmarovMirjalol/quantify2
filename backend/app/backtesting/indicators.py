@@ -13,11 +13,36 @@ def sma(series: pd.Series, period: int) -> pd.Series:
     return series.rolling(window=period, min_periods=period).mean()
 
 
+def _seeded_average(series: pd.Series, alpha: float, period: int) -> pd.Series:
+    """Recursive average whose first value is the SMA of the first `period` valid values.
+
+    This is the seeding used by Wilder, TradingView (ta.ema, ta.rma) and backtrader, so
+    signals agree with them from the first bar instead of only after the warm-up fades.
+    """
+    s = series.astype(float)
+    out = pd.Series(np.nan, index=s.index)
+    valid = np.flatnonzero(s.notna().to_numpy())
+    if len(valid) < period:
+        return out
+    seed_at = valid[period - 1]
+    tail = s.iloc[seed_at:].copy()
+    tail.iloc[0] = float(s.iloc[valid[0] : seed_at + 1].mean())
+    out.iloc[seed_at:] = tail.ewm(alpha=alpha, adjust=False).mean().to_numpy()
+    return out
+
+
 def ema(series: pd.Series, period: int) -> pd.Series:
-    """Exponential moving average (pandas ewm, adjust=False for recursive EMA)."""
+    """Exponential moving average, alpha 2/(N+1), seeded with the first N-bar SMA."""
     if period < 1:
         raise ValueError("EMA period must be >= 1")
-    return series.ewm(span=period, adjust=False, min_periods=period).mean()
+    return _seeded_average(series, 2.0 / (period + 1), period)
+
+
+def rma(series: pd.Series, period: int) -> pd.Series:
+    """Wilder's smoothing (alpha 1/N), seeded with the first N-bar SMA."""
+    if period < 1:
+        raise ValueError("Smoothing period must be >= 1")
+    return _seeded_average(series, 1.0 / period, period)
 
 
 def rsi(series: pd.Series, period: int = 14) -> pd.Series:
@@ -27,8 +52,8 @@ def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
     gain = delta.clip(lower=0.0)
     loss = (-delta).clip(lower=0.0)
-    avg_gain = gain.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
-    avg_loss = loss.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    avg_gain = rma(gain, period)
+    avg_loss = rma(loss, period)
     rs = avg_gain / avg_loss.replace(0, np.nan)
     result = 100 - (100 / (1 + rs))
     # When avg_loss is 0 and avg_gain > 0, RSI = 100
@@ -49,9 +74,7 @@ def macd(
     fast = ema(series, fast_period)
     slow = ema(series, slow_period)
     macd_line = fast - slow
-    signal_line = ema(macd_line.dropna(), signal_period).reindex(macd_line.index)
-    # Recompute signal with proper alignment: ewm on full series with NaNs handled
-    signal_line = macd_line.ewm(span=signal_period, adjust=False, min_periods=signal_period).mean()
+    signal_line = ema(macd_line, signal_period)
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
@@ -114,7 +137,7 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
         ],
         axis=1,
     ).max(axis=1)
-    return tr.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    return rma(tr, period)
 
 
 def stochastic(
@@ -142,13 +165,12 @@ def adx(df: pd.DataFrame, period: int = 14) -> tuple[pd.Series, pd.Series, pd.Se
     down = -low.diff()
     plus_dm = up.where((up > down) & (up > 0), 0.0)
     minus_dm = down.where((down > up) & (down > 0), 0.0)
-    alpha = 1 / period
     tr = atr(df, 1)
-    smooth_tr = tr.ewm(alpha=alpha, adjust=False, min_periods=period).mean().replace(0, np.nan)
-    plus_di = 100.0 * plus_dm.ewm(alpha=alpha, adjust=False, min_periods=period).mean() / smooth_tr
-    minus_di = 100.0 * minus_dm.ewm(alpha=alpha, adjust=False, min_periods=period).mean() / smooth_tr
+    smooth_tr = rma(tr, period).replace(0, np.nan)
+    plus_di = 100.0 * rma(plus_dm, period) / smooth_tr
+    minus_di = 100.0 * rma(minus_dm, period) / smooth_tr
     dx = 100.0 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
-    return dx.ewm(alpha=alpha, adjust=False, min_periods=period).mean(), plus_di, minus_di
+    return rma(dx, period), plus_di, minus_di
 
 
 def donchian(df: pd.DataFrame, period: int = 20) -> tuple[pd.Series, pd.Series, pd.Series]:
