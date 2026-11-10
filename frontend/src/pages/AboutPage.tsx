@@ -6,7 +6,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 const REPO = 'https://github.com/UmarovMirjalol/quantify2';
 
 /** A few sentences in the author's own words; the section is hidden while empty. */
-const AUTHOR_NOTE = '';
+const AUTHOR_NOTE = 'Sometimes traders need something fast and reliable to check their strategies. Here you go.';
 
 const PRINCIPLES = [
   {
