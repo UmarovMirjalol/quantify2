@@ -20,8 +20,16 @@ const pick = (r: LeaderboardRow, k: SortKey) =>
 
 function Pct({ value, hold }: { value: number | null; hold?: number }) {
   if (value == null) return <span className="hint">—</span>;
-  const tone = hold != null ? (value >= hold ? 'pos' : 'neg') : value >= 0 ? 'pos' : 'neg';
-  return <span className={`mono ${tone}`}>{signedPct(value)}</span>;
+  if (hold == null) return <span className="mono hold-cell">{signedPct(value)}</span>;
+  const won = value >= hold;
+  return (
+    <span className={`mono lb-pct ${won ? 'pos' : 'neg'}`}>
+      {signedPct(value)}
+      <span className="lb-mark" aria-label={won ? 'beat holding' : 'lost to holding'}>
+        {won ? '▲' : '▼'}
+      </span>
+    </span>
+  );
 }
 
 export function LeaderboardPage() {
@@ -174,11 +182,11 @@ export function LeaderboardPage() {
                   <th>#</th>
                   <th>Strategy</th>
                   <th>Market</th>
-                  <th>12 months</th>
-                  <th>Holding</th>
-                  <th>This week</th>
-                  <th>10 years</th>
-                  <th>Holding</th>
+                  <th className={sort === 'year' ? 'sorted' : ''}>12 months</th>
+                  <th className="hold-cell">Holding</th>
+                  <th className={sort === 'week' ? 'sorted' : ''}>This week</th>
+                  <th className={sort === '10y' ? 'sorted' : ''}>10 years</th>
+                  <th className="hold-cell">Holding</th>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
@@ -222,7 +230,7 @@ export function LeaderboardPage() {
             </table>
           </div>
           <p className="hint">
-            Green means the strategy beat holding over the same period. Costs of 0.1% per trade are included. Past
+            Green ▲ means the strategy beat holding over the same period, red ▼ means it lost. Costs of 0.1% per trade are included. Past
             results do not predict future ones. <Link to="/check">Test your own idea →</Link>
           </p>
         </>

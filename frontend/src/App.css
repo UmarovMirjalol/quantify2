@@ -6139,3 +6139,66 @@ h2 {
     left: 0;
   }
 }
+/* —— Polish pass 2 —— */
+.leaderboard-table .hold-cell {
+  color: var(--text-muted);
+}
+
+.leaderboard-table th.sorted {
+  color: var(--accent);
+}
+
+.lb-pct {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.lb-mark {
+  font-size: 0.6rem;
+  opacity: 0.85;
+}
+
+.leaderboard-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+.leaderboard-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.leaderboard-podium li {
+  padding: 0.3rem 0;
+}
+
+.playbook-card h2,
+.guide-article h2 {
+  color: var(--text);
+  font-family: var(--display);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.02em;
+}
+
+.playbook-card h2 {
+  font-size: 1.3rem;
+}
+
+.guide-article h2 {
+  margin-top: 1.8rem;
+  font-size: 1.3rem;
+}
+
+.guide-article h2:first-child {
+  margin-top: 0.2rem;
+}
+
+.playbook-card {
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.playbook-card:hover {
+  border-color: rgba(79, 214, 160, 0.3);
+  transform: translateY(-2px);
+}
