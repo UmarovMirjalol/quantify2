@@ -582,6 +582,72 @@ h2 {
   color: var(--negative);
 }
 
+.hold-verdict {
+  margin: 0.75rem 0 1rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.hold-verdict p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.hold-verdict .hold-verdict-line {
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.hold-verdict.won .hold-verdict-line {
+  color: var(--positive);
+}
+
+.hold-verdict.lost .hold-verdict-line {
+  color: var(--negative);
+}
+
+.whatif-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.whatif-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.whatif-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 0.75rem;
+}
+
+.whatif-big {
+  margin: 0.2rem 0 0 !important;
+  font-size: clamp(2.2rem, 7vw, 3.4rem) !important;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1 !important;
+}
+
+.whatif-next .btn {
+  margin-top: 0.5rem;
+}
+
+.hold-verdict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
 /* —— Strategy Code Export Buttons —— */
 .export-buttons {
   margin: 1rem 0 1.25rem;

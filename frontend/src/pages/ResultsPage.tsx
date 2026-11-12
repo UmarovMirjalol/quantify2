@@ -27,6 +27,12 @@ import { buildBuyAndHold } from '../utils/buyAndHold';
 import { classifyRegimes } from '../utils/regimes';
 import { WalkForward } from '../components/WalkForward';
 import { downloadText, toCsv } from '../utils/download';
+import { sizingLabel } from '../utils/formatStrategy';
+import { shareCard, signedPct } from '../utils/shareCard';
+
+const ACCENT_HEX = '#4fd6a0';
+const HOLD_HEX = '#98a2ac';
+const NEG_HEX = '#e57a84';
 
 type Tab =
   | 'overview'
@@ -63,7 +69,7 @@ function num(v: number | null | undefined, digits = 2): string {
 
 function money(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
-  return `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  return `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }
 
 function toneFor(v: number | null | undefined): 'positive' | 'negative' | 'neutral' {
@@ -119,6 +125,48 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
     m.total_return != null && buyHold.totalReturn != null
       ? m.total_return - buyHold.totalReturn
       : null;
+
+  const start = m.initial_capital ?? result.strategy.initial_capital;
+  const holdVerdict =
+    m.final_capital != null && buyHold.finalCapital != null && start > 0
+      ? { start, strategy: m.final_capital, hold: buyHold.finalCapital, won: m.final_capital >= buyHold.finalCapital }
+      : null;
+  const [cardBusy, setCardBusy] = useState(false);
+  const [cardNote, setCardNote] = useState<string | null>(null);
+
+  async function downloadCard() {
+    if (!holdVerdict) return;
+    setCardBusy(true);
+    setCardNote(null);
+    const bars = result.price_series;
+    const period = bars.length ? `${bars[0].date.slice(0, 10)} → ${bars[bars.length - 1].date.slice(0, 10)}` : '';
+    const diff = money(Math.abs(holdVerdict.strategy - holdVerdict.hold));
+    try {
+      const how = await shareCard(
+        {
+          eyebrow: `Backtest · ${result.strategy.asset}`,
+          title: result.strategy_description || 'My trading strategy',
+          meta: [result.strategy.asset, period, `${m.number_of_trades} trades`].filter(Boolean).join('  ·  '),
+          stats: [
+            { label: 'My strategy', value: money(holdVerdict.strategy), sub: signedPct(holdVerdict.strategy / start - 1), color: ACCENT_HEX },
+            { label: 'Just buy & hold', value: money(holdVerdict.hold), sub: signedPct(holdVerdict.hold / start - 1), color: HOLD_HEX },
+          ],
+          verdict: holdVerdict.won ? `Beat buy & hold by ${diff}` : `Lost to buy & hold by ${diff}`,
+          verdictColor: holdVerdict.won ? ACCENT_HEX : NEG_HEX,
+          lines: [
+            { values: buyHold.equity.map((p) => p.equity), color: HOLD_HEX, dashed: true },
+            { values: result.equity_curve.map((p) => p.equity), color: ACCENT_HEX },
+          ],
+        },
+        `quantify-result-${result.id}.png`,
+      );
+      setCardNote(how === 'downloaded' ? 'Card saved as PNG. Post it anywhere.' : null);
+    } catch (err) {
+      setCardNote(err instanceof Error ? err.message : 'Could not draw the card.');
+    } finally {
+      setCardBusy(false);
+    }
+  }
 
   function exportTradesCsv() {
     const rows: (string | number)[][] = [
@@ -365,8 +413,8 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
       ) : null}
 
       {result.clarifications && result.clarifications.length > 0 ? (
-        <div className="banner info" style={{ background: 'var(--color-bg-info, #e8f0fe)', border: '1px solid var(--color-border-info, #4285f4)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-          <strong>💡 AI Suggestions:</strong>
+        <div className="banner info">
+          <strong>Suggestions</strong>
           <ul style={{ margin: '6px 0 0 16px', padding: 0, listStyle: 'disc' }}>
             {result.clarifications.map((c, i) => (
               <li key={i} style={{ margin: '2px 0' }}>{c}</li>
@@ -380,6 +428,26 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
       <VerdictCard backtestId={result.id} initial={result.verdict} />
 
       <LiveSignalCard backtestId={result.id} initial={result.live_signal} canRefresh={!readOnly} />
+
+      {holdVerdict ? (
+        <section className={`hold-verdict ${holdVerdict.won ? 'won' : 'lost'}`}>
+          <p>
+            Your strategy turned <strong>{money(holdVerdict.start)}</strong> into{' '}
+            <strong className="mono">{money(holdVerdict.strategy)}</strong>. Just buying and holding:{' '}
+            <strong className="mono">{money(holdVerdict.hold)}</strong>.
+          </p>
+          <p className="hold-verdict-line">
+            {holdVerdict.won ? 'Your strategy won by ' : 'Holding won by '}
+            <span className="mono">{money(Math.abs(holdVerdict.strategy - holdVerdict.hold))}</span>
+          </p>
+          <div className="hold-verdict-actions no-print">
+            <button type="button" className="btn secondary small" onClick={downloadCard} disabled={cardBusy}>
+              {cardBusy ? 'Drawing…' : 'Share result card'}
+            </button>
+            {cardNote ? <span className="hint">{cardNote}</span> : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="kpi-grid">
         <KpiCard label="Total Return" value={pct(m.total_return)} tone={toneFor(m.total_return)} />
@@ -439,12 +507,8 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
                   <dd>{result.strategy.asset}</dd>
                 </div>
                 <div>
-                  <dt>Position sizing</dt>
-                  <dd>{result.strategy.position_sizing}</dd>
-                </div>
-                <div>
-                  <dt>Risk / trade</dt>
-                  <dd>{pct(result.strategy.risk.risk_per_trade)}</dd>
+                  <dt>Position size</dt>
+                  <dd>{sizingLabel(result.strategy)}</dd>
                 </div>
                 <div>
                   <dt>Stop loss</dt>

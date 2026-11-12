@@ -277,6 +277,46 @@ export async function runScreener(payload: {
   return request('/api/screener', json(payload));
 }
 
+export type WhatIfPoint = { date: string; value: number; invested: number };
+
+export type WhatIfResult = {
+  ticker: string;
+  source: string;
+  first_available: string;
+  clipped: boolean;
+  start_date: string;
+  end_date: string;
+  start_price: number;
+  end_price: number;
+  invested: number;
+  value: number;
+  gain: number;
+  total_return: number | null;
+  cagr: number | null;
+  max_drawdown: number | null;
+  multiple: number | null;
+  series: WhatIfPoint[];
+  benchmark: {
+    ticker: string;
+    start_date: string;
+    invested: number;
+    value: number;
+    gain: number;
+    total_return: number | null;
+    series: WhatIfPoint[];
+  } | null;
+};
+
+export async function getWhatIf(params: { ticker: string; start: string; amount: number; monthly: number }): Promise<WhatIfResult> {
+  const q = new URLSearchParams({
+    ticker: params.ticker,
+    start: params.start,
+    amount: String(params.amount),
+    monthly: String(params.monthly),
+  });
+  return request(`/api/whatif?${q}`);
+}
+
 export async function runDiscovery(dataset_id: string): Promise<DiscoveryResult> {
   return request('/api/discover', json({ dataset_id }));
 }

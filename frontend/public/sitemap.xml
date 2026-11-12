@@ -21,6 +21,11 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://quantifylab.xyz/whatif</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://quantifylab.xyz/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

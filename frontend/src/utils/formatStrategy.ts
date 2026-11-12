@@ -1,5 +1,17 @@
 /** Human-readable lines from a parsed StrategySpec condition blob. */
 
+import type { StrategySpec } from '../types';
+
+const pctText = (x: number) => `${+(x * 100).toFixed(2)}%`;
+
+/** Position size in plain words, matching how the risk engine sizes entries. */
+export function sizingLabel(s: Pick<StrategySpec, 'position_sizing' | 'risk' | 'stop_loss'>): string {
+  if (s.position_sizing === 'percent_capital') return `${pctText(s.risk.percent_capital ?? 0.1)} of capital per trade`;
+  if (s.position_sizing === 'fixed') return 'Fixed number of units';
+  if (s.stop_loss) return `Risk ${pctText(s.risk.risk_per_trade)} of capital per trade`;
+  return `${pctText(s.risk.max_position_pct ?? 1)} of capital per trade (no stop)`;
+}
+
 type IndLike = {
   indicator?: string;
   period?: number | null;

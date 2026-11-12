@@ -129,8 +129,8 @@ class RiskEngine:
                 per_share_risk = fill_price * stop_frac
                 quantity = dollar_risk / per_share_risk
             else:
-                # Without stop-loss, use risk_per_trade as capital fraction
-                quantity = (equity * risk_frac) / (fill_price * (1.0 + self.commission))
+                # Risk per trade is undefined without a stop, so trade the full allowed position.
+                quantity = (equity * self.risk.max_position_pct) / (fill_price * (1.0 + self.commission))
 
         # Max position as % of equity
         max_notional = equity * self.risk.max_position_pct - held

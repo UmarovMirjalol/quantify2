@@ -25,6 +25,10 @@ SLOW_GRID = [20, 30, 50, 75, 100, 150, 200]
 _NORMAL = NormalDist()
 
 
+def _tries(n: int) -> str:
+    return f"{n} {'try' if n == 1 else 'tries'}"
+
+
 def deflated_sharpe(equity: list[float], trial_sharpes: list[float]) -> dict[str, Any]:
     values = np.asarray(equity, dtype=float)
     returns = np.diff(values) / values[:-1] if len(values) >= 2 else np.array([])
@@ -65,17 +69,18 @@ def deflated_sharpe(equity: list[float], trial_sharpes: list[float]) -> dict[str
     if probability >= 0.95:
         verdict = "survives"
         headline = (
-            f"After counting {trials} tries on this dataset, the Sharpe still clears what luck alone would produce."
+            f"After counting {_tries(trials)} on this dataset, the Sharpe still clears what luck alone would produce."
         )
     elif probability >= 0.5:
         verdict = "weak"
         headline = (
-            f"With {trials} tries on this dataset, this Sharpe is only modestly above the best a random variant would show."
+            f"With {_tries(trials)} on this dataset, this Sharpe is only modestly above the best a random variant would show."
         )
     else:
         verdict = "luck"
         headline = (
-            f"{trials} tries on this dataset are enough to produce a Sharpe like this by chance."
+            f"{_tries(trials)[0].upper()}{_tries(trials)[1:]} on this dataset "
+            f"{'is' if trials == 1 else 'are'} enough to produce a Sharpe like this by chance."
         )
     return {
         "verdict": verdict,

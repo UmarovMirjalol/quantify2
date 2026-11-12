@@ -18,7 +18,7 @@ import {
 } from '../components/PositionManagement';
 import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
-import { formatConditions } from '../utils/formatStrategy';
+import { formatConditions, sizingLabel } from '../utils/formatStrategy';
 
 type PresetStrategy = {
   id: string;
@@ -524,7 +524,7 @@ export function HomePage({ health }: Props) {
                 required
                 disabled={loading}
               />
-              <small className="hint">0.01 = 1% (or type 1 for 1%)</small>
+              <small className="hint">0.01 = 1%. Used only with a stop-loss; otherwise trades use 100% of capital.</small>
             </label>
 
             <label className="field">
@@ -644,12 +644,8 @@ export function HomePage({ health }: Props) {
                 <span>{parse.strategy.asset}</span>
               </div>
               <div className="interp-row">
-                <span>Sizing</span>
-                <span>{parse.strategy.position_sizing}</span>
-              </div>
-              <div className="interp-row">
-                <span>Risk / trade</span>
-                <span>{((parse.strategy.risk.risk_per_trade ?? 0) * 100).toFixed(2)}%</span>
+                <span>Position size</span>
+                <span>{sizingLabel(parse.strategy)}</span>
               </div>
               <div className="interp-row">
                 <span>Stop / TP</span>

@@ -97,6 +97,44 @@ def _extract_risk_fields(text: str) -> dict[str, Any]:
     return out
 
 
+_ALL_IN = re.compile(
+    r"\ball[-\s]?in\b|\bfull\s+(?:capital|equity|size|position|account|balance)\b|"
+    r"\b(?:entire|whole)\s+(?:capital|account|balance|equity|portfolio)\b|"
+    r"\ball\s+(?:of\s+)?(?:my\s+|the\s+)?(?:capital|money|cash|equity|balance)\b|"
+    r"(?:на\s+)?(?:весь|все)\s+(?:капитал|депозит|деньги|баланс)",
+    re.I,
+)
+_CAPITAL_WORD = r"(?:capital|equity|account|portfolio|cash|balance|капитала|депозита|баланса)"
+_SIZE_PCT = [
+    re.compile(
+        r"\b(?:use|using|invest|investing|allocate|allocating|put|deploy|buy\s+with|position(?:\s+size)?|size)"
+        r"\s*(?:of|=|:|with)?\s*(\d+(?:[.,]\d+)?)\s*%",
+        re.I,
+    ),
+    re.compile(r"(\d+(?:[.,]\d+)?)\s*%\s*(?:of\s+(?:my\s+|the\s+)?)?" + _CAPITAL_WORD, re.I),
+    re.compile(r"(?:на|вход\w*|позици\w*|размер\w*)\s*(?:на\s+)?(\d+(?:[.,]\d+)?)\s*%\s*" + _CAPITAL_WORD, re.I),
+]
+
+
+def _extract_sizing(text: str) -> float | None:
+    """Fraction of capital per trade when the text names a position size; risk phrases are not sizes."""
+    if _ALL_IN.search(text):
+        return 1.0
+    for pattern in _SIZE_PCT:
+        for m in pattern.finditer(text):
+            before = text[max(0, m.start() - 12):m.start()].lower()
+            if "risk" in before or "риск" in before or "risk" in m.group(0).lower():
+                continue
+            value = _percent(float(m.group(1).replace(",", ".")))
+            if 0 < value <= 1:
+                return value
+    return None
+
+
+def _is_russian(text: str) -> bool:
+    return len(re.findall(r"[а-яё]", text, re.I)) > len(re.findall(r"[a-z]", text, re.I)) / 3
+
+
 _PCT = r"\+?(\d+(?:[.,]\d+)?)\s*%"
 _TRAILING = [
     re.compile(r"(?:trailing|trail)(?:[-\s]?stop)?(?:[-\s]?loss)?\s*(?:of|at|=|:)?\s*" + _PCT, re.I),
@@ -651,13 +689,36 @@ def parse_builtin(
     elif re.search(r"\b(?:1w|weekly|недельн\w*)\b", text, re.IGNORECASE):
         tf = "1w"
 
+    size = _extract_sizing(original_text)
+    stop = raw_fields.get("stop_loss")
+    risk_frac = risk_per_trade if risk_per_trade is not None else raw_fields.get("risk_per_trade", 0.01)
+    if size is None and stop is None:
+        size = 1.0
+    ru = _is_russian(original_text)
+
     clarifications: list[str] = []
-    if raw_fields.get("stop_loss") is None:
-        clarifications.append("Совет: укажите Stop-Loss (например: «стоп-лосс 2%») для четкого ограничения риска.")
+    if stop is None:
+        clarifications.append(
+            "Без стоп-лосса каждая сделка идёт на "
+            f"{size * 100:.0f}% капитала. Добавьте «стоп-лосс 2%», чтобы считать размер по риску."
+            if ru else
+            f"No stop-loss, so each trade uses {size * 100:.0f}% of capital. "
+            "Add “stop-loss 2%” to size positions by risk instead."
+        )
+    elif size is None:
+        clarifications.append(
+            f"Размер позиции по риску: {risk_frac * 100:g}% капитала на сделку при стопе {stop * 100:g}%. "
+            "Напишите «use 100% of capital», чтобы входить на весь капитал."
+            if ru else
+            f"Sized by risk: {risk_frac * 100:g}% of capital at risk per trade with a {stop * 100:g}% stop. "
+            "Write “use 100% of capital” to go all in instead."
+        )
     if raw_fields.get("take_profit") is None:
-        clarifications.append("Совет: можно добавить Take-Profit (например: «тейк-профит 5%») для фиксации прибыли.")
-    if raw_fields.get("risk_per_trade") is None:
-        clarifications.append("Размер риска на сделку по умолчанию составляет 1%. Вы можете изменить его (например: «риск 1.5%»).")
+        clarifications.append(
+            "Можно добавить тейк-профит, например «тейк-профит 5%»."
+            if ru else
+            "You can add a take-profit, e.g. “take-profit 5%”."
+        )
 
     spec: dict[str, Any] = {
         "asset": asset_name,
@@ -668,28 +729,16 @@ def parse_builtin(
         "exit_conditions": exit_,
         "entry_logic": "AND",
         "exit_logic": "AND",
-        "risk": {
-            "risk_per_trade": risk_per_trade
-            if risk_per_trade is not None
-            else raw_fields.get("risk_per_trade", 0.01)
-        },
-        "stop_loss": raw_fields.get("stop_loss"),
+        "risk": {"risk_per_trade": risk_frac}
+        | ({"percent_capital": size} if size is not None else {}),
+        "stop_loss": stop,
         "take_profit": raw_fields.get("take_profit"),
-        "position_sizing": "risk_based",
+        "position_sizing": "percent_capital" if size is not None else "risk_based",
     }
     if commission is not None:
         spec["commission"] = commission
     if slippage is not None:
         spec["slippage"] = slippage
-
-    # Default stops for risk-based sizing when user mentioned risk but no stop
-    if (
-        spec["position_sizing"] == "risk_based"
-        and spec["stop_loss"] is None
-        and re.search(r"stop", text, re.IGNORECASE) is None
-    ):
-        # leave null — risk engine falls back to capital fraction
-        pass
     _apply_management(spec, management)
 
     try:

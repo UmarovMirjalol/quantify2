@@ -36,7 +36,7 @@ def _size(spec, equity, cash, price, short, fraction, held=0.0):
     elif spec.get("stop_loss"):
         qty = equity * risk["risk_per_trade"] / (fill * spec["stop_loss"])
     else:
-        qty = equity * risk["risk_per_trade"] / unit
+        qty = equity * risk["max_position_pct"] / unit
     backing = equity if short else cash
     power = backing * risk["max_leverage"] - (held if short else 0.0)
     qty = min(

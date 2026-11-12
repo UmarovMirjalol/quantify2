@@ -36,6 +36,7 @@ const DiscoverPage = lazy(() =>
   import('./pages/DiscoverPage').then((m) => ({ default: m.DiscoverPage })),
 );
 const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })));
+const WhatIfPage = lazy(() => import('./pages/WhatIfPage').then((m) => ({ default: m.WhatIfPage })));
 const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const AccountPage = lazy(() =>
@@ -232,6 +233,7 @@ export default function App() {
           <Route path="/forward" element={<ForwardPage />} />
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/tools" element={<ToolsPage />} />
+          <Route path="/whatif" element={<WhatIfPage />} />
           <Route path="/research" element={<ResearchPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/r/:token" element={<ReportPage />} />

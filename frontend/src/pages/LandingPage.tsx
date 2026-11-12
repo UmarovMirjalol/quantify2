@@ -211,6 +211,9 @@ export function LandingPage() {
           <Link className="btn ghost" to="/research">
             Research
           </Link>
+          <Link className="btn ghost" to="/whatif">
+            What if…
+          </Link>
           <Link className="btn ghost" to="/guide">
             Guide
           </Link>

@@ -120,7 +120,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "id": "pinbar-support",
         "title": "Pin-bar Rejection",
         "tag": "Price Action",
-        "blurb": "Rejection candle signal with tight stop-loss and 2:1 profit target.",
+        "blurb": "Rejection candle signal with a 2% stop-loss and a 5% target (2.5:1).",
         "text": (
             "Buy SPY when a Bullish Pin-bar pattern forms on daily chart. "
             "Use 2% stop-loss and 5% take-profit. Risk 1% per trade."

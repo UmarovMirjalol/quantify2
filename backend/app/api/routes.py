@@ -440,6 +440,7 @@ async def api_run_backtest(
     settings = get_settings()
     parser_used = "llm" if settings.llm_enabled else "builtin"
     parsed_warnings: list[str] = []
+    parsed_clarifications: list[str] = []
 
     try:
         if body.strategy is not None:
@@ -469,6 +470,7 @@ async def api_run_backtest(
             strategy = parsed.strategy
             parser_used = parsed.parser
             parsed_warnings = parsed.warnings
+            parsed_clarifications = parsed.clarifications
     except StrategyParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -522,6 +524,7 @@ async def api_run_backtest(
         "id": record.id,
         "parser": parser_used,
         "warnings": parsed_warnings,
+        "clarifications": parsed_clarifications,
         "strategy_description": body.strategy_text,
         "dataset_name": body.dataset_id,
         "created_at": record.created_at.isoformat(),

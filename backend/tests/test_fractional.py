@@ -29,7 +29,12 @@ def test_unit_priced_above_the_budget_is_bought_fractionally():
     decision = _engine().size_entry(Portfolio(initial_capital=25000), 100_000.0)
     assert decision.allowed
     assert 0 < decision.quantity < 1
-    assert decision.quantity * 100_000.0 <= 25000 * 0.01 + 1e-6
+    assert decision.quantity * 100_000.0 <= 25000 + 1e-6
+
+
+def test_risk_sizing_without_a_stop_trades_the_full_allowed_position():
+    decision = _engine().size_entry(Portfolio(initial_capital=25000), 10.0)
+    assert decision.quantity * 10.0 > 25000 * 0.99
 
 
 def test_cheap_unit_still_sizes_in_whole_units():

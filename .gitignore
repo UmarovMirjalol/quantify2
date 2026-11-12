@@ -27,3 +27,10 @@ backups/
 .idea/
 .vscode/
 demo-screenshots/
+
+# Rendered promo media
+promo/*.mp4
+promo/*.png
+promo/*.txt
+promo/race_*.json
+promo/logo/

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ from app.models.forward import ForwardTest
 from app.research.discovery import run_discovery
 from app.research.forward import WARMUP_HISTORY, evaluate_forward
 from app.research.screener import UNIVERSES, run_screener, universe_list
+from app.research.whatif import what_if
 
 router = APIRouter(prefix="/api")
 
@@ -82,6 +83,26 @@ async def api_screener(body: ScreenerRequest) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {**result, "strategy": strategy.model_dump(mode="json")}
+
+
+# --- What if ------------------------------------------------------------------
+
+
+@router.get("/whatif")
+def api_what_if(
+    ticker: str = Query(min_length=1, max_length=20),
+    start: date = Query(),
+    amount: float = Query(default=1000.0, ge=0, le=1e9),
+    monthly: float = Query(default=0.0, ge=0, le=1e7),
+) -> dict[str, Any]:
+    if start >= date.today():
+        raise HTTPException(status_code=422, detail="Pick a start date in the past.")
+    try:
+        return what_if(ticker.strip(), start, amount, monthly)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"Could not load prices for '{ticker}'.") from exc
 
 
 # --- Discovery ----------------------------------------------------------------
