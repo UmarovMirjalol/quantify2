@@ -21,6 +21,7 @@ from app.models.backtest import BacktestRecord
 from app.models.forward import ForwardTest
 from app.research.discovery import run_discovery
 from app.research.forward import WARMUP_HISTORY, evaluate_forward
+from app.research.leaderboard import leaderboard
 from app.research.screener import UNIVERSES, run_screener, universe_list
 from app.research.whatif import what_if
 
@@ -62,7 +63,7 @@ class ScreenerRequest(BaseModel):
     strategy: StrategySpec | None = None
     universe: str | None = None
     tickers: list[str] = Field(default_factory=list, max_length=40)
-    history: str = Field(default="5y", pattern=r"^(1y|5y|10y)$")
+    history: str = Field(default="5y", pattern=r"^(1y|5y|10y|max)$")
 
 
 @router.get("/screener/universes")
@@ -103,6 +104,14 @@ def api_what_if(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"Could not load prices for '{ticker}'.") from exc
+
+
+@router.get("/leaderboard")
+def api_leaderboard() -> dict[str, Any]:
+    try:
+        return leaderboard()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=503, detail="The leaderboard is being rebuilt. Try again in a minute.") from exc
 
 
 # --- Discovery ----------------------------------------------------------------

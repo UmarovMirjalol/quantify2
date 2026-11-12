@@ -183,7 +183,7 @@
   display: none;
 }
 
-.landing-menu-btn,
+.landing-nav .landing-menu-btn,
 .sidebar-close {
   display: none;
 }
@@ -630,6 +630,75 @@ h2 {
 
 .hold-verdict.lost .hold-verdict-line {
   color: var(--negative);
+}
+
+.risk-warning {
+  margin-top: 0.6rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.hold-verdict-why {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.check-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.leaderboard-loading {
+  padding: 1.4rem;
+  color: var(--text-secondary);
+}
+
+.leaderboard-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.leaderboard-podium {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.leaderboard-podium h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.leaderboard-podium ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.leaderboard-podium li > span:first-child {
+  margin-right: 0.5rem;
+}
+
+.leaderboard-podium li {
+  line-height: 1.4;
+}
+
+.leaderboard-podium li .mono {
+  float: right;
+}
+
+.leaderboard-table td {
+  vertical-align: middle;
 }
 
 .instant-run {
@@ -4220,35 +4289,6 @@ h2 {
     padding: 0.85rem 1rem;
   }
 
-  .landing-nav .nav-links .btn.ghost {
-    display: none;
-  }
-
-  .landing-nav .landing-menu-btn {
-    display: inline-flex;
-    margin-left: auto;
-    margin-right: 0.4rem;
-  }
-
-  .landing-nav .nav-links.open {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.25rem;
-    padding: 0.6rem 1rem 0.9rem;
-    background: rgba(10, 12, 15, 0.97);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .landing-nav .nav-links.open .btn {
-    display: flex;
-    justify-content: flex-start;
-    min-height: 44px;
-  }
-
   .sidebar-close {
     display: flex;
   }
@@ -5654,5 +5694,36 @@ h2 {
   select,
   textarea {
     font-size: 16px !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .landing-nav .nav-links .btn.ghost {
+    display: none;
+  }
+
+  .landing-nav .landing-menu-btn {
+    display: inline-flex;
+    margin-left: auto;
+    margin-right: 0.4rem;
+  }
+
+  .landing-nav .nav-links.open {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.6rem 1rem 0.9rem;
+    background: rgba(10, 12, 15, 0.97);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .landing-nav .nav-links.open .btn {
+    display: flex;
+    justify-content: flex-start;
+    min-height: 44px;
   }
 }

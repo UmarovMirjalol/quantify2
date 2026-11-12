@@ -406,7 +406,14 @@ class BacktestEngine:
             else:
                 total_cost = fill_price * order.quantity + commission
                 if total_cost > portfolio.cash + 1e-6:
-                    return  # reject — insufficient cash
+                    # Sized at the signal close; a gap up at the open would otherwise skip the trade.
+                    affordable = round_quantity(order.quantity * portfolio.cash / total_cost)
+                    if self.strategy.position_sizing.value == "fixed" or affordable <= 0:
+                        return
+                    order.quantity = affordable
+                    commission = self.risk_engine.commission_cost(fill_price, order.quantity)
+                    slippage_cost = abs(fill_price - fill_price_raw) * order.quantity
+                    total_cost = fill_price * order.quantity + commission
                 portfolio.cash -= total_cost
             portfolio.total_commission += commission
             portfolio.total_slippage += slippage_cost

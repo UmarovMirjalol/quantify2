@@ -27,6 +27,8 @@ class IndicatorType(str, Enum):
     STOCH = "STOCH"
     ADX = "ADX"
     DONCHIAN = "DONCHIAN"
+    WEEKDAY = "WEEKDAY"
+    CHANGE = "CHANGE"
 
 
 class ConditionOp(str, Enum):
@@ -83,6 +85,7 @@ class IndicatorRef(BaseModel):
         "d",
         "plus",
         "minus",
+        "next",
     ] = "value"
     # Base bars per higher-timeframe bar. 1 means the chart timeframe.
     bar_factor: int | None = Field(default=None, ge=1, le=2000)
@@ -133,6 +136,10 @@ class IndicatorRef(BaseModel):
             self.period = self.period or 20
             if self.component not in ("lower", "middle"):
                 self.component = "upper"
+        if ind == IndicatorType.WEEKDAY and self.component != "next":
+            self.component = "value"
+        if ind == IndicatorType.CHANGE:
+            self.period = self.period or 1
         return self
 
 

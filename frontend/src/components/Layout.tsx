@@ -96,6 +96,14 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             <Icon d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.8c0 4.9 10 2.6 10 7.6 0 2.3-2.2 3.6-5 3.6s-5-1.2-5-3.2" />
             What if…
           </NavLink>
+          <NavLink to="/check">
+            <Icon d="M9 12l2 2 4-4M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+            Guru check
+          </NavLink>
+          <NavLink to="/leaderboard">
+            <Icon d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />
+            Leaderboard
+          </NavLink>
           <NavLink to="/tools">
             <Icon d="M5 3h14v18H5zM8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v6" />
             Tools

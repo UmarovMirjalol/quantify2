@@ -160,6 +160,7 @@ export function ScreenerPage() {
             <option value="1y">1 year</option>
             <option value="5y">5 years</option>
             <option value="10y">10 years</option>
+            <option value="max">Full history</option>
           </select>
           <button type="button" className="btn primary" onClick={scan} disabled={running || total < 1 || text.trim().length < 5}>
             {running ? `Scanning ${total}…` : `Scan ${total} ticker${total === 1 ? '' : 's'}`}

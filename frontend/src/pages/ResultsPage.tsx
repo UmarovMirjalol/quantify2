@@ -27,8 +27,9 @@ import { buildBuyAndHold } from '../utils/buyAndHold';
 import { classifyRegimes } from '../utils/regimes';
 import { WalkForward } from '../components/WalkForward';
 import { downloadText, toCsv } from '../utils/download';
-import { sizingLabel } from '../utils/formatStrategy';
+import { riskWarnings, sizingLabel } from '../utils/formatStrategy';
 import { shareCard, signedPct } from '../utils/shareCard';
+import { explainResult } from '../utils/explainResult';
 
 const ACCENT_HEX = '#4fd6a0';
 const HOLD_HEX = '#98a2ac';
@@ -131,6 +132,20 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
     m.final_capital != null && buyHold.finalCapital != null && start > 0
       ? { start, strategy: m.final_capital, hold: buyHold.finalCapital, won: m.final_capital >= buyHold.finalCapital }
       : null;
+  const reasons = useMemo(
+    () =>
+      holdVerdict
+        ? explainResult({
+            metrics: m,
+            trades: result.trades,
+            bars: result.price_series.length,
+            holdEquity: buyHold.equity,
+            holdReturn: buyHold.totalReturn,
+            won: holdVerdict.won,
+          })
+        : [],
+    [holdVerdict?.won, m, result.trades, result.price_series.length, buyHold],
+  );
   const [cardBusy, setCardBusy] = useState(false);
   const [cardNote, setCardNote] = useState<string | null>(null);
 
@@ -445,6 +460,18 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             {holdVerdict.won ? 'Your strategy won by ' : 'Holding won by '}
             <span className="mono">{money(Math.abs(holdVerdict.strategy - holdVerdict.hold))}</span>
           </p>
+          {reasons.length ? (
+            <ul className="hold-verdict-why">
+              {reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          ) : null}
+          {riskWarnings(result.strategy).map((w) => (
+            <div key={w} className="banner warn risk-warning">
+              {w}
+            </div>
+          ))}
           <div className="hold-verdict-actions no-print">
             <button type="button" className="btn secondary small" onClick={downloadCard} disabled={cardBusy}>
               {cardBusy ? 'Drawing…' : 'Share result card'}

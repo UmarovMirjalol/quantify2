@@ -18,7 +18,7 @@ import {
 } from '../components/PositionManagement';
 import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
-import { formatConditions, sizingLabel } from '../utils/formatStrategy';
+import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStrategy';
 
 type PresetStrategy = {
   id: string;
@@ -454,7 +454,7 @@ export function HomePage({ health }: Props) {
               ⚡ 1-Click Live Market:
             </span>
             <HistoryPicker disabled={loading || fetchingMarket} />
-            {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL'].map((sym) => (
+            {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL', 'EURUSD', 'GOLD'].map((sym) => (
               <button
                 key={sym}
                 type="button"
@@ -659,6 +659,11 @@ export function HomePage({ health }: Props) {
                     : `${(parse.strategy.take_profit * 100).toFixed(2)}%`}
                 </span>
               </div>
+              {riskWarnings(parse.strategy).map((w) => (
+                <div key={w} className="banner warn risk-warning">
+                  {w}
+                </div>
+              ))}
               {effectiveStrategy && managementSummary(effectiveStrategy).length ? (
                 <div style={{ marginTop: '0.75rem' }}>
                   <small className="hint">Position management</small>

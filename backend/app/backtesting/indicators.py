@@ -323,6 +323,24 @@ def engulfing(df: pd.DataFrame, component: str = "bullish") -> pd.Series:
     return (bullish | bearish).astype(float)
 
 
+def weekday(df: pd.DataFrame, component: str = "value") -> pd.Series:
+    """Day of week, Monday = 0. ``next`` is the weekday of the following session, known from the calendar."""
+    if "date" not in df.columns:
+        return pd.Series(np.nan, index=df.index)
+    dow = pd.to_datetime(df["date"], errors="coerce").dt.dayofweek
+    if component != "next":
+        return pd.Series(dow.to_numpy(dtype=float), index=df.index)
+    nxt = (dow + 1) % 7
+    if not (dow >= 5).any():
+        nxt = nxt.where(dow != 4, 0)
+    return pd.Series(nxt.to_numpy(dtype=float), index=df.index)
+
+
+def pct_change(close: pd.Series, period: int = 1) -> pd.Series:
+    """Percent change of the close over the last ``period`` bars, in percent."""
+    return (close / close.shift(period) - 1.0) * 100.0
+
+
 def compute_indicator_series(
     df: pd.DataFrame,
     indicator: str,
@@ -424,5 +442,11 @@ def compute_indicator_series(
 
     if ind == "ENGULFING":
         return engulfing(df, component=component)
+
+    if ind == "WEEKDAY":
+        return weekday(df, component=component)
+
+    if ind == "CHANGE":
+        return pct_change(close, period or 1)
 
     raise ValueError(f"Unsupported indicator: {indicator}")

@@ -192,6 +192,8 @@ def validate_strategy_spec(strategy: StrategySpec) -> list[str]:
         "STOCH",
         "ADX",
         "DONCHIAN",
+        "WEEKDAY",
+        "CHANGE",
     }
     for cond in strategy.entry_conditions + strategy.exit_conditions:
         for side_name in ("left", "right"):

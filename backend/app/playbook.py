@@ -6,6 +6,41 @@ from typing import Any
 
 PLAYBOOK: list[dict[str, Any]] = [
     {
+        "id": "golden-cross",
+        "title": "Golden cross",
+        "tag": "Viral",
+        "blurb": "The famous one: buy when the 50-day average crosses above the 200-day, sell on the death cross.",
+        "text": (
+            "Buy SPY when the 50-day SMA crosses above the 200-day SMA and sell when it crosses below. "
+            "Use 100% of capital."
+        ),
+        "indicators": ["SMA"],
+    },
+    {
+        "id": "monday-friday",
+        "title": "Buy Monday, sell Friday",
+        "tag": "Viral",
+        "blurb": "A pure calendar rule: in the market Monday to Friday, in cash over the weekend.",
+        "text": "Buy SPY on Monday and sell on Friday. Use 100% of capital.",
+        "indicators": ["Calendar"],
+    },
+    {
+        "id": "buy-the-dip",
+        "title": "Buy the dip",
+        "tag": "Viral",
+        "blurb": "Buy after a 3% one-day drop, sell once price is back above its 20-day average.",
+        "text": "Buy SPY when the price drops 3% in a day. Use 100% of capital.",
+        "indicators": ["Change", "SMA"],
+    },
+    {
+        "id": "crypto-weekend",
+        "title": "Crypto weekend",
+        "tag": "Viral",
+        "blurb": "Hold Bitcoin only from Friday to Monday, the weekend everyone talks about.",
+        "text": "Buy BTC-USD on Friday and sell on Monday. Use 100% of capital.",
+        "indicators": ["Calendar"],
+    },
+    {
         "id": "pin-bar-support",
         "title": "Pin bar at support",
         "tag": "Price action",

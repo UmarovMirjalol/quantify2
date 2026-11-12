@@ -294,6 +294,102 @@ def _stochastic_rules(text: str) -> tuple[list[dict[str, Any]], list[dict[str, A
     )
 
 
+_DAY_INDEX = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4,
+    "понедельник": 0, "вторник": 1, "среду": 2, "среда": 2, "четверг": 3, "пятницу": 4, "пятница": 4,
+}
+_DAY_WORD = r"(monday|tuesday|wednesday|thursday|friday|понедельник|вторник|среду|среда|четверг|пятницу|пятница)"
+_CAL_ENTRY = re.compile(
+    r"(?:\bbuy|\benter|\blong|\bpurchase|покупа\w*|купи\w*|вход\w*)[^.;]{0,40}?"
+    r"(?:\b(?:on|every|each)\s+|\bв(?:о)?\s+(?:кажд\w+\s+)?)" + _DAY_WORD,
+    re.I,
+)
+_CAL_EXIT = re.compile(
+    r"(?:\bsell|\bexit|\bclose|прода\w*|выход\w*|выйти|закр\w*)[^.;]{0,40}?"
+    r"(?:\b(?:on|every|each|by)\s+|\bв(?:о)?\s+(?:кажд\w+\s+)?)" + _DAY_WORD,
+    re.I,
+)
+_OTHER_INDICATORS = re.compile(
+    r"\b(?:sma|ema|rsi|macd|bollinger|stoch\w*|adx|vwap|obv|donchian|moving\s+average|скользящ\w*)\b", re.I
+)
+_DIP = re.compile(
+    r"(?:\bdrops?|\bdropped|\bfalls?|\bfell|\bdeclines?|\bsinks?|\bplunges?|\bdips?|\bdown|"
+    r"пада\w*|упад\w*|упал\w*|сниж\w*|снизи\w*|просед\w*|просел\w*|обвал\w*)"
+    r"\s+(?:by\s+|more\s+than\s+|over\s+|at\s+least\s+|на\s+|более\s+чем\s+на\s+|больше\s+чем\s+на\s+)?"
+    r"(\d+(?:[.,]\d+)?)\s*%"
+    r"|(\d+(?:[.,]\d+)?)\s*%\s*(?:drop|dip|fall|decline|sell[-\s]?off|crash|падени\w*|просадк\w*|обвал\w*)",
+    re.I,
+)
+_WINDOW = re.compile(
+    r"^\s*(?:(?:in|over|within)\s+(?:a|one|the\s+last|the\s+past)?\s*|за\s+(?:последни[ехй]\s+)?)"
+    r"(\d+)?\s*(days?|sessions?|weeks?|months?|день|дня|дней|сесси\w*|недел\w*|месяц\w*)",
+    re.I,
+)
+_RISE = re.compile(
+    r"(?:\brises?|\bgains?|\bjumps?|\brallies|\brally|\bbounces?|\bup|раст\w*|вырас\w*|вырос\w*|подним\w*|отскоч\w*)"
+    r"\s+(?:by\s+|на\s+)?(\d+(?:[.,]\d+)?)\s*%",
+    re.I,
+)
+
+
+def _window_bars(after: str) -> tuple[int, str]:
+    match = _WINDOW.search(after)
+    if not match:
+        return 1, "day"
+    n = int(match.group(1) or 1)
+    unit = match.group(2).lower()
+    if unit.startswith(("week", "недел")):
+        return 5 * n, "week" if n == 1 else f"{n} weeks"
+    if unit.startswith(("month", "месяц")):
+        return 21 * n, "month" if n == 1 else f"{n} months"
+    return n, "day" if n == 1 else f"{n} days"
+
+
+def _calendar_rules(text: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]] | None:
+    """'Buy on Monday, sell on Friday': trade at the open of the named sessions."""
+    if _OTHER_INDICATORS.search(text):
+        return None
+    buy = _CAL_ENTRY.search(text)
+    if not buy:
+        return None
+    day_in = _DAY_INDEX[buy.group(1).lower()]
+    sell = _CAL_EXIT.search(text, buy.end())
+    day_out = _DAY_INDEX[sell.group(1).lower()] if sell else (day_in + 1) % 5
+    nxt = {"indicator": "WEEKDAY", "component": "next"}
+    notes = ["Buys at the open of the named day and sells at the open of the exit day."]
+    if not sell:
+        notes.append("No exit day given, so each trade is held for one session.")
+    return (
+        [{"left": nxt, "operator": "equals", "right": float(day_in)}],
+        [{"left": nxt, "operator": "equals", "right": float(day_out)}],
+        notes,
+    )
+
+
+def _dip_rules(text: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], float | None] | None:
+    """'Buy when the price drops 5% in a day': enter after the drop, exit on the bounce back above the 20-day SMA."""
+    if _OTHER_INDICATORS.search(text):
+        return None
+    dip = _DIP.search(text)
+    if not dip:
+        return None
+    size = float((dip.group(1) or dip.group(2)).replace(",", "."))
+    if not 0 < size < 100:
+        return None
+    bars, label = _window_bars(text[dip.end():])
+    close = {"indicator": "PRICE", "component": "close"}
+    entry = [{"left": {"indicator": "CHANGE", "period": bars}, "operator": "less_than", "right": -size}]
+    exit_ = [{"left": close, "operator": "greater_than", "right": {"indicator": "SMA", "period": 20}}]
+    notes = [f"Buys after the price falls {size:g}% or more in a {label}."]
+    rise = _RISE.search(text, dip.end())
+    take = float(rise.group(1).replace(",", ".")) / 100 if rise else None
+    notes.append(
+        f"Sells at a gain of {take * 100:g}% or when the price closes back above its 20-day average."
+        if take else "Sells when the price closes back above its 20-day average."
+    )
+    return entry, exit_, notes, take
+
+
 _SHORT_PATTERN = re.compile(
     r"\b(?:sell\s+short|go\s+short|short[-\s]?sell\w*|shorting|"
     r"short\s+(?:when|if|on|after|once|the|it)\b|шорт\w*|продава\w+\s+в\s+шорт)"
@@ -355,6 +451,17 @@ def parse_builtin(
     for rules in (_breakout_rules(text), _stochastic_rules(text)):
         if rules and entry is None:
             entry, exit_ = rules
+
+    # --- Calendar ("buy on Monday") and buy-the-dip ("drops 5% in a day") ---
+    dip_take: float | None = None
+    calendar = None if entry is not None else _calendar_rules(text)
+    if calendar:
+        entry, exit_, notes = calendar
+        warnings.extend(notes)
+    dip = None if entry is not None else _dip_rules(text)
+    if dip:
+        entry, exit_, notes, dip_take = dip
+        warnings.extend(notes)
 
     # --- SMA / EMA / MA crossover with captured periods ---
     ma = None if entry is not None else re.search(
@@ -678,13 +785,13 @@ def parse_builtin(
         ]
 
     tf = "1d"
-    if re.search(r"\b(?:5m|5[-\s]?мин\w*)\b", text, re.IGNORECASE):
+    if re.search(r"\b(?:5m|5[-\s]?min(?:ute)?s?|5[-\s]?мин\w*)\b", text, re.IGNORECASE):
         tf = "5m"
-    elif re.search(r"\b(?:15m|15[-\s]?мин\w*)\b", text, re.IGNORECASE):
+    elif re.search(r"\b(?:15m|15[-\s]?min(?:ute)?s?|15[-\s]?мин\w*)\b", text, re.IGNORECASE):
         tf = "15m"
-    elif re.search(r"\b(?:1h|60m|часов\w*)\b", text, re.IGNORECASE):
+    elif re.search(r"\b(?:1h|60m|1[-\s]?hour|hourly|часов\w*)\b", text, re.IGNORECASE):
         tf = "1h"
-    elif re.search(r"\b(?:4h|4[-\s]?часов\w*)\b", text, re.IGNORECASE):
+    elif re.search(r"\b(?:4h|4[-\s]?hours?|4[-\s]?часов\w*)\b", text, re.IGNORECASE):
         tf = "4h"
     elif re.search(r"\b(?:1w|weekly|недельн\w*)\b", text, re.IGNORECASE):
         tf = "1w"
@@ -713,6 +820,8 @@ def parse_builtin(
             f"Sized by risk: {risk_frac * 100:g}% of capital at risk per trade with a {stop * 100:g}% stop. "
             "Write “use 100% of capital” to go all in instead."
         )
+    if raw_fields.get("take_profit") is None and dip_take is not None:
+        raw_fields["take_profit"] = dip_take
     if raw_fields.get("take_profit") is None:
         clarifications.append(
             "Можно добавить тейк-профит, например «тейк-профит 5%»."

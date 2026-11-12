@@ -58,6 +58,10 @@ ADX: period 14, component "value" (trend strength), "plus" (+DI) or "minus" (-DI
   Trend filter: {"left":{"indicator":"ADX","period":14},"operator":"greater_than","right":25}
 DONCHIAN: highest high / lowest low of the PREVIOUS N bars, component "upper", "lower" or "middle".
   20-day high breakout: {"left":{"indicator":"PRICE","component":"close"},"operator":"greater_than","right":{"indicator":"DONCHIAN","period":20,"component":"upper"}}
+WEEKDAY: day of week, Monday = 0 ... Friday = 4. Component "next" is the weekday of the next session.
+  Trades fill at the next open, so "buy on Monday" is {"left":{"indicator":"WEEKDAY","component":"next"},"operator":"equals","right":0}
+CHANGE: percent change of the close over the last N bars, in percent (5 = +5%).
+  "Buy after a 5% drop in a day": {"left":{"indicator":"CHANGE","period":1},"operator":"less_than","right":-5}
 """
 
 

@@ -46,6 +46,10 @@ def _var_name(ref: IndicatorRef) -> str:
     if ind == "donchian":
         comp = ref.component if ref.component in ("lower", "middle") else "upper"
         return f"dc_{comp}_{ref.period}"
+    if ind == "weekday":
+        return "dow_next" if ref.component == "next" else "dow_val"
+    if ind == "change":
+        return f"chg_{ref.period or 1}"
     return f"{ind}_val"
 
 
@@ -180,6 +184,14 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
                 lines.append(f"dc_middle_{p} = (dc_upper_{p} + dc_lower_{p}) / 2")
                 lines.append(f'plot(dc_upper_{p}, color=color.teal, title="Donchian high {p}")')
                 lines.append(f'plot(dc_lower_{p}, color=color.teal, title="Donchian low {p}")')
+        elif ind == "WEEKDAY":
+            if "dow_calc" not in indicators_seen:
+                indicators_seen.add("dow_calc")
+                lines.append("dow_val = (dayofweek + 5) % 7  // Monday = 0")
+                lines.append('dow_next = syminfo.type != "crypto" and dow_val == 4 ? 0 : (dow_val + 1) % 7')
+        elif ind == "CHANGE":
+            p = ref.period or 1
+            lines.append(f"{var} = (close / close[{p}] - 1) * 100")
         elif ind == "ENGULFING":
             if "engulfing_calc" not in indicators_seen:
                 indicators_seen.add("engulfing_calc")

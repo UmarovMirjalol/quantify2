@@ -317,6 +317,30 @@ export async function getWhatIf(params: { ticker: string; start: string; amount:
   return request(`/api/whatif?${q}`);
 }
 
+export interface LeaderboardRow {
+  id: string;
+  title: string;
+  tag: string;
+  text: string;
+  ticker: string;
+  return_year: number | null;
+  hold_year: number;
+  trades_year: number;
+  return_week: number | null;
+  hold_week: number;
+  return_10y: number | null;
+  hold_10y: number;
+  max_drawdown_10y: number | null;
+}
+
+export type Leaderboard =
+  | { status: 'building' }
+  | { status: 'ready'; as_of: string; tickers: string[]; capital: number; rows: LeaderboardRow[]; beat_hold_10y: number };
+
+export async function getLeaderboard(): Promise<Leaderboard> {
+  return request('/api/leaderboard');
+}
+
 export async function runDiscovery(dataset_id: string): Promise<DiscoveryResult> {
   return request('/api/discover', json({ dataset_id }));
 }

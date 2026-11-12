@@ -13,6 +13,10 @@ from app.config import UPLOAD_DIR
 from app.data.validators import validate_ohlcv_dataframe
 
 
+_FIAT = {"USD", "EUR", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD", "CNY", "HKD", "SGD", "SEK", "NOK", "MXN", "TRY", "RUB", "INR", "KZT", "UZS"}
+_COMMODITIES = {"GOLD": "GC=F", "XAUUSD": "GC=F", "SILVER": "SI=F", "XAGUSD": "SI=F", "OIL": "CL=F", "WTI": "CL=F", "BRENT": "BZ=F", "NATGAS": "NG=F"}
+
+
 def _normalize_symbol(ticker: str) -> tuple[str, str]:
     """Normalize input ticker into (binance_symbol, yahoo_symbol)."""
     cleaned = ticker.strip().upper()
@@ -20,7 +24,12 @@ def _normalize_symbol(ticker: str) -> tuple[str, str]:
         # Already a Yahoo symbol: BRK-B, BTC-USD, ^GSPC, EURUSD=X.
         base = cleaned.split("-")[0].replace(".", "").replace("^", "")
         return f"{base}USDT", cleaned
-    raw = cleaned.replace("/", "")
+    raw = cleaned.replace("/", "").replace(" ", "")
+    compact = raw.replace("_", "")
+    if compact in _COMMODITIES:
+        return f"{compact}USDT", _COMMODITIES[compact]
+    if len(compact) == 6 and compact[:3] in _FIAT and compact[3:] in _FIAT and compact[:3] != compact[3:]:
+        return f"{compact}USDT", f"{compact}=X"
     crypto_bases = {"BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "NEAR", "TON"}
     if raw in crypto_bases:
         return f"{raw}USDT", f"{raw}-USD"

@@ -169,7 +169,10 @@ def backtest(df, spec, entry, exit_, size=None):
             if kind in ("open", "add") and (pos is None) == (kind == "open"):
                 px = fill(o, sell=short)
                 fee = abs(px * qty) * comm
-                if short or px * qty + fee <= cash + 1e-6:
+                if not short and px * qty + fee > cash + 1e-6 and spec["position_sizing"] != "fixed":
+                    qty = round_quantity(qty * cash / (px * qty + fee)) if cash > 0 else 0.0
+                    fee = abs(px * qty) * comm
+                if qty > 0 and (short or px * qty + fee <= cash + 1e-6):
                     cash += (px * qty - fee) if short else -(px * qty + fee)
                     if kind == "add":
                         total = pos["qty"] + qty

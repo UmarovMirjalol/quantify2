@@ -37,6 +37,8 @@ const DiscoverPage = lazy(() =>
 );
 const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })));
 const WhatIfPage = lazy(() => import('./pages/WhatIfPage').then((m) => ({ default: m.WhatIfPage })));
+const CheckPage = lazy(() => import('./pages/CheckPage').then((m) => ({ default: m.CheckPage })));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const AccountPage = lazy(() =>
@@ -234,6 +236,8 @@ export default function App() {
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/whatif" element={<WhatIfPage />} />
+          <Route path="/check" element={<CheckPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/research" element={<ResearchPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/r/:token" element={<ReportPage />} />

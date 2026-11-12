@@ -1,28 +1,31 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchMarketData, runBacktest } from '../services/api';
+import { quickRun } from '../utils/quickRun';
 
 const HINTS = [
-  'Buy when RSI falls below 30 and sell when RSI rises above 70',
-  'Buy when the 20-day SMA crosses above the 50-day SMA',
-  'Buy when MACD crosses above its signal line',
-  'Buy when price closes below the lower Bollinger Band',
+  { label: 'RSI oversold bounce', text: 'Buy when RSI falls below 30 and sell when RSI rises above 70', ticker: 'SPY' },
+  { label: 'Golden cross', text: 'Buy when the 50-day SMA crosses above the 200-day SMA and sell when it crosses below', ticker: 'SPY' },
+  { label: 'Buy Monday, sell Friday', text: 'Buy on Monday and sell on Friday', ticker: 'SPY' },
+  { label: 'Buy the 3% dip', text: 'Buy when the price drops 3% in a day', ticker: 'SPY' },
+  { label: 'Bitcoin weekend', text: 'Buy on Friday and sell on Monday', ticker: 'BTC-USD' },
+  { label: 'MACD momentum', text: 'Buy when MACD crosses above its signal line and sell when it crosses below', ticker: 'NVDA' },
 ];
 
-const TICKERS = ['SPY', 'AAPL', 'NVDA', 'BTC-USD'];
+const TICKERS = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'TSLA', 'BTC-USD', 'ETH-USD', 'EURUSD', 'GOLD'];
 
 export function InstantTry() {
   const navigate = useNavigate();
-  const [text, setText] = useState(HINTS[0]);
+  const [text, setText] = useState(HINTS[0].text);
   const [ticker, setTicker] = useState('SPY');
   const [flash, setFlash] = useState<string | null>(null);
   const [kick, setKick] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function pickHint(h: string) {
-    setText(h);
-    setFlash(h);
+  function pickHint(h: (typeof HINTS)[number]) {
+    setText(h.text);
+    setTicker(h.ticker);
+    setFlash(h.label);
     window.setTimeout(() => setFlash(null), 420);
   }
 
@@ -41,16 +44,8 @@ export function InstantTry() {
     setKick(true);
     setError(null);
     try {
-      setStatus(`Loading 10 years of ${symbol} prices…`);
-      const data = await fetchMarketData(symbol, '1d', '10y');
-      setStatus('Running the backtest…');
-      const result = await runBacktest({
-        strategy_text: cleaned,
-        dataset_id: data.dataset_id,
-        asset: symbol,
-        config: { initial_capital: 10_000, commission: 0.001, slippage: 0.0005, risk_per_trade: 0.01 },
-      });
-      navigate(`/results/${result.id}`);
+      const id = await quickRun(cleaned, symbol, setStatus);
+      navigate(`/results/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not run the backtest.');
       setStatus(null);
@@ -66,8 +61,8 @@ export function InstantTry() {
         <p className="eyebrow">Try it</p>
         <h2>Describe a strategy. Run it.</h2>
         <p className="section-lede">
-          Supports SMA, EMA, RSI, MACD, and Bollinger. Free-form text is parsed into a validated
-          spec when possible.
+          Pick a famous strategy or write your own in plain English. We test it on 10 years of real
+          prices and compare it with simply buying and holding.
         </p>
       </div>
       <form className={`instant-form ${kick ? 'kick' : ''}`} onSubmit={onSubmit}>
@@ -86,13 +81,14 @@ export function InstantTry() {
         <div className="instant-hints">
           {HINTS.map((h) => (
             <button
-              key={h}
+              key={h.label}
               type="button"
-              className={`chip ${flash === h ? 'flash-click' : ''} ${text === h ? 'active' : ''}`}
+              className={`chip ${flash === h.label ? 'flash-click' : ''} ${text === h.text ? 'active' : ''}`}
               onClick={() => pickHint(h)}
               disabled={busy}
+              title={h.text}
             >
-              {h.slice(0, 42)}…
+              {h.label}
             </button>
           ))}
         </div>

@@ -21,6 +21,11 @@
 - **Discover** (`/discover`): tries 30 classic rule sets (MA crosses, Donchian, MACD, ADX, RSI, Bollinger, Stochastic) on an asset, ranks them on the first 70% of history only and shows which held up on the unseen 30%, with a Deflated-Sharpe luck check
 - **Forward tests** (`/forward`): freeze a strategy today and score it only on bars that arrive afterwards (paper trading); start from text, any live-market backtest or a screener row, compare with buy & hold and the backtest's CAGR
 - **What if…** (`/whatif`): what a lump sum and/or a monthly amount in any ticker would be worth today, against the same plan in the S&P 500, with a shareable link and result card
+- **Guru check** (`/check`): paste a strategy from a video or post; it is parsed, run on 10 years of real prices and compared with buying and holding
+- **Leaderboard** (`/leaderboard`): every daily playbook strategy on the S&P 500, Nasdaq 100, Nvidia and Bitcoin, ranked by the last 12 months, this week and 10 years
+- **Calendar and dip rules**: "buy on Monday, sell on Friday" (`WEEKDAY`) and "buy when the price drops 5% in a day" (`CHANGE`), in English and Russian
+- **Forex and commodities**: `EURUSD`, `EUR/USD`, `GOLD`, `OIL` map to Yahoo symbols automatically
+- **Plain-language results**: why the strategy beat or lost to holding (time in the market, drawdown, costs) and warnings about missing stops or risky sizing
 - **Share cards**: one click turns a backtest or a what-if result into a 1080×1350 PNG (strategy vs buy & hold, "Tested on Quantify")
 - **Tools** (`/tools`): position size from stop distance, break-even win rate and expectancy for a reward:risk, Kelly fraction, drawdown recovery and compound growth
 - **More indicators**: Stochastic %K/%D, ADX and +DI/−DI, Donchian/turtle breakouts, all in plain English or Russian ("turtle breakout 55 days", "ADX above 25", "стохастик ниже 20"), exported to Pine (`ta.stoch`, `ta.dmi`, `ta.highest`) and standalone Python
@@ -334,6 +339,7 @@ Buy when price closes below the lower Bollinger Band and sell when it crosses ab
 | GET, POST | `/api/forward` | List / start forward tests (from text + ticker or a backtest) |
 | GET, DELETE | `/api/forward/{id}` | Forward test detail (auto-refreshed) / delete |
 | GET | `/api/whatif?ticker=&start=&amount=&monthly=` | Value today of a lump sum / monthly plan, with an S&P 500 comparison |
+| GET | `/api/leaderboard` | Playbook strategies ranked on popular markets; `{"status": "building"}` while the 12-hour cache refreshes |
 | POST | `/api/forward/{id}/refresh` | Re-score with the latest bars |
 
 ## Tests
