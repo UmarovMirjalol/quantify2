@@ -54,6 +54,9 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
       {open ? <div className="backdrop" onClick={() => setOpen(false)} /> : null}
 
       <aside id="app-sidebar" className={`sidebar ${open ? 'open' : ''}`}>
+        <button type="button" className="sidebar-close" aria-label="Close menu" onClick={() => setOpen(false)}>
+          ×
+        </button>
         <Link to="/" className="brand" onClick={() => setOpen(false)}>
           <span className="brand-mark brand-mark-lg" aria-hidden="true">
             <img src="/logo.svg" width={28} height={28} alt="" />
@@ -143,9 +146,9 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             className="btn ghost"
             aria-expanded={open}
             aria-controls="app-sidebar"
-            onClick={() => setOpen(true)}
+            onClick={() => setOpen((v) => !v)}
           >
-            Menu
+            {open ? 'Close' : 'Menu'}
           </button>
           <Link to="/" className="brand" style={{ padding: 0 }}>
             <span className="brand-mark brand-mark-lg" aria-hidden="true">

@@ -35,14 +35,22 @@ function detail(s: LiveSignal): string {
   return 'No position and no entry signal on the latest close. Nothing to do until the rule fires.';
 }
 
+const STALE_DAYS = 7;
+
+function ageDays(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+
 export function LiveSignalCard({
   backtestId,
   initial,
   canRefresh,
+  datasetName,
 }: {
   backtestId: number;
   initial?: LiveSignal;
   canRefresh: boolean;
+  datasetName?: string;
 }) {
   const [signal, setSignal] = useState<LiveSignal | null>(initial ?? null);
   const [busy, setBusy] = useState(false);
@@ -67,11 +75,25 @@ export function LiveSignalCard({
 
   if (!signal && !canRefresh) return null;
 
+  const demo = /^sample_/i.test(datasetName ?? '');
+  const age = signal ? ageDays(signal.as_of) : 0;
+
   return (
     <section className={`stress-verdict live-signal verdict-${signal ? TONE[signal.action] : 'thin'}`}>
+      {demo ? (
+        <p className="banner warn">
+          Demo data: this is a built-in synthetic sample, not a real market, so this “signal” is only an example. Load a
+          ticker in the workspace for a live signal.
+        </p>
+      ) : signal && age > STALE_DAYS ? (
+        <p className="banner warn">
+          The latest bar is from {signal.as_of.slice(0, 10)}, {age} days ago. Update with the latest data before acting
+          on it.
+        </p>
+      ) : null}
       <div className="verdict-head">
         <div>
-          <p className="eyebrow">Signal today</p>
+          <p className="eyebrow">{demo ? 'Signal on demo data' : age > STALE_DAYS ? `Signal as of ${signal?.as_of.slice(0, 10)}` : 'Signal today'}</p>
           <h2>{signal ? headline(signal) : 'Check today’s signal'}</h2>
           <p>
             {signal

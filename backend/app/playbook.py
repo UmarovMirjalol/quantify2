@@ -150,7 +150,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "indicators": ["VWAP", "Volume", "Stop"],
     },
     {
-        "id": "volume-breakout",
+        "id": "volume-spike",
         "title": "Volume Spike Breakout",
         "tag": "Breakout",
         "blurb": "Confirm high-volume momentum when volume exceeds its 20-day average.",

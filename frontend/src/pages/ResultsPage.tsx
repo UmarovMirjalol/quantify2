@@ -427,7 +427,12 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
 
       <VerdictCard backtestId={result.id} initial={result.verdict} />
 
-      <LiveSignalCard backtestId={result.id} initial={result.live_signal} canRefresh={!readOnly} />
+      <LiveSignalCard
+        backtestId={result.id}
+        initial={result.live_signal}
+        canRefresh={!readOnly}
+        datasetName={result.dataset_name}
+      />
 
       {holdVerdict ? (
         <section className={`hold-verdict ${holdVerdict.won ? 'won' : 'lost'}`}>

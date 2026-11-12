@@ -89,6 +89,16 @@ export function LandingPage() {
   const [interpVisible, setInterpVisible] = useState(reduced ? 4 : 0);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0, gx: 50, gy: 40 });
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
   const exec = useInView<HTMLElement>(reduced);
   const invariants = useInView<HTMLElement>(reduced);
   const metrics = useInView<HTMLElement>(reduced);
@@ -198,7 +208,16 @@ export function LandingPage() {
             <span className="brand-tag">Quant research</span>
           </span>
         </Link>
-        <div className="nav-links">
+        <button
+          type="button"
+          className="btn ghost landing-menu-btn"
+          aria-expanded={navOpen}
+          aria-controls="landing-links"
+          onClick={() => setNavOpen((v) => !v)}
+        >
+          {navOpen ? 'Close' : 'Menu'}
+        </button>
+        <div id="landing-links" className={`nav-links${navOpen ? ' open' : ''}`} onClick={() => setNavOpen(false)}>
           <a className="btn ghost" href="#demo">
             Demo
           </a>

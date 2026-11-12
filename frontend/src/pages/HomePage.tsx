@@ -89,7 +89,7 @@ const EXAMPLE_STRATEGIES: PresetStrategy[] = [
     text: 'Buy when Hammer candlestick pattern appears on chart. Risk 1.5% per trade with 2% stop-loss and exit when RSI exceeds 70.',
   },
   {
-    id: 'volume-breakout',
+    id: 'volume-spike',
     label: '🔊 Volume Spike',
     tag: 'Breakout',
     text: 'Buy when volume is above 20-day average volume and close is above 50-day SMA. Exit when close crosses below 20-day SMA. Use 2% stop-loss.',
