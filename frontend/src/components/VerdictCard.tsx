@@ -69,9 +69,13 @@ export function VerdictCard({
     <section className={`stress-verdict verdict-card verdict-${GRADE_TONE[report.grade]}`}>
       <div className="verdict-head">
         <div>
-          <p className="eyebrow">Quantify verdict</p>
+          <p className="eyebrow">Is it real or luck?</p>
           <h2>{GRADE_LABEL[report.grade]}</h2>
           <p>{report.headline}</p>
+          <p className="verdict-explain">
+            {report.checks.length} stress tests check whether the result holds up on unseen data, other markets and higher costs. This score is
+            about reliability, not about beating buy & hold.
+          </p>
         </div>
         <div className="verdict-score" aria-label={`Score ${report.score} out of 100`}>
           <strong>{report.score}</strong>

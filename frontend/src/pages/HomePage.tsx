@@ -19,6 +19,7 @@ import {
 import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
 import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStrategy';
+import { yahooSymbol } from '../utils/quickRun';
 
 type PresetStrategy = {
   id: string;
@@ -364,9 +365,18 @@ export function HomePage({ health }: Props) {
     }
     setStrategyText(cleanedStrategy);
     try {
+      let runDataset = datasetId;
+      const asset = parse.strategy?.asset?.trim().toUpperCase();
+      if (datasetId.startsWith('sample') && asset && asset !== 'SAMPLE') {
+        setFetchMsg(`Loading real ${asset} prices…`);
+        const data = await fetchMarketData(yahooSymbol(asset));
+        runDataset = data.dataset_id;
+        setDatasetId(runDataset);
+        setDatasets(await listDatasets());
+      }
       const result = await runBacktest({
         strategy_text: cleanedStrategy,
-        dataset_id: datasetId,
+        dataset_id: runDataset,
         strategy: effectiveStrategy ?? undefined,
         config: {
           initial_capital: initialCapital,
@@ -393,9 +403,8 @@ export function HomePage({ health }: Props) {
           <p className="eyebrow">Research workspace</p>
           <h1>New Backtest</h1>
           <p className="lede">
-            Describe SMA / EMA / RSI / MACD / Bollinger / Stochastic / ADX / breakout rules in plain English. Preview the parsed
-            spec before you run. Need custom logic or dynamic sizing?{' '}
-            <Link to="/code">Write it in Python →</Link>
+            Write your trading rules in plain English, pick a market, and see whether they would have made money, and whether
+            they beat simply buying and holding. Coder? <Link to="/code">Write it in Python →</Link>
           </p>
         </div>
         {health?.llm_enabled ? (
@@ -409,8 +418,11 @@ export function HomePage({ health }: Props) {
 
       <div className="workspace">
         <form className="panel form-panel" onSubmit={onSubmit}>
+          <p className="form-step">
+            <b>1</b> Describe your idea
+          </p>
           <label className="field">
-            <span>Describe your strategy</span>
+            <span className="sr-only">Describe your strategy</span>
             <textarea
               value={strategyText}
               onChange={(e) => setStrategyText(e.target.value)}
@@ -423,7 +435,7 @@ export function HomePage({ health }: Props) {
           </label>
 
           <div className="example-row">
-            <span>Playbook</span>
+            <span>Or try</span>
             {presets.slice(0, 6).map((ex) => (
               <button
                 key={ex.id}
@@ -440,36 +452,22 @@ export function HomePage({ health }: Props) {
             </Link>
           </div>
 
-          <div
-            className="live-data-bar"
-            style={{
-              margin: '0.8rem 0 0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>
-              ⚡ 1-Click Live Market:
-            </span>
-            <HistoryPicker disabled={loading || fetchingMarket} />
-            {['BTC', 'ETH', 'SOL', 'SPY', 'NVDA', 'AAPL', 'EURUSD', 'GOLD'].map((sym) => (
+          <p className="form-step">
+            <b>2</b> Pick a market <small>real prices, loaded in one click</small>
+          </p>
+          <div className="live-data-bar">
+            {['SPY', 'NVDA', 'AAPL', 'BTC', 'ETH', 'SOL', 'EURUSD', 'GOLD'].map((sym) => (
               <button
                 key={sym}
                 type="button"
-                className="chip"
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '0.2rem 0.5rem',
-                  borderColor: 'rgba(79, 214, 160, 0.35)',
-                }}
+                className={`chip market-chip${datasetId.toUpperCase().startsWith(`${sym}`) ? ' active' : ''}`}
                 disabled={loading || fetchingMarket}
                 onClick={() => handleFetchTicker(sym)}
               >
-                {fetchingMarket ? '...' : sym}
+                {fetchingMarket ? '…' : sym}
               </button>
             ))}
+            <HistoryPicker disabled={loading || fetchingMarket} />
           </div>
           {fetchMsg ? (
             <div className="banner ok" style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', margin: '0.4rem 0' }}>
@@ -477,9 +475,9 @@ export function HomePage({ health }: Props) {
             </div>
           ) : null}
 
-          <div className="param-grid">
+          <div className="param-grid param-grid-main">
             <label className="field">
-              <span>Dataset / asset</span>
+              <span>Price data in use</span>
               <select
                 value={datasetId}
                 onChange={(e) => setDatasetId(e.target.value)}
@@ -488,7 +486,7 @@ export function HomePage({ health }: Props) {
               >
                 {datasets.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.source})
+                    {d.id.startsWith('sample') ? 'Demo data (real prices load on run)' : `${d.name} (${d.source})`}
                   </option>
                 ))}
                 {!datasets.length ? <option value="sample_data.csv">sample_data.csv</option> : null}
@@ -496,12 +494,7 @@ export function HomePage({ health }: Props) {
             </label>
 
             <label className="field">
-              <span>Timeframe</span>
-              <input value="Daily" readOnly disabled />
-            </label>
-
-            <label className="field">
-              <span>Initial capital</span>
+              <span>Starting money ($)</span>
               <input
                 type="number"
                 min={1000}
@@ -512,64 +505,78 @@ export function HomePage({ health }: Props) {
                 disabled={loading}
               />
             </label>
-
-            <label className="field">
-              <span>Risk per trade</span>
-              <input
-                type="number"
-                min={0}
-                step="any"
-                value={riskPerTrade}
-                onChange={(e) => setRiskPerTrade(Number(e.target.value))}
-                required
-                disabled={loading}
-              />
-              <small className="hint">0.01 = 1%. Used only with a stop-loss; otherwise trades use 100% of capital.</small>
-            </label>
-
-            <label className="field">
-              <span>Commission</span>
-              <input
-                type="number"
-                min={0}
-                step="any"
-                value={commission}
-                onChange={(e) => setCommission(Number(e.target.value))}
-                required
-                disabled={loading}
-              />
-            </label>
-
-            <label className="field">
-              <span>Slippage</span>
-              <input
-                type="number"
-                min={0}
-                step="any"
-                value={slippage}
-                onChange={(e) => setSlippage(Number(e.target.value))}
-                required
-                disabled={loading}
-              />
-            </label>
           </div>
 
-          <PositionManagement value={management} onChange={setManagement} disabled={loading} />
+          <details className="advanced-settings">
+            <summary>
+              <b>3</b> Advanced settings <small>costs, risk, exits, your own CSV. The defaults are realistic.</small>
+            </summary>
+            <div className="param-grid">
+              <label className="field">
+                <span>Timeframe</span>
+                <input value="Daily" readOnly disabled />
+              </label>
 
-          <label className="field">
-            <span>Upload market CSV</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => onUpload(e.target.files?.[0] ?? null)}
-              disabled={loading}
-            />
-            {uploadInfo ? (
-              <small className="hint ok-text">{uploadInfo}</small>
-            ) : (
-              <small className="hint">Columns: date, open, high, low, close, volume</small>
-            )}
-          </label>
+              <label className="field">
+                <span>Risk per trade</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={riskPerTrade}
+                  onChange={(e) => setRiskPerTrade(Number(e.target.value))}
+                  required
+                  disabled={loading}
+                />
+                <small className="hint">0.01 = 1%. Used only with a stop-loss; otherwise trades use 100% of capital.</small>
+              </label>
+
+              <label className="field">
+                <span>Commission</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={commission}
+                  onChange={(e) => setCommission(Number(e.target.value))}
+                  required
+                  disabled={loading}
+                />
+                <small className="hint">Broker fee per trade. 0.001 = 0.1%.</small>
+              </label>
+
+              <label className="field">
+                <span>Slippage</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={slippage}
+                  onChange={(e) => setSlippage(Number(e.target.value))}
+                  required
+                  disabled={loading}
+                />
+                <small className="hint">Price moving against you as the order fills. 0.0005 = 0.05%.</small>
+              </label>
+            </div>
+
+            <PositionManagement value={management} onChange={setManagement} disabled={loading} />
+
+            <label className="field">
+              <span>Upload your own price CSV</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => onUpload(e.target.files?.[0] ?? null)}
+                disabled={loading}
+              />
+              {uploadInfo ? (
+                <small className="hint ok-text">{uploadInfo}</small>
+              ) : (
+                <small className="hint">Columns: date, open, high, low, close, volume</small>
+              )}
+            </label>
+          </details>
 
           {error ? (
             <div className="banner error" role="alert">

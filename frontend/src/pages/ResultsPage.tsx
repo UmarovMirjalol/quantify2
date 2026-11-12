@@ -488,10 +488,15 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           value={vsHold == null ? '—' : `${vsHold >= 0 ? '+' : ''}${(vsHold * 100).toFixed(2)}%`}
           tone={toneFor(vsHold)}
         />
-        <KpiCard label="CAGR" value={pct(m.cagr)} tone={toneFor(m.cagr)} />
-        <KpiCard label="Sharpe Ratio" value={num(m.sharpe_ratio)} />
-        <KpiCard label="Sortino Ratio" value={num(m.sortino_ratio)} />
-        <KpiCard label="Max Drawdown" value={pct(m.max_drawdown)} tone="negative" />
+        <KpiCard label="CAGR" value={pct(m.cagr)} tone={toneFor(m.cagr)} hint="Average growth per year" />
+        <KpiCard label="Sharpe Ratio" value={num(m.sharpe_ratio)} hint="Return per unit of risk. Above 1 is good" />
+        <KpiCard label="Sortino Ratio" value={num(m.sortino_ratio)} hint="Like Sharpe, but only drops count as risk" />
+        <KpiCard
+          label="Max Drawdown"
+          value={pct(m.max_drawdown)}
+          tone="negative"
+          hint="Worst fall from a peak along the way"
+        />
         <KpiCard
           label="Trades"
           value={String(m.number_of_trades)}

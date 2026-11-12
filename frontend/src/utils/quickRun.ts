@@ -2,6 +2,8 @@ import { fetchMarketData, parseStrategy, runBacktest } from '../services/api';
 
 const YAHOO_ALIASES: Record<string, string> = { BTC: 'BTC-USD', ETH: 'ETH-USD', SOL: 'SOL-USD' };
 
+export const yahooSymbol = (symbol: string) => YAHOO_ALIASES[symbol] ?? symbol;
+
 /**
  * Parse, load 10 years of daily prices and run one backtest; returns the saved result id.
  * Leave `ticker` empty to use the asset named in the text (SPY when none is named).
