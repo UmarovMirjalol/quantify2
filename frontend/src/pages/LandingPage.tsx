@@ -22,17 +22,41 @@ const HeroScene3D = lazy(() =>
 const ACCENT = '#4fd6a0';
 
 const STRATEGY =
-  'Buy SPY when the 20-day moving average crosses above the 50-day. Risk 1% per trade; exit when RSI exceeds 70.';
+  'Buy SPY when the 20-day moving average crosses above the 50-day. Exit when RSI exceeds 70.';
 
 const EQUITY_PATH =
   'M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16';
+
+const TOOLS = [
+  {
+    to: '/check',
+    title: 'Guru check',
+    body: 'Saw a “90% win rate” strategy on TikTok? Paste it and see if it really made money.',
+    cta: 'Check a strategy',
+    icon: 'M9 12l2 2 4-4M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z',
+  },
+  {
+    to: '/leaderboard',
+    title: 'Leaderboard',
+    body: 'Famous strategies ranked on real prices of the S&P 500, Nasdaq, Nvidia and Bitcoin.',
+    cta: 'See who wins',
+    icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3',
+  },
+  {
+    to: '/whatif',
+    title: 'What if I had bought…',
+    body: 'What $1,000 in Apple, Tesla or Bitcoin ten years ago would be worth today.',
+    cta: 'Run the numbers',
+    icon: 'M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.8c0 4.9 10 2.6 10 7.6 0 2.3-2.2 3.6-5 3.6s-5-1.2-5-3.2',
+  },
+] as const;
 
 const FLOW = ['NL', 'Spec', 'Sim', 'Results'] as const;
 const INTERP = [
   { label: 'Entry', value: 'SMA(20) × SMA(50)' },
   { label: 'Exit', value: 'RSI > 70' },
   { label: 'Universe', value: 'SPY' },
-  { label: 'Risk', value: '1.00% / trade' },
+  { label: 'Size', value: '100% of capital' },
 ] as const;
 
 type Phase = 'boot' | 'type' | 'parse' | 'spec' | 'sim' | 'results' | 'hold';
@@ -218,59 +242,57 @@ export function LandingPage() {
           {navOpen ? 'Close' : 'Menu'}
         </button>
         <div id="landing-links" className={`nav-links${navOpen ? ' open' : ''}`} onClick={() => setNavOpen(false)}>
-          <a className="btn ghost" href="#demo">
-            Demo
-          </a>
-          <a className="btn ghost" href="#playbook">
-            Playbook
-          </a>
           <a className="btn ghost" href="#try">
-            Try
+            Try it
           </a>
-          <Link className="btn ghost" to="/research">
-            Research
-          </Link>
-          <Link className="btn ghost" to="/whatif">
-            What if…
-          </Link>
           <Link className="btn ghost" to="/check">
             Guru check
           </Link>
           <Link className="btn ghost" to="/leaderboard">
             Leaderboard
           </Link>
+          <Link className="btn ghost" to="/whatif">
+            What if…
+          </Link>
+          <Link className="btn ghost" to="/playbook">
+            Playbook
+          </Link>
           <Link className="btn ghost" to="/guide">
             Guide
           </Link>
           <Link className="btn primary" to="/app">
-            Workspace
+            Open workspace
           </Link>
         </div>
       </header>
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="wordmark reveal" style={{ ['--d' as string]: '0ms' }}>
-            Quantify <span className="wordmark-est mono">Est. 2025</span>
-          </p>
+          <Link to="/leaderboard" className="hero-pill reveal" style={{ ['--d' as string]: '0ms' }}>
+            <b>New</b>
+            Most famous strategies lose to buy &amp; hold. See the leaderboard
+            <span aria-hidden="true">→</span>
+          </Link>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
-            Your edge — proven before you risk a dollar.
+            Does your trading strategy <em>actually work?</em>
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Type a strategy in English. Quantify runs a look-ahead-safe backtest with real costs,
-            metrics, and every fill. Free. No signup.
+            Describe it in plain English. We test it on 10 years of real prices, with real fees, and show
+            whether it beats simply buying and holding.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
-            <Link className="btn primary" to="/app">
-              Backtest free
-            </Link>
-            <a className="btn secondary" href="#demo">
-              See a demo
+            <a className="btn primary" href="#try">
+              Test a strategy free
             </a>
+            <Link className="btn secondary" to="/check">
+              Check a guru’s claim
+            </Link>
           </div>
-          <p className="hero-note mono reveal" style={{ ['--d' as string]: '300ms' }}>
-            Signal at close · fill at next open · commission + slippage on every trade
-          </p>
+          <ul className="hero-trust reveal" style={{ ['--d' as string]: '300ms' }}>
+            <li>Stocks, crypto, forex</li>
+            <li>Fees included</li>
+            <li>No signup</li>
+          </ul>
         </div>
 
         <div className="hero-stage reveal" style={{ ['--d' as string]: '140ms' }} ref={stageRef}>
@@ -447,17 +469,40 @@ export function LandingPage() {
 
       <MarketTicker />
 
+      <InstantTry />
+
+      <section className="landing-section tools-trio in-view">
+        <div className="section-head">
+          <p className="eyebrow">Free tools</p>
+          <h2>Three ways to stop guessing.</h2>
+        </div>
+        <div className="tools-trio-grid">
+          {TOOLS.map((t, i) => (
+            <Link key={t.to} to={t.to} className="tool-card" style={{ ['--i' as string]: i }}>
+              <span className="tool-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={t.icon} />
+                </svg>
+              </span>
+              <h3>{t.title}</h3>
+              <p>{t.body}</p>
+              <span className="tool-card-cta">
+                {t.cta} <span aria-hidden="true">→</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <LandingDemo />
+
+      <StrategyGallery />
+
+      <LiveStats />
 
       <DailyFact />
 
       <StrategyOfTheDay />
-
-      <InstantTry />
-
-      <LiveStats />
-
-      <StrategyGallery />
 
       <ActivityPulse />
 
@@ -519,8 +564,8 @@ export function LandingPage() {
         <div className="invariant-grid">
           {[
             {
-              bad: 'Arbitrary code execution',
-              good: 'Validated specs only: SMA, EMA, RSI, MACD, Bollinger, risk rules.',
+              bad: 'Peeking at the future',
+              good: 'Every rule and Python strategy only sees bars up to the signal.',
             },
             {
               bad: 'Same-bar fills',
@@ -625,20 +670,6 @@ export function LandingPage() {
 
       <ReleasesFaq />
 
-      <section className="landing-section deploy-strip in-view">
-        <div className="deploy-strip-inner">
-          <div>
-            <p className="eyebrow">Deploy</p>
-            <h2>One-command production stack.</h2>
-            <p className="section-lede">
-              Docker Compose: edge, SPA, API, SQLite volumes, optional access gate and HTTPS.
-            </p>
-          </div>
-          <pre className="deploy-code mono">{`cp .env.production.example .env
-./deploy/scripts/deploy.sh`}</pre>
-        </div>
-      </section>
-
       <section className="landing-section seo-copy in-view">
         <div className="section-head">
           <p className="eyebrow">Free backtesting</p>
@@ -653,14 +684,48 @@ export function LandingPage() {
           <Link to="/playbook">Strategy playbook →</Link>
           <Link to="/research">Study: do backtest winners keep winning? →</Link>
           <Link to="/about">About →</Link>
-          <a href="/robots.txt">robots.txt</a>
-          <a href="/sitemap.xml">sitemap.xml</a>
+        </div>
+      </section>
+
+      <section className="landing-section final-cta in-view">
+        <h2>Got a strategy in your head? Find out in 30 seconds.</h2>
+        <div className="landing-cta-row">
+          <a className="btn primary" href="#try">
+            Test it free
+          </a>
+          <Link className="btn secondary" to="/leaderboard">
+            See the leaderboard
+          </Link>
         </div>
       </section>
 
       <footer className="landing-footer">
-        <span>Quantify · Established 2025</span>
-        <span className="mono">No API key · Signal at close → execute next open</span>
+        <div className="footer-brand">
+          <span className="brand-mark" aria-hidden="true">
+            <img src="/logo.svg" width={22} height={22} alt="" />
+          </span>
+          <div>
+            <strong>Quantify</strong>
+            <p>Free strategy backtester. Research output, not investment advice.</p>
+          </div>
+        </div>
+        <nav className="footer-cols" aria-label="Footer">
+          <div>
+            <h4>Tools</h4>
+            <Link to="/app">Workspace</Link>
+            <Link to="/check">Guru check</Link>
+            <Link to="/leaderboard">Leaderboard</Link>
+            <Link to="/whatif">What if…</Link>
+          </div>
+          <div>
+            <h4>Learn</h4>
+            <Link to="/guide">Guide</Link>
+            <Link to="/playbook">Playbook</Link>
+            <Link to="/research">Research</Link>
+            <Link to="/about">About</Link>
+          </div>
+        </nav>
+        <p className="footer-fine mono">Signal at close → fill at next open · fees on every trade · Est. 2025</p>
       </footer>
     </div>
   );

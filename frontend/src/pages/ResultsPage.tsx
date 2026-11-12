@@ -372,18 +372,23 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           </div>
         </div>
         <div className="results-actions no-print">
-          <button type="button" className="btn secondary small" onClick={exportTradesCsv}>
-            Export trades CSV
-          </button>
-          <button type="button" className="btn secondary small" onClick={exportEquityCsv}>
-            Export equity CSV
-          </button>
-          <button type="button" className="btn secondary small" onClick={exportMetricsJson}>
-            Export JSON
-          </button>
-          <button type="button" className="btn secondary small" onClick={() => window.print()}>
-            Save PDF
-          </button>
+          <details className="download-menu">
+            <summary className="btn secondary">Download ▾</summary>
+            <div className="download-menu-list" onClick={(e) => e.currentTarget.parentElement?.removeAttribute('open')}>
+              <button type="button" onClick={exportTradesCsv}>
+                Trades (CSV)
+              </button>
+              <button type="button" onClick={exportEquityCsv}>
+                Equity curve (CSV)
+              </button>
+              <button type="button" onClick={exportMetricsJson}>
+                Metrics (JSON)
+              </button>
+              <button type="button" onClick={() => window.print()}>
+                Report (PDF)
+              </button>
+            </div>
+          </details>
           {readOnly ? (
             <Link className="btn primary" to="/app">
               Test your own strategy
@@ -437,17 +442,6 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           </ul>
         </div>
       ) : null}
-
-      {readOnly ? null : <ExportButtons strategy={result.strategy} title={result.strategy_description} />}
-
-      <VerdictCard backtestId={result.id} initial={result.verdict} />
-
-      <LiveSignalCard
-        backtestId={result.id}
-        initial={result.live_signal}
-        canRefresh={!readOnly}
-        datasetName={result.dataset_name}
-      />
 
       {holdVerdict ? (
         <section className={`hold-verdict ${holdVerdict.won ? 'won' : 'lost'}`}>
@@ -504,6 +498,17 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           hint={`Final ${money(m.final_capital)}`}
         />
       </section>
+
+      <VerdictCard backtestId={result.id} initial={result.verdict} />
+
+      <LiveSignalCard
+        backtestId={result.id}
+        initial={result.live_signal}
+        canRefresh={!readOnly}
+        datasetName={result.dataset_name}
+      />
+
+      {readOnly ? null : <ExportButtons strategy={result.strategy} title={result.strategy_description} />}
 
       <div className="tabs no-print" role="tablist">
         {tabs.map((t) => (

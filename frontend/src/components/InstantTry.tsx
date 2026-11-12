@@ -66,18 +66,7 @@ export function InstantTry() {
         </p>
       </div>
       <form className={`instant-form ${kick ? 'kick' : ''}`} onSubmit={onSubmit}>
-        <label className="field">
-          <span>Strategy</span>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            minLength={5}
-            required
-            disabled={busy}
-            placeholder="Describe a trading idea in plain English…"
-          />
-        </label>
+        <p className="instant-pick">Pick a famous one or write your own</p>
         <div className="instant-hints">
           {HINTS.map((h) => (
             <button
@@ -92,6 +81,18 @@ export function InstantTry() {
             </button>
           ))}
         </div>
+        <label className="field">
+          <span>Strategy</span>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={3}
+            minLength={5}
+            required
+            disabled={busy}
+            placeholder="Describe a trading idea in plain English…"
+          />
+        </label>
         <div className="instant-run">
           <label className="field instant-ticker">
             <span>On</span>
