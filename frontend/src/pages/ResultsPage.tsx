@@ -27,7 +27,7 @@ import { buildBuyAndHold } from '../utils/buyAndHold';
 import { classifyRegimes } from '../utils/regimes';
 import { WalkForward } from '../components/WalkForward';
 import { downloadText, toCsv } from '../utils/download';
-import { riskWarnings, sizingLabel } from '../utils/formatStrategy';
+import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStrategy';
 import { shareCard, signedPct } from '../utils/shareCard';
 import { explainResult } from '../utils/explainResult';
 
@@ -198,6 +198,8 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
         'bars_held',
         'entry_reason',
         'exit_reason',
+        'entry_why',
+        'exit_why',
       ],
       ...result.trades.map((t) => [
         t.entry_date,
@@ -212,6 +214,8 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
         t.bars_held,
         t.entry_reason,
         t.exit_reason,
+        t.entry_why ?? '',
+        t.exit_why ?? '',
       ]),
     ];
     downloadText(`quantify-trades-${result.id}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
@@ -548,6 +552,30 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
                   <dt>Asset</dt>
                   <dd>{result.strategy.asset}</dd>
                 </div>
+                {result.strategy.custom_code ? null : (
+                  <>
+                    <div>
+                      <dt>Enters when</dt>
+                      <dd>
+                        {formatConditions(
+                          result.strategy.entry_conditions,
+                          result.strategy.entry_logic,
+                          result.strategy.entry_any,
+                        ).join(' ')}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Exits when</dt>
+                      <dd>
+                        {formatConditions(
+                          result.strategy.exit_conditions,
+                          result.strategy.exit_logic,
+                          result.strategy.exit_any,
+                        ).join(' ')}
+                      </dd>
+                    </div>
+                  </>
+                )}
                 <div>
                   <dt>Position size</dt>
                   <dd>{sizingLabel(result.strategy)}</dd>
@@ -749,6 +777,13 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             />
             <KpiCard label="Commission paid" value={money(result.total_commission ?? 0)} />
             <KpiCard label="Slippage cost" value={money(result.total_slippage ?? 0)} />
+            {result.total_funding ? (
+              <KpiCard
+                label="Funding / holding cost"
+                value={money(result.total_funding)}
+                hint={`${((result.strategy.funding_rate ?? 0) * 100).toFixed(1)}% a year on position value`}
+              />
+            ) : null}
             <KpiCard label="Win rate" value={pct(m.win_rate)} />
             <KpiCard label="Profit factor" value={num(m.profit_factor)} />
           </section>

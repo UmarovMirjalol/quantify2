@@ -92,9 +92,14 @@ def _combine(parts, logic):
 
 def rule_signals(df, spec):
     """Entry/exit flags from the spec's conditions; bars with warming-up indicators never trade."""
-    conds = spec["entry_conditions"] + spec["exit_conditions"]
+    entry_any, exit_any = spec.get("entry_any") or [], spec.get("exit_any") or []
+    conds = spec["entry_conditions"] + entry_any + spec["exit_conditions"] + exit_any
     entry = _combine([evaluate_condition(df, c) for c in spec["entry_conditions"]], spec.get("entry_logic", "AND"))
     exit_ = _combine([evaluate_condition(df, c) for c in spec["exit_conditions"]], spec.get("exit_logic", "AND"))
+    if entry_any:
+        entry = entry & _combine([evaluate_condition(df, c) for c in entry_any], "OR")
+    if exit_any:
+        exit_ = exit_ & _combine([evaluate_condition(df, c) for c in exit_any], "OR")
     valid = df["close"].notna()
     for c in conds:
         valid = valid & resolve_side(df, c["left"]).notna()

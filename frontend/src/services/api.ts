@@ -143,6 +143,7 @@ export async function runBacktest(payload: {
     commission: number;
     slippage: number;
     risk_per_trade?: number;
+    funding_rate?: number;
   };
   asset?: string;
 }): Promise<BacktestResult> {

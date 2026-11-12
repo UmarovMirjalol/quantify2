@@ -8,6 +8,9 @@ export interface StrategySpec {
   custom_code?: string | null;
   entry_logic?: string;
   exit_logic?: string;
+  /** At least one of these must also hold: "A and (B or C)". */
+  entry_any?: unknown[];
+  exit_any?: unknown[];
   risk: {
     risk_per_trade: number;
     max_position_pct?: number;
@@ -23,6 +26,8 @@ export interface StrategySpec {
   position_sizing: string;
   commission?: number;
   slippage?: number;
+  /** Yearly holding cost on position value (funding, margin interest). */
+  funding_rate?: number;
 }
 
 export interface Metrics {
@@ -57,6 +62,9 @@ export interface Trade {
   commission: number;
   entry_reason: string;
   exit_reason: string;
+  /** Which rules fired, with indicator values on the signal bar. */
+  entry_why?: string;
+  exit_why?: string;
   bars_held: number;
 }
 
@@ -189,6 +197,7 @@ export interface BacktestResult {
   price_series: PriceBar[];
   total_commission?: number;
   total_slippage?: number;
+  total_funding?: number;
   execution_convention?: string;
   monte_carlo?: MonteCarloResult;
   regimes?: RegimeReport;

@@ -48,6 +48,7 @@ export function managementSummary(spec: Partial<StrategySpec>): string[] {
   }
   if (spec.breakeven_after_scale) lines.push('Stop to breakeven after the first partial exit');
   if ((spec.max_entries ?? 1) > 1) lines.push(`Pyramiding: up to ${spec.max_entries} entries`);
+  if (spec.funding_rate) lines.push(`Holding cost ${pctText(spec.funding_rate)}% a year`);
   return lines;
 }
 

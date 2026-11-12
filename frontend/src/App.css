@@ -6323,3 +6323,166 @@ h2 {
   min-width: 0;
   max-width: 100%;
 }
+.trade-why {
+  min-width: 18rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.trade-why span {
+  display: block;
+}
+
+.trade-why b {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+/* —— Lab, capabilities, comparison —— */
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.05rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-panel);
+}
+
+.lab-grid li strong {
+  font-family: var(--display);
+  font-size: 1.08rem;
+  color: var(--text);
+}
+
+.lab-grid li > span:last-child {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.lab-num {
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.caps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.6rem;
+}
+
+.caps-grid article {
+  padding: 1.15rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(79, 214, 160, 0.05), transparent 60%), var(--bg-panel);
+}
+
+.caps-grid h3 {
+  margin: 0 0 0.4rem;
+  font-family: var(--display);
+  font-size: 1.08rem;
+  color: var(--text);
+}
+
+.caps-grid p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.compare-wrap {
+  margin-top: 1.6rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-panel);
+}
+
+.compare-table {
+  width: 100%;
+  min-width: 44rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+.compare-table tbody tr:last-child th,
+.compare-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.compare-table thead th {
+  font-family: var(--display);
+  font-size: 1rem;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.compare-table tbody th {
+  width: 22%;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.compare-table td {
+  color: var(--text-secondary);
+}
+
+.compare-table .ours {
+  background: rgba(79, 214, 160, 0.06);
+  color: var(--text);
+}
+
+.compare-table thead .ours {
+  color: var(--accent);
+}
+
+.compare-note {
+  margin-top: 0.8rem;
+}
+
+@media (max-width: 860px) {
+  .lab-grid,
+  .caps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.demo-head h2 {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-transform: none;
+  color: var(--text);
+}
+@media (max-width: 860px) {
+  .compare-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-panel);
+    box-shadow: 1px 0 0 var(--border);
+  }
+}

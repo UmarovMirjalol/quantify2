@@ -130,6 +130,7 @@ export function HomePage({ health }: Props) {
   const [riskPerTrade, setRiskPerTrade] = useState(0.01);
   const [commission, setCommission] = useState(0.001);
   const [slippage, setSlippage] = useState(0.0005);
+  const [fundingPct, setFundingPct] = useState(0);
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(-1);
   const [error, setError] = useState<string | null>(null);
@@ -329,8 +330,13 @@ export function HomePage({ health }: Props) {
   const entryLines = formatConditions(
     parse.strategy?.entry_conditions,
     parse.strategy?.entry_logic,
+    parse.strategy?.entry_any,
   );
-  const exitLines = formatConditions(parse.strategy?.exit_conditions, parse.strategy?.exit_logic);
+  const exitLines = formatConditions(
+    parse.strategy?.exit_conditions,
+    parse.strategy?.exit_logic,
+    parse.strategy?.exit_any,
+  );
 
   async function onUpload(file: File | null) {
     if (!file) return;
@@ -383,6 +389,7 @@ export function HomePage({ health }: Props) {
           commission,
           slippage,
           risk_per_trade: riskPerTrade,
+          funding_rate: fundingPct > 0 ? fundingPct / 100 : undefined,
         },
       });
       setProgressStep(PIPELINE_STEPS.length);
@@ -557,6 +564,23 @@ export function HomePage({ health }: Props) {
                   disabled={loading}
                 />
                 <small className="hint">Price moving against you as the order fills. 0.0005 = 0.05%.</small>
+              </label>
+
+              <label className="field">
+                <span>Holding cost, % a year</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={500}
+                  step="any"
+                  value={fundingPct}
+                  onChange={(e) => setFundingPct(Number(e.target.value))}
+                  disabled={loading}
+                />
+                <small className="hint">
+                  Crypto perpetual funding or margin interest, charged on the position while it is open. Around 10 for
+                  leveraged crypto, 0 for spot stocks.
+                </small>
               </label>
             </div>
 

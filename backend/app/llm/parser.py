@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from app.config import get_settings
+from app.llm.clauses import count, parse_side, split_sides
 from app.llm.prompts import SYSTEM_PROMPT, build_user_prompt
 from app.llm.schemas import ParseStrategyResponse, StrategySpec
 from app.strategies.interpreter import validate_strategy_spec
@@ -160,6 +161,19 @@ _PYRAMID = [
     re.compile(r"пирамид\w*\s*(?:до)?\s*(\d+)", re.I),
     re.compile(r"до\s+(\d+)\s+вход\w*", re.I),
 ]
+_SCALE_IN = [
+    re.compile(r"(?:buy|enter|get\s+in|scale\s+in(?:to)?)\s+(?:the\s+position\s+)?in\s+(\d+)\s+(?:parts|tranches|steps|chunks|pieces|batches)", re.I),
+    re.compile(r"scale\s+in\s+(?:up\s+to\s+)?(\d+)\s+times", re.I),
+    re.compile(r"(?:в|на)\s+(\d+)\s+(?:част\w*|заход\w*|транш\w*|прием\w*|приём\w*)", re.I),
+]
+_FUNDING = re.compile(
+    r"(?:funding(?:\s+rate)?|financing(?:\s+cost)?|borrow(?:ing)?\s+(?:cost|fee|rate)|margin\s+interest|"
+    r"фандинг\w*|ставк\w+\s+финансирования|стоимост\w+\s+удержания)\s*(?:of|at|is|=|:|в|на)?\s*"
+    + _PCT
+    + r"(\s*(?:per|a|an|every|each|в|за)?\s*(?:8\s*h(?:ours?)?|8\s*час\w*|day|дн\w*|день|year|annual|yr|год\w*))?",
+    re.I,
+)
+_FUNDING_PER_YEAR = {"8": 3 * 365, "day": 365, "дн": 365, "ден": 365}
 _ADD_TIMES = re.compile(r"add\s+(?:to\s+(?:the\s+)?(?:position|winners?)\s+)?(?:up\s+to\s+)?(\d+)\s+times|доб\w+\s+(?:до\s+)?(\d+)\s+раз", re.I)
 _PORTION_WORDS = {"half": 0.5, "third": 1 / 3, "quarter": 0.25, "половин": 0.5, "треть": 1 / 3, "четверть": 0.25}
 
@@ -200,7 +214,14 @@ def _extract_management(text: str) -> tuple[dict[str, Any], str]:
         out["breakeven_after_scale"] = True
         text = _BREAKEVEN.sub(" ", text)
 
-    for pattern in _PYRAMID:
+    match = _FUNDING.search(text)
+    if match:
+        unit = (match.group(2) or "").strip().lower()
+        times = next((n for key, n in _FUNDING_PER_YEAR.items() if key in unit), 1)
+        out["funding_rate"] = min(5.0, _percent(float(match.group(1).replace(",", "."))) * times)
+        text = text[: match.start()] + " " + text[match.end() :]
+
+    for pattern in _PYRAMID + _SCALE_IN:
         match = pattern.search(text)
         if match:
             out["max_entries"] = max(1, min(10, int(match.group(1))))
@@ -559,7 +580,11 @@ def parse_builtin(
 
     # --- Bollinger ---
     if entry is None and re.search(r"bollinger|lower\s+band", text, re.IGNORECASE):
-        period_m = re.search(r"(\d+)\s*[-\s]?day.*bollinger|bollinger.*?(\d+)", text, re.IGNORECASE)
+        period_m = re.search(
+            r"(\d+)\s*[-\s]?(?:day|period|bar)\s*bollinger|bollinger\s*(?:bands?)?\s*\(?\s*(\d+)",
+            text,
+            re.IGNORECASE,
+        )
         period = 20
         if period_m:
             period = int(period_m.group(1) or period_m.group(2) or 20)
@@ -784,6 +809,24 @@ def parse_builtin(
             {"left": {"indicator": "ADX", "period": period}, "operator": "greater_than", "right": float(adx_filter.group(2))}
         ]
 
+    # Rules the reader understood clause by clause win over the templates above, which only
+    # recognise one idea per strategy and would drop "... and price above the 200-day SMA".
+    entry_logic = exit_logic = "AND"
+    entry_any: list[dict[str, Any]] = []
+    exit_any: list[dict[str, Any]] = []
+    entry_text, exit_text = split_sides(text)
+    read_entry = parse_side(entry_text) if entry_text else None
+    read_exit = parse_side(exit_text) if exit_text else None
+    if read_entry:
+        entry, entry_logic, entry_any = read_entry
+        warnings = [w for w in warnings if not w.startswith(("Short side", "Free parser"))]
+    if read_exit:
+        exit_, exit_logic, exit_any = read_exit
+    if count(read_entry) + count(read_exit) > 2 or entry_any or exit_any:
+        warnings.append(
+            f"Read {count(read_entry) + count(read_exit)} separate rules; check them in the preview."
+        )
+
     tf = "1d"
     if re.search(r"\b(?:5m|5[-\s]?min(?:ute)?s?|5[-\s]?мин\w*)\b", text, re.IGNORECASE):
         tf = "5m"
@@ -836,8 +879,10 @@ def parse_builtin(
         "initial_capital": initial_capital or 100_000.0,
         "entry_conditions": entry,
         "exit_conditions": exit_,
-        "entry_logic": "AND",
-        "exit_logic": "AND",
+        "entry_logic": entry_logic,
+        "exit_logic": exit_logic,
+        "entry_any": entry_any,
+        "exit_any": exit_any,
         "risk": {"risk_per_trade": risk_frac}
         | ({"percent_capital": size} if size is not None else {}),
         "stop_loss": stop,

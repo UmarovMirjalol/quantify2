@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 from app.llm.schemas import Condition, ConditionOp, IndicatorRef, IndicatorType, Side, StrategySpec
+from app.strategies.interpreter import all_conditions
 
 
 def _var_name(ref: IndicatorRef) -> str:
@@ -79,6 +80,13 @@ def _condition_to_pine(cond: Condition) -> str:
     return f"({left_str} == {right_str})"
 
 
+def _side_to_pine(conds: list[Condition], logic: str, any_of: list[Condition]) -> str:
+    expr = (" and " if logic == "AND" else " or ").join(_condition_to_pine(c) for c in conds)
+    if not any_of:
+        return expr
+    return f"({expr}) and ({' or '.join(_condition_to_pine(c) for c in any_of)})"
+
+
 def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> str:
     """Generate TradingView Pine Script v5 code from a StrategySpec."""
     if strategy.is_custom:
@@ -95,12 +103,17 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
         "",
         "// === INDICATORS ===",
     ]
+    if strategy.funding_rate:
+        lines[-1:-1] = [
+            f"// Quantify charged a {strategy.funding_rate * 100:.1f}% yearly holding cost; Pine has no funding model.",
+            "",
+        ]
 
     # Collect unique indicators
     indicators_seen: set[str] = set()
 
     all_refs: list[IndicatorRef] = []
-    for c in strategy.entry_conditions + strategy.exit_conditions:
+    for c in all_conditions(strategy):
         if isinstance(c.left, IndicatorRef):
             all_refs.append(c.left)
         if isinstance(c.right, IndicatorRef):
@@ -209,14 +222,8 @@ def generate_pine_script(strategy: StrategySpec, title: str | None = None) -> st
     stop_sign, take_sign = ("+", "-") if short else ("-", "+")
 
     # Entry condition
-    entry_clauses = [_condition_to_pine(c) for c in strategy.entry_conditions]
-    entry_glue = " and " if strategy.entry_logic.value == "AND" else " or "
-    lines.append(f"enter_{tag} = {entry_glue.join(entry_clauses)}")
-
-    # Exit condition
-    exit_clauses = [_condition_to_pine(c) for c in strategy.exit_conditions]
-    exit_glue = " and " if strategy.exit_logic.value == "AND" else " or "
-    lines.append(f"exit_{tag} = {exit_glue.join(exit_clauses)}")
+    lines.append(f"enter_{tag} = {_side_to_pine(strategy.entry_conditions, strategy.entry_logic.value, strategy.entry_any)}")
+    lines.append(f"exit_{tag} = {_side_to_pine(strategy.exit_conditions, strategy.exit_logic.value, strategy.exit_any)}")
 
     lines.append("")
     lines.append("// === EXECUTION ===")

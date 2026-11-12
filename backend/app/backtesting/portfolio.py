@@ -30,6 +30,7 @@ class Portfolio:
     equity_curve: list[EquityPoint] = field(default_factory=list)
     total_commission: float = 0.0
     total_slippage: float = 0.0
+    total_funding: float = 0.0
 
     def __post_init__(self) -> None:
         self.cash = float(self.initial_capital)

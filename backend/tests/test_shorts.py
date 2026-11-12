@@ -89,8 +89,8 @@ def test_parser_reads_short_language_and_flips_the_rule():
     strategy = parse_demo(text, initial_capital=100000).strategy
     assert strategy.side.value == "short"
     assert strategy.asset == "SPY"
-    assert strategy.entry_conditions[0].condition.value == "cross_below"
-    assert strategy.exit_conditions[0].condition.value == "cross_above"
+    assert strategy.entry_conditions[0].operator.value == "cross_below"
+    assert strategy.exit_conditions[0].operator.value == "cross_above"
 
     long_strategy = parse_demo("Buy SPY when the 20-day SMA crosses above the 50-day SMA.").strategy
     assert long_strategy.side.value == "long"

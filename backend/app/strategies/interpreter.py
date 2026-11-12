@@ -137,6 +137,10 @@ def combine_signals(signals: list[pd.Series], logic: LogicOp) -> pd.Series:
     return result
 
 
+def all_conditions(strategy: StrategySpec) -> list[Condition]:
+    return strategy.entry_conditions + strategy.entry_any + strategy.exit_conditions + strategy.exit_any
+
+
 def generate_signals(df: pd.DataFrame, strategy: StrategySpec) -> tuple[pd.Series, pd.Series]:
     """
     Generate entry and exit signal series from a strategy specification.
@@ -153,9 +157,13 @@ def generate_signals(df: pd.DataFrame, strategy: StrategySpec) -> tuple[pd.Serie
     exit_parts = [evaluate_condition(df, c) for c in strategy.exit_conditions]
     entries = combine_signals(entry_parts, strategy.entry_logic)
     exits = combine_signals(exit_parts, strategy.exit_logic)
+    if strategy.entry_any:
+        entries = entries & combine_signals([evaluate_condition(df, c) for c in strategy.entry_any], LogicOp.OR)
+    if strategy.exit_any:
+        exits = exits & combine_signals([evaluate_condition(df, c) for c in strategy.exit_any], LogicOp.OR)
     # Cannot trade when indicators are NaN (warmup)
     valid = df["close"].notna()
-    for c in strategy.entry_conditions + strategy.exit_conditions:
+    for c in all_conditions(strategy):
         left = _resolve_side(df, c.left)
         valid = valid & left.notna()
         if not isinstance(c.right, (int, float)):
@@ -164,6 +172,91 @@ def generate_signals(df: pd.DataFrame, strategy: StrategySpec) -> tuple[pd.Serie
     entries = entries & valid
     exits = exits & valid
     return entries.astype(bool), exits.astype(bool)
+
+
+_OP_WORDS = {
+    ConditionOp.GREATER_THAN: "above",
+    ConditionOp.LESS_THAN: "below",
+    ConditionOp.CROSS_ABOVE: "crossed above",
+    ConditionOp.CROSS_BELOW: "crossed below",
+    ConditionOp.EQUALS: "=",
+}
+_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _ref_label(ref: object) -> str:
+    ind = ref.indicator.value if hasattr(ref.indicator, "value") else str(ref.indicator)
+    comp, period = ref.component, ref.period
+    if ind == "PRICE":
+        label = comp.capitalize()
+    elif ind == "MACD":
+        label = {"signal": "MACD signal", "histogram": "MACD histogram"}.get(comp, "MACD")
+    elif ind == "BOLLINGER":
+        label = f"Bollinger {comp} band"
+    elif ind == "STOCH":
+        label = f"Stochastic %{'D' if comp == 'd' else 'K'}"
+    elif ind == "ADX":
+        label = {"plus": "+DI", "minus": "-DI"}.get(comp, "ADX")
+    elif ind == "DONCHIAN":
+        label = f"{period}-bar {'low' if comp == 'lower' else 'mid' if comp == 'middle' else 'high'}"
+    elif ind == "CHANGE":
+        label = f"{period}-bar change %"
+    elif ind == "VOLUME":
+        label = f"Volume SMA({period})" if comp == "sma" else "Volume"
+    elif ind in ("HAMMER", "PINBAR", "ENGULFING"):
+        label = f"{'Bearish' if comp == 'bearish' else 'Bullish'} {ind.lower().replace('pinbar', 'pin bar')}"
+    elif period:
+        label = f"{ind}({period})"
+    else:
+        label = ind
+    tf = getattr(ref, "timeframe", None)
+    return f"{label} [{tf}]" if tf else label
+
+
+def _fmt(v: float) -> str:
+    return f"{v:,.2f}" if abs(v) >= 1 else f"{v:.4f}"
+
+
+class ConditionExplainer:
+    """Plain-English reasons for which rules were true on a given bar."""
+
+    def __init__(self, df: pd.DataFrame, strategy: StrategySpec):
+        self.parts = {
+            side: [
+                (c, evaluate_condition(df, c), _resolve_side(df, c.left), _resolve_side(df, c.right))
+                for c in conds
+            ]
+            for side, conds in (
+                ("entry", strategy.entry_conditions + strategy.entry_any),
+                ("exit", strategy.exit_conditions + strategy.exit_any),
+            )
+        }
+
+    def why(self, side: str, i: int) -> str:
+        if i < 0:
+            return ""
+        lines = []
+        for cond, hit, left, right in self.parts.get(side, []):
+            if i >= len(hit) or not bool(hit.iloc[i]):
+                continue
+            ind = cond.left.indicator.value
+            lv, rv = float(left.iloc[i]), float(right.iloc[i])
+            if ind in ("HAMMER", "PINBAR", "ENGULFING"):
+                lines.append(f"{_ref_label(cond.left)} candle")
+            elif ind == "CHANGE" and isinstance(cond.right, (int, float)):
+                bars = cond.left.period or 1
+                lines.append(
+                    f"Price change over {bars} bar{'s' if bars > 1 else ''} {lv:.2f}% "
+                    f"{_OP_WORDS[cond.operator]} {rv:.2f}%"
+                )
+            elif ind == "WEEKDAY":
+                lines.append(
+                    f"{'Next session' if cond.left.component == 'next' else 'Day'} is {_DAYS[int(rv) % 7]}"
+                )
+            else:
+                rlabel = _fmt(rv) if isinstance(cond.right, (int, float)) else f"{_ref_label(cond.right)} {_fmt(rv)}"
+                lines.append(f"{_ref_label(cond.left)} {_fmt(lv)} {_OP_WORDS[cond.operator]} {rlabel}")
+        return "; ".join(lines)
 
 
 def validate_strategy_spec(strategy: StrategySpec) -> list[str]:
@@ -195,7 +288,7 @@ def validate_strategy_spec(strategy: StrategySpec) -> list[str]:
         "WEEKDAY",
         "CHANGE",
     }
-    for cond in strategy.entry_conditions + strategy.exit_conditions:
+    for cond in all_conditions(strategy):
         for side_name in ("left", "right"):
             side = getattr(cond, side_name)
             if isinstance(side, (int, float)):

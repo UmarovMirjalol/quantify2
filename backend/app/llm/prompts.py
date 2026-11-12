@@ -49,6 +49,9 @@ Optional position management (omit when not asked for):
   "scale_out": [{"profit": 0.05, "fraction": 0.5}] closes half the position at +5%; up to 3 levels, fractions sum to at most 1.
   "breakeven_after_scale": true moves the stop to the entry price after the first partial exit.
   "max_entries": 3 allows pyramiding: up to 3 entries into the same position (default 1).
+  "funding_rate": 0.1 charges 10% a year on the open position's value (perpetual funding, margin interest).
+Nested logic "A and (B or C)": put A in entry_conditions with entry_logic "AND" and B, C in
+"entry_any": at least one of entry_any must also be true. "exit_any" works the same for exits.
 For RSI use period and threshold, e.g. {"indicator":"RSI","period":14,"condition":"less_than","threshold":30}
 For MACD crossover use {"indicator":"MACD","condition":"cross_above"}
 For Bollinger use {"indicator":"BOLLINGER","period":20,"condition":"less_than","component":"lower"}

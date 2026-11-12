@@ -98,6 +98,7 @@ def backtest(df, spec, entry, exit_, size=None):
     levels = spec.get("scale_out") or []
     breakeven = spec.get("breakeven_after_scale", False)
     max_entries = spec.get("max_entries", 1)
+    funding = spec.get("funding_rate") or 0.0
 
     def value(price):
         return 0.0 if pos is None else (-1.0 if pos["short"] else 1.0) * pos["qty"] * price
@@ -213,6 +214,8 @@ def backtest(df, spec, entry, exit_, size=None):
                 if qty > 0:
                     pending = ("add", qty, None, None)
 
+        if funding and pos is not None and i > 0:
+            cash -= pos["qty"] * c * funding * (dates[i] - dates[i - 1]).total_seconds() / (365.0 * 86400.0)
         equity.append(cash + value(c))
         if pos is not None:
             pos["best"] = min(pos["best"], l) if pos["short"] else max(pos["best"], h)

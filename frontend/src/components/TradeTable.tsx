@@ -33,7 +33,7 @@ export function TradeTable({ trades, asset }: { trades: Trade[]; asset?: string 
             <th>P&amp;L</th>
             <th>Return</th>
             <th>Holding</th>
-            <th>Exit reason</th>
+            <th>Why</th>
           </tr>
         </thead>
         <tbody>
@@ -54,7 +54,16 @@ export function TradeTable({ trades, asset }: { trades: Trade[]; asset?: string 
                 {(t.return_pct * 100).toFixed(2)}%
               </td>
               <td className="mono">{t.bars_held}d</td>
-              <td className="truncate">{t.exit_reason}</td>
+              <td className="trade-why">
+                {t.entry_why ? (
+                  <span>
+                    <b>In:</b> {t.entry_why}
+                  </span>
+                ) : null}
+                <span>
+                  <b>Out:</b> {t.exit_why || t.exit_reason.replace(/_/g, ' ')}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

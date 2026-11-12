@@ -360,6 +360,9 @@ class StrategySpec(BaseModel):
     custom_code: str | None = Field(default=None, max_length=20_000)
     entry_logic: LogicOp = LogicOp.AND
     exit_logic: LogicOp = LogicOp.AND
+    # "A and (B or C)": when set, the side also needs at least one of these to be true.
+    entry_any: list[Condition] = Field(default_factory=list, max_length=4)
+    exit_any: list[Condition] = Field(default_factory=list, max_length=4)
     risk: RiskConfig = Field(default_factory=RiskConfig)
     stop_loss: float | None = Field(default=None, ge=0.001, le=0.5)
     take_profit: float | None = Field(default=None, ge=0.001, le=5.0)
@@ -374,6 +377,8 @@ class StrategySpec(BaseModel):
     position_sizing: PositionSizing = PositionSizing.RISK_BASED
     commission: float = Field(default=0.0, ge=0.0, le=0.05)
     slippage: float = Field(default=0.0, ge=0.0, le=0.05)
+    # Yearly cost of holding a position (perpetual funding, margin interest, borrow fee), on its value.
+    funding_rate: float = Field(default=0.0, ge=0.0, le=5.0)
 
     @field_validator("asset")
     @classmethod
@@ -391,8 +396,9 @@ class StrategySpec(BaseModel):
             if self.stop_loss is None and self.risk.risk_per_trade > 0:
                 # Without stop-loss, risk-based sizing falls back to percent of capital
                 pass
-        if len(self.entry_conditions) + len(self.exit_conditions) > 8:
-            raise ValueError("Strategy too complex: max 8 total conditions for MVP")
+        total = len(self.entry_conditions) + len(self.exit_conditions) + len(self.entry_any) + len(self.exit_any)
+        if total > 10:
+            raise ValueError("Strategy too complex: max 10 total conditions")
         if self.scale_out:
             self.scale_out = sorted(self.scale_out, key=lambda level: level.profit)
             if sum(level.fraction for level in self.scale_out) > 1.0 + 1e-9:
@@ -452,6 +458,7 @@ class BacktestConfig(BaseModel):
     commission: float = Field(default=0.001, ge=0.0, le=0.05)
     slippage: float = Field(default=0.0005, ge=0.0, le=0.05)
     risk_per_trade: float | None = Field(default=None, ge=0.0001, le=1.0)
+    funding_rate: float | None = Field(default=None, ge=0.0, le=5.0)
 
     @field_validator("commission", "slippage", mode="before")
     @classmethod

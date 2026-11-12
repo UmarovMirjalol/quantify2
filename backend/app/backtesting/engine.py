@@ -27,8 +27,11 @@ from app.research.market import market_exposure
 from app.research.regimes import classify_regimes
 from app.metrics.performance import compute_performance_metrics
 from app.risk.risk_engine import RiskEngine, round_quantity
-from app.strategies.interpreter import generate_signals, validate_strategy_spec
+from app.strategies.interpreter import ConditionExplainer, generate_signals, validate_strategy_spec
 from app.strategies.sandbox import CustomSignals, SandboxError, run_custom
+
+
+_YEAR_SECONDS = 365.0 * 86400.0
 
 
 class BacktestError(Exception):
@@ -100,6 +103,7 @@ class BacktestEngine:
         highs = df["high"].to_numpy(dtype=float)
         lows = df["low"].to_numpy(dtype=float)
         closes = df["close"].to_numpy(dtype=float)
+        funding = self.strategy.funding_rate
         for i in range(n):
             bar_date = dates[i]
             o, h, l, c = float(opens[i]), float(highs[i]), float(lows[i]), float(closes[i])
@@ -187,7 +191,13 @@ class BacktestEngine:
                             adds_to_position=True,
                         )
 
-            # 4) Mark-to-market at close, then let the trailing stop follow this bar's extreme
+            # 4) Holding cost for the time since the last close, then mark-to-market at close
+            #    and let the trailing stop follow this bar's extreme
+            if funding and pos.is_open and i > 0:
+                years = (bar_date - dates[i - 1]).total_seconds() / _YEAR_SECONDS
+                cost = abs(pos.quantity) * c * funding * years
+                portfolio.cash -= cost
+                portfolio.total_funding += cost
             portfolio.record_equity(bar_date, c)
             if pos.is_open:
                 short = pos.side == PositionSide.SHORT
@@ -253,6 +263,8 @@ class BacktestEngine:
             }
             for t in portfolio.trades
         ]
+        if not self.strategy.is_custom:
+            self._attach_reasons(df, dates, trades_out)
 
         monte_carlo_res = run_monte_carlo_simulation(
             portfolio.trades,
@@ -268,6 +280,7 @@ class BacktestEngine:
             "price_series": price_series,
             "total_commission": portfolio.total_commission,
             "total_slippage": portfolio.total_slippage,
+            "total_funding": portfolio.total_funding,
             "monte_carlo": monte_carlo_res,
             "live_signal": live_signal,
             "regimes": classify_regimes(price_series, trades_out),
@@ -281,6 +294,24 @@ class BacktestEngine:
                 "This prevents look-ahead bias."
             ),
         }
+
+    def _attach_reasons(self, df: pd.DataFrame, dates: list[Any], trades: list[dict[str, Any]]) -> None:
+        """Name the rules behind each fill; the signal bar is the one before the fill."""
+        explainer = ConditionExplainer(df, self.strategy)
+        index = {pd.Timestamp(d).isoformat(): i for i, d in enumerate(dates)}
+        fixed = {
+            "stop_loss": "Stop-loss hit",
+            "take_profit": "Take-profit hit",
+            "scale_out": "Partial profit taken",
+        }
+        for t in trades:
+            entry_i = index.get(t["entry_date"], 0) - 1
+            exit_i = index.get(t["exit_date"], 0) - 1
+            t["entry_why"] = explainer.why("entry", entry_i)
+            if t["exit_reason"] == "exit_signal":
+                t["exit_why"] = explainer.why("exit", exit_i)
+            else:
+                t["exit_why"] = fixed.get(t["exit_reason"], t["exit_reason"].replace("_", " "))
 
     def _holding_at(self, df: pd.DataFrame, k: int, signals: CustomSignals | None) -> bool:
         """Whether an unrestricted run is in a position after bar ``k``'s close."""

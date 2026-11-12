@@ -51,6 +51,59 @@ const TOOLS = [
   },
 ] as const;
 
+const CHECKS = [
+  { k: 'Holdout', d: 'Rerun on the last 30% of history the rules never saw.' },
+  { k: 'Walk-forward', d: 'Re-tune on the past only, then score the next slice. Repeat.' },
+  { k: 'Monte Carlo', d: 'Shuffle the trade order 1,000 times. How bad can the path get?' },
+  { k: 'Synthetic markets', d: '100 alternate price histories. Does the edge survive them?' },
+  { k: 'Deflated Sharpe', d: 'Discounts the score for every variant you already tried.' },
+  { k: 'Cost break-even', d: 'The fee level at which the profit disappears.' },
+  { k: 'Parameter heatmap', d: 'Stable plateau or one lucky setting?' },
+  { k: 'Market regimes', d: 'Did it earn in rising and falling markets, or only one?' },
+  { k: 'Alpha vs holding', d: 'What is left after paying for plain market exposure.' },
+] as const;
+
+const CAPABILITIES = [
+  {
+    title: 'Complex rules in plain words',
+    body: '“RSI below 30 and (MACD crosses up or price drops 4% in a day)”. Every rule is shown back to you before the run.',
+  },
+  {
+    title: '5-minute to weekly bars',
+    body: 'Intraday and daily data, plus higher-timeframe filters like “15m entries, 4h trend”.',
+  },
+  {
+    title: 'Portfolios and screeners',
+    body: 'One rule on a basket of up to 12 assets, or scan 40 tickers at once.',
+  },
+  {
+    title: 'Python when words are not enough',
+    body: 'Any logic and dynamic sizing in code, with a guard against peeking at future bars.',
+  },
+  {
+    title: 'Shorts, exits and funding',
+    body: 'Real shorts, trailing stops, partial exits, scaling in, and a yearly holding cost for perpetuals or margin.',
+  },
+  {
+    title: 'Every trade explained',
+    body: 'Each trade says which rule fired and the indicator values at that moment.',
+  },
+] as const;
+
+const COMPARE = {
+  cols: ['Quantify', 'TradingView (Pine)', 'QuantConnect / vectorbt'],
+  rows: [
+    ['How you describe a strategy', 'Plain English or Python', 'Pine Script code', 'Python or C# code'],
+    ['Price', 'Free, no signup', 'Free tier, paid plans for more', 'Free tier or open source, paid compute and Pro'],
+    ['Data', 'Bars from 5 minutes to weekly', 'Bars, tick-level replay on paid plans', 'Tick, quote and order-book data'],
+    ['Overfitting tests built in', '9, run on every result', 'None', 'You write them yourself'],
+    ['Compared with buy & hold', 'First thing you see', 'One number in the report', 'Benchmark chart'],
+    ['Many assets at once', 'Up to 12 per portfolio', 'One symbol per strategy', 'Hundreds'],
+    ['Live trading', 'No: signals and forward tests', 'Alerts to brokers', 'Yes, many brokers'],
+    ['Best for', 'Checking an idea before risking money', 'Charting and most retail traders', 'Professional algo developers'],
+  ],
+} as const;
+
 const FLOW = ['NL', 'Spec', 'Sim', 'Results'] as const;
 const INTERP = [
   { label: 'Entry', value: 'SMA(20) × SMA(50)' },
@@ -125,7 +178,6 @@ export function LandingPage() {
   }, [navOpen]);
   const exec = useInView<HTMLElement>(reduced);
   const invariants = useInView<HTMLElement>(reduced);
-  const metrics = useInView<HTMLElement>(reduced);
 
   const flowActive = phaseIndex(phase);
   const kpiActive = phase === 'results' || phase === 'hold';
@@ -494,6 +546,82 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="landing-section lab-section in-view" id="lab">
+        <div className="section-head">
+          <p className="eyebrow">Overfitting lab</p>
+          <h2>9 tests every result has to survive.</h2>
+          <p className="section-lede">
+            A pretty equity curve proves nothing: with enough tries, any rule fits the past. After every backtest
+            Quantify attacks the result and grades it from 0 to 100. Most tools leave this part to you.
+          </p>
+        </div>
+        <ol className="lab-grid">
+          {CHECKS.map((c, i) => (
+            <li key={c.k} style={{ ['--i' as string]: i }}>
+              <span className="lab-num mono">{String(i + 1).padStart(2, '0')}</span>
+              <strong>{c.k}</strong>
+              <span>{c.d}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="landing-section caps-section in-view">
+        <div className="section-head">
+          <p className="eyebrow">Not just simple rules</p>
+          <h2>Starts in plain English. Goes further when you need it.</h2>
+        </div>
+        <div className="caps-grid">
+          {CAPABILITIES.map((c) => (
+            <article key={c.title}>
+              <h3>{c.title}</h3>
+              <p>{c.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-section compare-section in-view" id="compare">
+        <div className="section-head">
+          <p className="eyebrow">Honest comparison</p>
+          <h2>Where Quantify fits.</h2>
+          <p className="section-lede">
+            Quantify is not a replacement for a professional quant platform. It is the fastest way to find out whether
+            an idea is worth more of your time and money.
+          </p>
+        </div>
+        <div className="table-wrap compare-wrap">
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th />
+                {COMPARE.cols.map((c, i) => (
+                  <th key={c} className={i === 0 ? 'ours' : ''}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARE.rows.map(([label, ...cells]) => (
+                <tr key={label}>
+                  <th scope="row">{label}</th>
+                  {cells.map((cell, i) => (
+                    <td key={i} className={i === 0 ? 'ours' : ''}>
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="hint compare-note">
+          Missing on purpose: tick and order-book data, live order routing. If you need those, use QuantConnect. Use
+          Quantify first to decide which ideas deserve it.
+        </p>
+      </section>
+
       <LandingDemo />
 
       <StrategyGallery />
@@ -584,86 +712,6 @@ export function LandingPage() {
               <p className="invariant-bad mono">✕ {item.bad}</p>
               <p className="invariant-good">→ {item.good}</p>
             </article>
-          ))}
-        </div>
-      </section>
-
-      <section
-        className={`landing-section metrics-section ${metrics.inView ? 'in-view' : ''}`}
-        ref={metrics.ref}
-      >
-        <div className="section-head">
-          <p className="eyebrow">Results</p>
-          <h2>Metrics from the simulation, not a sketch.</h2>
-          <p className="section-lede">
-            Each run returns equity, risk, trades, and the parsed specification you can inspect.
-          </p>
-        </div>
-        <div className="metric-board">
-          {[
-            { k: 'Total return / CAGR', d: 'Compounded path from simulated capital' },
-            { k: 'Sharpe / Sortino', d: 'Risk-adjusted return, including downside' },
-            { k: 'Max drawdown', d: 'Peak-to-trough decline on the equity curve' },
-            { k: 'Win rate / profit factor', d: 'Trade quality alongside direction' },
-            { k: 'Trade ledger', d: 'Every fill with side, price, and PnL' },
-            { k: 'Parsed JSON spec', d: 'Exact rules the engine ran' },
-            { k: 'Holdout audit', d: 'Same rules on the unseen tail, plus nearby parameters' },
-            { k: 'Regime split', d: 'Profit above the moving average, and profit below it' },
-            { k: 'Walk-forward', d: 'Refit the parameter on the past, score only the next slice' },
-            { k: 'Deflated Sharpe', d: 'Discounts the Sharpe for every variant you already tried' },
-            { k: 'Cost break-even', d: 'The fee level at which the edge disappears' },
-            { k: 'Parameter heatmap', d: 'Plateau or lucky spike, across every fast × slow pair' },
-            { k: 'One verdict', d: 'Nine checks graded into a single 0–100 score' },
-            { k: 'Synthetic markets', d: '100 alternate histories: does the edge survive them?' },
-            { k: 'No-peek optimizer', d: 'Tune on 70%, judge once on the 30% no candidate saw' },
-            { k: 'Portfolio', d: 'One rule on a basket, with correlation and per-asset contribution' },
-            { k: 'Alpha & beta', d: 'What is left after paying for market exposure' },
-            { k: 'Long or short', d: '"Short SPY when…" runs a real short with mirrored stops' },
-            { k: 'Share & compare', d: 'Public report link, PDF, and two runs side by side' },
-            { k: 'Python strategies', d: 'Any logic and dynamic sizing in code, with a look-ahead guard' },
-            { k: 'No lock-in', d: 'MIT, self-hostable, and a standalone .py that reproduces every trade' },
-            { k: 'Position management', d: 'Trailing stop, partial take-profits, breakeven, pyramiding' },
-            { k: 'Accounts', d: 'Optional sign-in: your history follows you to any device' },
-          ].map((m, i) => (
-            <div key={m.k} style={{ ['--i' as string]: i }}>
-              <strong>{m.k}</strong>
-              <span>{m.d}</span>
-            </div>
-          ))}
-        </div>
-        <div className="landing-cta-row">
-          <Link className="btn primary" to="/app">
-            Open workspace
-          </Link>
-          <Link className="btn secondary" to="/playbook">
-            Strategy playbook
-          </Link>
-          <a className="btn ghost" href="#demo">
-            Demo
-          </a>
-        </div>
-      </section>
-
-      <section className="landing-section in-view">
-        <div className="section-head">
-          <p className="eyebrow">Holdout audit</p>
-          <h2>The curve is not the evidence.</h2>
-          <p className="section-lede">
-            After a run, Quantify replays the same rules on the last 30% of bars — a slice that never
-            chose the strategy — then nudges the entry parameter. If Sharpe only exists on the fitted
-            window, the verdict says so.
-          </p>
-        </div>
-        <div className="metric-board">
-          {[
-            { k: 'Fit window', d: 'First 70% of bars. This is the history the rules were allowed to like.' },
-            { k: 'Unseen holdout', d: 'Last 30%. Same spec, no retuning. Return, Sharpe, drawdown, trades.' },
-            { k: 'Nearby parameters', d: 'Move the main entry setting. A lonely spike is a fragile result.' },
-          ].map((item, i) => (
-            <div key={item.k} style={{ ['--i' as string]: i }}>
-              <strong>{item.k}</strong>
-              <span>{item.d}</span>
-            </div>
           ))}
         </div>
       </section>

@@ -159,11 +159,13 @@ export function formatCondition(raw: unknown): string {
   }
 }
 
-export function formatConditions(list: unknown[] | undefined, logic?: string): string[] {
+export function formatConditions(list: unknown[] | undefined, logic?: string, anyOf?: unknown[]): string[] {
   if (!list?.length) return ['—'];
   const joiner = logic === 'OR' ? 'OR' : 'AND';
-  return list.map((c, i) => {
+  const lines = list.map((c, i) => {
     const line = formatCondition(c);
     return i === 0 ? line : `${joiner} ${line}`;
   });
+  if (anyOf?.length) lines.push(`AND any of: ${anyOf.map(formatCondition).join(' | ')}`);
+  return lines;
 }

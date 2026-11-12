@@ -473,6 +473,8 @@ async def api_run_backtest(
             parsed_clarifications = parsed.clarifications
     except StrategyParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if body.config.funding_rate is not None:
+        strategy = strategy.model_copy(update={"funding_rate": body.config.funding_rate})
 
     try:
         data = load_dataset(body.dataset_id)
