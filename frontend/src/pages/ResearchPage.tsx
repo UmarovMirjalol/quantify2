@@ -227,9 +227,9 @@ export function ResearchPage() {
           <p className="eyebrow">Research · {study.generated}</p>
           <h1>Do backtest winners keep winning?</h1>
           <p className="lede">
-            We backtested {s.rules_per_asset} classic trading rules on {s.assets} stocks, ETFs, crypto coins, currencies and
-            futures, then ran the same rules, unchanged, on the years that came after. The short answer: a great backtest
-            tells you very little about what comes next.
+            An original multi-asset study: {s.rules_per_asset} classic rules × {s.assets} markets ({s.pairs.toLocaleString()}{' '}
+            pairs), ranked on the first 70% of history and scored only on the unseen years. The short answer a skeptic
+            wants — a great backtest tells you almost nothing about what comes next.
           </p>
         </div>
         <div className="btn-row no-print">

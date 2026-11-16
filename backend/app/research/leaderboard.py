@@ -14,9 +14,20 @@ from app.data.market_fetcher import fetch_market_frame
 from app.llm.parser import parse_builtin
 from app.playbook import PLAYBOOK
 
-TICKERS = ("SPY", "QQQ", "NVDA", "BTC-USD")
-YEAR_BARS = {"BTC-USD": 365}
-WEEK_BARS = {"BTC-USD": 7}
+TICKERS = (
+    "SPY",
+    "QQQ",
+    "IWM",
+    "EEM",
+    "GLD",
+    "TLT",
+    "XLE",
+    "NVDA",
+    "BTC-USD",
+    "ETH-USD",
+)
+YEAR_BARS = {"BTC-USD": 365, "ETH-USD": 365}
+WEEK_BARS = {"BTC-USD": 7, "ETH-USD": 7}
 CAPITAL = 10_000.0
 _TTL = 12 * 3600
 _LOCK = threading.Lock()

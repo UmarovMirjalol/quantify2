@@ -3,20 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { quickRun } from '../utils/quickRun';
 
 const HINTS = [
-  { label: 'RSI oversold bounce', text: 'Buy when RSI falls below 30 and sell when RSI rises above 70', ticker: 'SPY' },
-  { label: 'Golden cross', text: 'Buy when the 50-day SMA crosses above the 200-day SMA and sell when it crosses below', ticker: 'SPY' },
-  { label: 'Buy Monday, sell Friday', text: 'Buy on Monday and sell on Friday', ticker: 'SPY' },
-  { label: 'Buy the 3% dip', text: 'Buy when the price drops 3% in a day', ticker: 'SPY' },
+  { label: 'EM RSI bounce', text: 'Buy when RSI falls below 30 and sell when RSI rises above 70', ticker: 'EEM' },
+  { label: 'Nasdaq golden cross', text: 'Buy when the 50-day SMA crosses above the 200-day SMA and sell when it crosses below', ticker: 'QQQ' },
+  { label: 'Small-cap weekdays', text: 'Buy on Monday and sell on Friday', ticker: 'IWM' },
+  { label: 'Emerging dip', text: 'Buy when the price drops 3% in a day', ticker: 'EEM' },
   { label: 'Bitcoin weekend', text: 'Buy on Friday and sell on Monday', ticker: 'BTC-USD' },
-  { label: 'MACD momentum', text: 'Buy when MACD crosses above its signal line and sell when it crosses below', ticker: 'NVDA' },
+  { label: 'NVDA MACD', text: 'Buy when MACD crosses above its signal line and sell when it crosses below', ticker: 'NVDA' },
+  { label: 'Gold EMA trend', text: 'Buy when the 12-day EMA crosses above the 26-day EMA and sell when it crosses below', ticker: 'GLD' },
+  { label: 'EURUSD stochastic', text: 'Buy when Stochastic %K crosses above %D below 20 and sell when %K crosses below %D above 80', ticker: 'EURUSD' },
 ];
 
-const TICKERS = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'TSLA', 'BTC-USD', 'ETH-USD', 'EURUSD', 'GOLD'];
+const TICKERS = [
+  'QQQ', 'IWM', 'EEM', 'NVDA', 'TSLA', 'TSM', 'TLT', 'GLD', 'XLE',
+  'BTC-USD', 'ETH-USD', 'SOL-USD', 'EURUSD', 'USDJPY', 'GOLD', 'OIL',
+];
 
 export function InstantTry() {
   const navigate = useNavigate();
   const [text, setText] = useState(HINTS[0].text);
-  const [ticker, setTicker] = useState('SPY');
+  const [ticker, setTicker] = useState('EEM');
   const [flash, setFlash] = useState<string | null>(null);
   const [kick, setKick] = useState(false);
   const [status, setStatus] = useState<string | null>(null);

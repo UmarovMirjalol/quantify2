@@ -25,11 +25,11 @@ const PRESETS = [
 export function ScreenerPage() {
   usePageMeta(
     'Signal screener — Quantify',
-    'Run one trading rule across dozens of stocks, ETFs or crypto and see which ones signal a buy or sell today.',
+    'Run one trading rule across stocks, growth names, internationals, FX, commodities, factors or crypto and see who signals a buy or sell today.',
   );
   const navigate = useNavigate();
   const [universes, setUniverses] = useState<ScreenerUniverse[]>([]);
-  const [universe, setUniverse] = useState<string | null>('us_megacaps');
+  const [universe, setUniverse] = useState<string | null>('etfs');
   const [tickers, setTickers] = useState('');
   const [text, setText] = useState(DEFAULT_TEXT);
   const [history, setHistory] = useState<HistoryRange>('5y');

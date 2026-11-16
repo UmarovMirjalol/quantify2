@@ -18,16 +18,23 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from app.backtesting.orders import Order, OrderSide
+from app.backtesting.bars import align_to_timeframe
+from app.backtesting.orders import Order, OrderSide, OrderType, resolve_pending_fill
 from app.backtesting.portfolio import Portfolio
 from app.backtesting.positions import PositionSide, TradeRecord
-from app.llm.schemas import Side, StrategySpec
+from app.llm.schemas import EntryOrderType, Side, StrategySpec
 from app.metrics.monte_carlo import run_monte_carlo_simulation
 from app.research.market import market_exposure
 from app.research.regimes import classify_regimes
 from app.metrics.performance import compute_performance_metrics
 from app.risk.risk_engine import RiskEngine, round_quantity
-from app.strategies.interpreter import ConditionExplainer, generate_signals, validate_strategy_spec
+from app.strategies.interpreter import (
+    ConditionExplainer,
+    build_debug_bars,
+    collect_chart_series,
+    generate_signals,
+    validate_strategy_spec,
+)
 from app.strategies.sandbox import CustomSignals, SandboxError, run_custom
 
 
@@ -73,6 +80,13 @@ class BacktestEngine:
         if not required.issubset(set(df.columns)):
             raise BacktestError(f"Data missing columns: {required - set(df.columns)}")
 
+        df, bars_meta = align_to_timeframe(df, self.strategy.timeframe)
+        if len(df) < 5:
+            raise BacktestError(
+                f"Too few bars after aligning to {self.strategy.timeframe} "
+                f"({bars_meta.get('source_bars', 0)} → {len(df)})"
+            )
+
         sizes = None
         if self.strategy.is_custom:
             try:
@@ -103,23 +117,28 @@ class BacktestEngine:
         highs = df["high"].to_numpy(dtype=float)
         lows = df["low"].to_numpy(dtype=float)
         closes = df["close"].to_numpy(dtype=float)
-        funding = self.strategy.funding_rate
+        funding = float(self.strategy.funding_rate or 0.0)
+        borrow = float(getattr(self.strategy, "borrow_rate", 0.0) or 0.0)
         for i in range(n):
             bar_date = dates[i]
             o, h, l, c = float(opens[i]), float(highs[i]), float(lows[i]), float(closes[i])
 
-            # 1) Execute pending order from previous bar's signal at today's open
+            # 1) Try to fill a pending order from an earlier signal (market @ open; limit/stop on H/L)
             if pending_order is not None:
-                self._execute_order(
-                    portfolio,
-                    pending_order,
-                    fill_price_raw=o,
-                    fill_bar_index=i,
-                    fill_date=bar_date,
-                    markers=markers,
-                    entry_reason_ref={"value": entry_reason},
-                )
-                pending_order = None
+                raw = resolve_pending_fill(pending_order, open_=o, high=h, low=l)
+                if raw is not None:
+                    self._execute_order(
+                        portfolio,
+                        pending_order,
+                        fill_price_raw=raw,
+                        fill_bar_index=i,
+                        fill_date=bar_date,
+                        markers=markers,
+                        entry_reason_ref={"value": entry_reason},
+                    )
+                    pending_order = None
+                elif pending_order.order_type == OrderType.MARKET:
+                    pending_order = None
 
             def fill(order: Order, raw: float) -> None:
                 order.signal_bar_index = i
@@ -142,12 +161,14 @@ class BacktestEngine:
                 st_order = self.risk_engine.check_stop_take(portfolio, h, l, o)
                 if st_order is not None and st_order.reason == "stop_loss":
                     fill(st_order, worse(o, pos.stop_loss_price))
+                    pending_order = None
                 else:
                     self._scale_out(pos, short, h, l, o, fill)
                     if st_order is not None and pos.is_open:
                         fill(st_order, better(o, pos.take_profit_price))
+                        pending_order = None
 
-            # 3) Generate new signal at close — queue for next bar open
+            # 3) Generate new signal at close — queue for a later fill
             if i < n - 1:  # cannot execute after last bar
                 fraction = float(sizes[i]) if sizes is not None else None
                 if not pos.is_open and entry_flags[i] and fraction != 0.0:
@@ -155,6 +176,7 @@ class BacktestEngine:
                         portfolio, c, short=self.short, fraction=fraction
                     )
                     if decision.allowed:
+                        order_type, limit_px = self._entry_order_params(c)
                         pending_order = Order(
                             side=OrderSide.SELL if self.short else OrderSide.BUY,
                             quantity=decision.quantity,
@@ -163,6 +185,8 @@ class BacktestEngine:
                             opens_position=True,
                             stop_loss_price=decision.stop_loss_price,
                             take_profit_price=decision.take_profit_price,
+                            order_type=order_type,
+                            limit_price=limit_px,
                         )
                         entry_reason = "entry_signal"
                 elif pos.is_open and exit_flags[i]:
@@ -171,6 +195,7 @@ class BacktestEngine:
                         quantity=pos.quantity,
                         signal_bar_index=i,
                         reason="exit_signal",
+                        order_type=OrderType.MARKET,
                     )
                 elif (
                     pos.is_open
@@ -182,6 +207,7 @@ class BacktestEngine:
                         portfolio, c, short=self.short, fraction=fraction, adding=True
                     )
                     if decision.allowed:
+                        order_type, limit_px = self._entry_order_params(c)
                         pending_order = Order(
                             side=OrderSide.SELL if self.short else OrderSide.BUY,
                             quantity=decision.quantity,
@@ -189,13 +215,19 @@ class BacktestEngine:
                             reason="pyramid_add",
                             opens_position=True,
                             adds_to_position=True,
+                            order_type=order_type,
+                            limit_price=limit_px,
                         )
+                elif not pos.is_open and exit_flags[i] and pending_order and pending_order.opens_position:
+                    # Opposite signal cancels an unfilled entry.
+                    pending_order = None
 
             # 4) Holding cost for the time since the last close, then mark-to-market at close
             #    and let the trailing stop follow this bar's extreme
-            if funding and pos.is_open and i > 0:
+            hold_rate = funding + (borrow if pos.is_open and pos.side == PositionSide.SHORT else 0.0)
+            if hold_rate and pos.is_open and i > 0:
                 years = (bar_date - dates[i - 1]).total_seconds() / _YEAR_SECONDS
-                cost = abs(pos.quantity) * c * funding * years
+                cost = abs(pos.quantity) * c * hold_rate * years
                 portfolio.cash -= cost
                 portfolio.total_funding += cost
             portfolio.record_equity(bar_date, c)
@@ -218,6 +250,7 @@ class BacktestEngine:
         if metrics_only:
             return {"metrics": metrics, "live_signal": live_signal}
 
+        volumes = df["volume"].to_numpy(dtype=float)
         price_series = [
             {
                 "date": pd.Timestamp(dates[i]).isoformat(),
@@ -225,9 +258,24 @@ class BacktestEngine:
                 "high": float(highs[i]),
                 "low": float(lows[i]),
                 "close": float(closes[i]),
+                "volume": float(volumes[i]) if volumes[i] == volumes[i] else 0.0,
             }
             for i in range(n)
         ]
+        indicator_series = (
+            [] if self.strategy.is_custom else collect_chart_series(df, self.strategy)
+        )
+        debug_bars = (
+            []
+            if metrics_only
+            else build_debug_bars(
+                df,
+                self.strategy,
+                entry_flags=entry_flags,
+                exit_flags=exit_flags,
+                indicator_series=indicator_series,
+            )
+        )
 
         equity_series = [
             {
@@ -278,6 +326,9 @@ class BacktestEngine:
             "trades": trades_out,
             "markers": markers,
             "price_series": price_series,
+            "indicator_series": indicator_series,
+            "debug_bars": debug_bars,
+            "bars": bars_meta,
             "total_commission": portfolio.total_commission,
             "total_slippage": portfolio.total_slippage,
             "total_funding": portfolio.total_funding,
@@ -288,12 +339,44 @@ class BacktestEngine:
                 [pt["equity"] for pt in equity_series],
                 [float(x) for x in closes[: len(equity_series)]],
             ),
-            "execution_convention": (
-                "Signals are generated at bar close using only information available "
-                "at that time. Orders are executed at the next bar's open. "
-                "This prevents look-ahead bias."
-            ),
+            "execution_convention": self._execution_note(),
         }
+
+    def _entry_order_params(self, signal_close: float) -> tuple[OrderType, float | None]:
+        """Map strategy entry_order + limit_offset to an OrderType and trigger price."""
+        kind = getattr(self.strategy, "entry_order", EntryOrderType.MARKET)
+        if isinstance(kind, str):
+            kind = EntryOrderType(kind)
+        if kind == EntryOrderType.MARKET:
+            return OrderType.MARKET, None
+        offset = self.strategy.limit_offset
+        if offset is None:
+            offset = 0.001
+        if kind == EntryOrderType.LIMIT:
+            px = signal_close * (1.0 - offset) if not self.short else signal_close * (1.0 + offset)
+            return OrderType.LIMIT, float(px)
+        px = signal_close * (1.0 + offset) if not self.short else signal_close * (1.0 - offset)
+        return OrderType.STOP, float(px)
+
+    def _execution_note(self) -> str:
+        kind = getattr(self.strategy, "entry_order", EntryOrderType.MARKET)
+        label = kind.value if hasattr(kind, "value") else str(kind)
+        base = (
+            "Signals are generated at bar close using only information available at that time. "
+        )
+        if label == "market":
+            return base + "Market entries/exits fill at the next bar's open (look-ahead safe)."
+        if label == "limit":
+            return (
+                base
+                + "Limit entries wait until price trades through the limit; "
+                "unfilled entries stay working until filled or cancelled."
+            )
+        return (
+            base
+            + "Stop entries wait until price trades through the stop; "
+            "unfilled entries stay working until filled or cancelled."
+        )
 
     def _attach_reasons(self, df: pd.DataFrame, dates: list[Any], trades: list[dict[str, Any]]) -> None:
         """Name the rules behind each fill; the signal bar is the one before the fill."""

@@ -473,8 +473,21 @@ async def api_run_backtest(
             parsed_clarifications = parsed.clarifications
     except StrategyParseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    cfg_updates: dict[str, Any] = {}
     if body.config.funding_rate is not None:
-        strategy = strategy.model_copy(update={"funding_rate": body.config.funding_rate})
+        cfg_updates["funding_rate"] = body.config.funding_rate
+    if body.config.borrow_rate is not None:
+        cfg_updates["borrow_rate"] = body.config.borrow_rate
+    if body.config.spread is not None:
+        cfg_updates["spread"] = body.config.spread
+    if body.config.entry_order is not None:
+        cfg_updates["entry_order"] = body.config.entry_order
+    if body.config.limit_offset is not None:
+        cfg_updates["limit_offset"] = body.config.limit_offset
+    if body.config.timeframe is not None:
+        cfg_updates["timeframe"] = body.config.timeframe
+    if cfg_updates:
+        strategy = strategy.model_copy(update=cfg_updates)
 
     try:
         data = load_dataset(body.dataset_id)

@@ -480,3 +480,35 @@ def test_end_to_end_backtest(sample_df):
     # Persist-like JSON roundtrip
     blob = json.dumps(result)
     assert "equity_curve" in blob
+
+
+def test_chart_series_export(trending_df):
+    """Results carry volume + the indicator overlays used by the strategy."""
+    strategy = StrategySpec.model_validate(
+        {
+            "asset": "TEST",
+            "initial_capital": 100000,
+            "entry_conditions": [
+                {"indicator": "SMA", "fast_period": 5, "slow_period": 20, "condition": "cross_above"}
+            ],
+            "exit_conditions": [
+                {"indicator": "RSI", "period": 14, "threshold": 70, "condition": "greater_than"}
+            ],
+            "risk": {"percent_capital": 0.5},
+            "position_sizing": "percent_capital",
+            "commission": 0.0,
+            "slippage": 0.0,
+        }
+    )
+    result = BacktestEngine(strategy).run(trending_df)
+    assert "volume" in result["price_series"][0]
+    series = result["indicator_series"]
+    assert series
+    labels = {s["label"] for s in series}
+    panes = {s["pane"] for s in series}
+    assert any("SMA" in label for label in labels)
+    assert any("RSI" in label for label in labels)
+    assert "overlay" in panes
+    assert "pane" in panes
+    for s in series:
+        assert len(s["values"]) == len(trending_df)

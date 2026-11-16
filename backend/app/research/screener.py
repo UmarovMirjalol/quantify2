@@ -11,8 +11,8 @@ from app.backtesting.engine import BacktestEngine, BacktestError
 from app.data.market_fetcher import fetch_market_frame
 from app.llm.schemas import StrategySpec
 
-MAX_TICKERS = 40
-WORKERS = 8
+MAX_TICKERS = 60
+WORKERS = 10
 
 # Yahoo symbols; crypto uses the -USD pairs Yahoo quotes daily.
 UNIVERSES: dict[str, dict[str, Any]] = {
@@ -24,18 +24,71 @@ UNIVERSES: dict[str, dict[str, Any]] = {
             "NFLX", "AMD", "ORCL", "CRM", "BAC", "KO", "PEP", "ADBE", "CSCO", "INTC",
         ],
     },
+    "us_growth": {
+        "label": "US growth & high-beta",
+        "tickers": [
+            "NVDA", "AMD", "AVGO", "SMCI", "ARM", "PLTR", "SNOW", "CRWD", "NET", "DDOG",
+            "SHOP", "SQ", "COIN", "HOOD", "UBER", "ABNB", "DASH", "RBLX", "U", "PATH",
+            "TSLA", "RIVN", "LCID", "NIO", "MARA", "RIOT", "MSTR", "OKLO", "IONQ", "RKLB",
+        ],
+    },
+    "us_value_cyclical": {
+        "label": "US value & cyclicals",
+        "tickers": [
+            "XOM", "CVX", "COP", "OXY", "SLB", "BA", "CAT", "DE", "GE", "HON",
+            "UPS", "FDX", "GM", "F", "DAL", "UAL", "AAL", "CCL", "RCL", "MGM",
+            "JPM", "BAC", "WFC", "C", "GS", "MS", "BLK", "SCHW", "AXP", "USB",
+        ],
+    },
     "etfs": {
         "label": "ETFs: indices, sectors, bonds, metals",
         "tickers": [
-            "SPY", "QQQ", "IWM", "DIA", "EFA", "EEM", "TLT", "IEF", "HYG", "GLD",
-            "SLV", "USO", "XLE", "XLF", "XLK", "XLV", "XLY", "XLP", "XLI", "XLU", "VNQ",
+            "SPY", "QQQ", "IWM", "DIA", "MDY", "EFA", "EEM", "VEA", "VWO", "FXI",
+            "TLT", "IEF", "SHY", "HYG", "LQD", "TIP", "GLD", "SLV", "USO", "UNG",
+            "XLE", "XLF", "XLK", "XLV", "XLY", "XLP", "XLI", "XLU", "XLB", "VNQ",
+            "ARKK", "SMH", "SOXX", "XBI", "IBB", "KWEB", "EWJ", "EWZ", "INDA", "GREK",
+        ],
+    },
+    "international": {
+        "label": "International ADRs & markets",
+        "tickers": [
+            "TSM", "ASML", "SAP", "NVO", "AZN", "UL", "SONY", "TM", "HMC", "BABA",
+            "PDD", "JD", "BIDU", "NIO", "SE", "GRAB", "MELI", "NU", "ITUB", "VALE",
+            "BP", "SHEL", "TTE", "RIO", "BHP", "RELX", "DEO", "BUD", "SNY", "GSK",
+        ],
+    },
+    "fx": {
+        "label": "FX majors & crosses",
+        "tickers": [
+            "EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X", "AUDUSD=X", "USDCAD=X",
+            "NZDUSD=X", "EURGBP=X", "EURJPY=X", "GBPJPY=X", "AUDJPY=X", "EURCHF=X",
+            "USDMXN=X", "USDTRY=X", "USDBRL=X", "USDZAR=X", "USDSEK=X", "USDNOK=X",
+            "USDINR=X", "USDCNY=X",
+        ],
+    },
+    "commodities": {
+        "label": "Commodities & futures proxies",
+        "tickers": [
+            "GC=F", "SI=F", "CL=F", "BZ=F", "NG=F", "HG=F", "PL=F", "PA=F",
+            "ZC=F", "ZW=F", "ZS=F", "KC=F", "CT=F", "SB=F", "LE=F", "HE=F",
+            "GLD", "SLV", "USO", "UNG", "DBA", "DBC", "PDBC", "COPX",
+        ],
+    },
+    "factors_vol": {
+        "label": "Factors, vol & alternatives",
+        "tickers": [
+            "MTUM", "VLUE", "QUAL", "SIZE", "USMV", "SPHQ", "SPHD", "DVY",
+            "VXX", "UVXY", "SVXY", "TAIL", "BTAL", "KMLM", "DBMF", "PAVE",
+            "BITO", "IBIT", "ETHA", "GBTC", "ARKK", "BOTZ", "ROBO", "HACK",
         ],
     },
     "crypto": {
-        "label": "Crypto majors",
+        "label": "Crypto majors & alts",
         "tickers": [
             "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
             "AVAX-USD", "LINK-USD", "DOT-USD", "LTC-USD", "TRX-USD", "TON11419-USD", "NEAR-USD",
+            "ATOM-USD", "UNI-USD", "AAVE-USD", "APT-USD", "SUI-USD", "PEPE-USD",
+            "MATIC-USD", "SHIB-USD", "ICP-USD", "FIL-USD", "ARB-USD", "OP-USD",
         ],
     },
 }

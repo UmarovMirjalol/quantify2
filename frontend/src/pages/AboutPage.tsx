@@ -6,7 +6,8 @@ import { usePageMeta } from '../hooks/usePageMeta';
 const REPO = 'https://github.com/UmarovMirjalol/quantify2';
 
 /** A few sentences in the author's own words; the section is hidden while empty. */
-const AUTHOR_NOTE = 'Sometimes traders need something fast and reliable to check their strategies. Here you go.';
+const AUTHOR_NOTE =
+  'I built Quantify end-to-end — the bar-by-bar engine, the overfitting lab, the multi-asset research, and the interface — to answer one question without marketing theater: would this strategy have worked, and can I trust that answer? The fills are look-ahead-safe, the trades match an independent backtester to the cent, and the published study shows why pretty equity curves are not enough.';
 
 const PRINCIPLES = [
   {
@@ -45,7 +46,7 @@ interface Numbers {
 export function AboutPage() {
   usePageMeta(
     'About — Quantify',
-    'Why Quantify exists: a free, open-source backtester built to tell you whether to believe your backtest.',
+    'Solo-built research backtester: look-ahead-safe engine verified against backtrader, nine overfitting tests, and a published multi-asset study on whether backtest winners keep winning.',
   );
   const [numbers, setNumbers] = useState<Numbers | null>(null);
 
@@ -62,10 +63,11 @@ export function AboutPage() {
       <div className="page-header">
         <div>
           <p className="eyebrow">About</p>
-          <h1>Honest backtesting, free for everyone</h1>
+          <h1>A backtester that tries to disprove you</h1>
           <p className="lede">
-            Most backtesting tools are built to show you a beautiful equity curve. Quantify is built to tell you whether to
-            believe it.
+            Most tools are designed to flatter an idea with a beautiful curve. Quantify is designed so an admissions
+            officer — or a skeptic — can ask “is this real?” and get a receipt: verified fills, out-of-sample grades, and
+            a public study.
           </p>
         </div>
       </div>
@@ -136,13 +138,25 @@ export function AboutPage() {
         </ul>
       </section>
 
-      <section className="panel research-text">
-        <h2>Author</h2>
+      <section className="panel research-text about-author">
+        <p className="eyebrow">Author</p>
+        <h2>Solo-built by Mirjalol Umarov</h2>
         <p>
-          Designed, built and tested by <strong>Mirjalol Umarov</strong>: the engine, the research, the interface and the
-          study on this site.
+          Engine, research methodology, frontend, exports to Pine and Python, and the survival study — one builder, one
+          stack, fully open source.
         </p>
         {AUTHOR_NOTE ? <p>{AUTHOR_NOTE}</p> : null}
+        <ul className="about-receipts">
+          <li>
+            <strong>Verification</strong> — every trade matched to backtrader in a re-runnable script
+          </li>
+          <li>
+            <strong>Research</strong> — 106 assets × 30 rules, scored only on unseen years
+          </li>
+          <li>
+            <strong>Product</strong> — NL parser, sandboxed Python strategies, screener, forward tests, public reports
+          </li>
+        </ul>
         <div className="about-links">
           <Link className="btn primary" to="/research">
             Read the study
@@ -150,8 +164,8 @@ export function AboutPage() {
           <a className="btn ghost" href={REPO} target="_blank" rel="noreferrer">
             Source code on GitHub
           </a>
-          <Link className="btn ghost" to="/guide">
-            How to use it
+          <Link className="btn ghost" to="/app">
+            Open the workspace
           </Link>
         </div>
       </section>

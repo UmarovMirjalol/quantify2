@@ -42,13 +42,19 @@ class RiskEngine:
         self.strategy = strategy
         self.commission = strategy.commission
         self.slippage = strategy.slippage
+        self.spread = float(getattr(strategy, "spread", 0.0) or 0.0)
         self.risk = strategy.risk
 
+    def adverse_cost_rate(self) -> float:
+        """Combined half-spread + slippage fraction applied against the trader."""
+        return self.slippage + self.spread / 2.0
+
     def apply_slippage(self, price: float, side: OrderSide) -> float:
-        """Worsen the fill price by the configured slippage rate."""
+        """Worsen the fill price by slippage and half-spread."""
+        rate = self.adverse_cost_rate()
         if side == OrderSide.BUY:
-            return price * (1.0 + self.slippage)
-        return price * (1.0 - self.slippage)
+            return price * (1.0 + rate)
+        return price * (1.0 - rate)
 
     def commission_cost(self, price: float, quantity: float) -> float:
         """Commission as a fraction of notional."""

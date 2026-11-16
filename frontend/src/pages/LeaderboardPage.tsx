@@ -13,7 +13,18 @@ const SORTS: { id: SortKey; label: string }[] = [
   { id: '10y', label: '10 years' },
 ];
 
-const NAMES: Record<string, string> = { SPY: 'S&P 500', QQQ: 'Nasdaq 100', NVDA: 'Nvidia', 'BTC-USD': 'Bitcoin' };
+const NAMES: Record<string, string> = {
+  SPY: 'S&P 500',
+  QQQ: 'Nasdaq 100',
+  IWM: 'Russell 2000',
+  EEM: 'Emerging mkts',
+  GLD: 'Gold',
+  TLT: 'Long Treasuries',
+  XLE: 'Energy',
+  NVDA: 'Nvidia',
+  'BTC-USD': 'Bitcoin',
+  'ETH-USD': 'Ethereum',
+};
 
 const pick = (r: LeaderboardRow, k: SortKey) =>
   k === 'year' ? [r.return_year, r.hold_year] : k === 'week' ? [r.return_week, r.hold_week] : [r.return_10y, r.hold_10y];

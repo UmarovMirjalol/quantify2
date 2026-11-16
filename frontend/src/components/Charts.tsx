@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import type { EquityPoint, Marker, PriceBar } from '../types';
+import type { DebugBar, EquityPoint, IndicatorSeries, Marker, PriceBar } from '../types';
+import { TradingChart } from './TradingChart';
 
 const FONT = 'IBM Plex Sans, system-ui, sans-serif';
 const MONO = 'IBM Plex Mono, ui-monospace, monospace';
@@ -123,60 +124,15 @@ export function DrawdownChart({ data }: { data: EquityPoint[] }) {
 export function PriceTradeChart({
   prices,
   markers,
+  indicators,
+  debugBars,
 }: {
   prices: PriceBar[];
   markers: Marker[];
+  indicators?: IndicatorSeries[];
+  debugBars?: DebugBar[];
 }) {
-  const entries = markers.filter((m) => m.type === 'entry');
-  const exits = markers.filter((m) => m.type === 'exit');
-
-  return (
-    <Plot
-      data={[
-        {
-          x: prices.map((p) => p.date),
-          y: prices.map((p) => p.close),
-          type: 'scatter',
-          mode: 'lines',
-          line: { color: '#c8d0da', width: 1.35 },
-          name: 'Close',
-          hovertemplate: '%{x}<br>$%{y:.2f}<extra>Close</extra>',
-        },
-        {
-          x: entries.map((m) => m.date),
-          y: entries.map((m) => m.price),
-          type: 'scatter',
-          mode: 'markers',
-          marker: { color: '#4fd6a0', size: 9, symbol: 'triangle-up', line: { width: 0 } },
-          name: 'Entry',
-          hovertemplate: '%{x}<br>$%{y:.2f}<extra>Entry</extra>',
-        },
-        {
-          x: exits.map((m) => m.date),
-          y: exits.map((m) => m.price),
-          type: 'scatter',
-          mode: 'markers',
-          marker: { color: '#ff6b7a', size: 9, symbol: 'triangle-down', line: { width: 0 } },
-          name: 'Exit',
-          hovertemplate: '%{x}<br>$%{y:.2f}<extra>Exit</extra>',
-        },
-      ]}
-      layout={{
-        ...layoutBase,
-        height: 320,
-        legend: {
-          orientation: 'h',
-          y: 1.12,
-          x: 0,
-          font: { size: 11, color: '#9aa3b2' },
-        },
-        yaxis: { ...layoutBase.yaxis, tickprefix: '$' },
-      }}
-      config={{ displayModeBar: false, responsive: true }}
-      style={{ width: '100%' }}
-      useResizeHandler
-    />
-  );
+  return <TradingChart prices={prices} markers={markers} indicators={indicators} debugBars={debugBars} />;
 }
 
 export function MonthlyReturnsChart({ data }: { data: EquityPoint[] }) {

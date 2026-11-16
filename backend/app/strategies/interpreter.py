@@ -174,6 +174,124 @@ def generate_signals(df: pd.DataFrame, strategy: StrategySpec) -> tuple[pd.Serie
     return entries.astype(bool), exits.astype(bool)
 
 
+# Drawn on the price pane (TradingView-style overlays).
+_CHART_OVERLAY = frozenset({"SMA", "EMA", "BOLLINGER", "VWAP", "DONCHIAN"})
+# Drawn on a separate pane below price.
+_CHART_PANE = frozenset({"RSI", "MACD", "STOCH", "ADX", "ATR", "OBV", "CHANGE"})
+_CHART_SKIP = frozenset(
+    {"PRICE", "VOLUME", "HAMMER", "PINBAR", "ENGULFING", "WEEKDAY"}
+)
+_CHART_SERIES_CAP = 10
+
+
+def _ref_key(ref: object) -> str:
+    ind = ref.indicator.value if hasattr(ref.indicator, "value") else str(ref.indicator)
+    return "|".join(
+        [
+            ind,
+            str(getattr(ref, "period", None)),
+            str(getattr(ref, "fast_period", None)),
+            str(getattr(ref, "slow_period", None)),
+            str(getattr(ref, "signal_period", None)),
+            str(getattr(ref, "std_dev", None)),
+            str(getattr(ref, "component", None)),
+            str(getattr(ref, "timeframe", None)),
+            str(getattr(ref, "bar_factor", None)),
+        ]
+    )
+
+
+def collect_chart_series(df: pd.DataFrame, strategy: StrategySpec) -> list[dict]:
+    """Export the indicator series used by the strategy for the results chart.
+
+    Custom Python strategies have no structured refs, so this returns [].
+    """
+    if strategy.is_custom:
+        return []
+
+    seen: set[str] = set()
+    out: list[dict] = []
+    for cond in all_conditions(strategy):
+        for side in (cond.left, cond.right):
+            if isinstance(side, (int, float)):
+                continue
+            ind = side.indicator.value if hasattr(side.indicator, "value") else str(side.indicator)
+            if ind in _CHART_SKIP:
+                continue
+            pane = "overlay" if ind in _CHART_OVERLAY else "pane" if ind in _CHART_PANE else None
+            if pane is None:
+                continue
+            key = _ref_key(side)
+            if key in seen:
+                continue
+            seen.add(key)
+            series = _resolve_side(df, side)
+            values: list[float | None] = []
+            for v in series.to_numpy(dtype=float):
+                if v != v:  # NaN
+                    values.append(None)
+                else:
+                    values.append(float(v))
+            out.append(
+                {
+                    "id": key,
+                    "label": _ref_label(side),
+                    "pane": pane,
+                    "indicator": ind,
+                    "values": values,
+                }
+            )
+            if len(out) >= _CHART_SERIES_CAP:
+                return out
+    return out
+
+
+_DEBUG_BAR_CAP = 8_000
+
+
+def build_debug_bars(
+    df: pd.DataFrame,
+    strategy: StrategySpec,
+    *,
+    entry_flags: np.ndarray,
+    exit_flags: np.ndarray,
+    indicator_series: list[dict] | None = None,
+) -> list[dict]:
+    """Per-bar signal debugger for the results chart HUD.
+
+    Caps length on very long intraday runs so the payload stays interactive.
+    """
+    n = len(df)
+    if n == 0:
+        return []
+    step = max(1, (n + _DEBUG_BAR_CAP - 1) // _DEBUG_BAR_CAP) if n > _DEBUG_BAR_CAP else 1
+    dates = pd.to_datetime(df["date"], errors="coerce")
+    series = indicator_series or []
+    out: list[dict] = []
+    for i in range(0, n, step):
+        inds: dict[str, float | None] = {}
+        for s in series:
+            val = s["values"][i] if i < len(s["values"]) else None
+            inds[s["label"]] = val
+        note = ""
+        if bool(entry_flags[i]) and bool(exit_flags[i]):
+            note = "entry + exit both true"
+        elif bool(entry_flags[i]):
+            note = "entry signal"
+        elif bool(exit_flags[i]):
+            note = "exit signal"
+        out.append(
+            {
+                "date": pd.Timestamp(dates.iloc[i]).isoformat() if pd.notna(dates.iloc[i]) else str(df["date"].iloc[i]),
+                "entry": bool(entry_flags[i]),
+                "exit": bool(exit_flags[i]),
+                "indicators": inds,
+                "note": note,
+            }
+        )
+    return out
+
+
 _OP_WORDS = {
     ConditionOp.GREATER_THAN: "above",
     ConditionOp.LESS_THAN: "below",

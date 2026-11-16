@@ -19,7 +19,7 @@ import {
 import { normalizeStrategyText } from '../services/session';
 import type { DatasetInfo, HealthStatus, PlaybookItem, StrategySpec } from '../types';
 import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStrategy';
-import { yahooSymbol } from '../utils/quickRun';
+import { MARKET_CHIPS, yahooSymbol } from '../utils/markets';
 
 type PresetStrategy = {
   id: string;
@@ -31,69 +31,69 @@ type PresetStrategy = {
 const EXAMPLE_STRATEGIES: PresetStrategy[] = [
   {
     id: 'sma-cross',
-    label: '📈 SMA crossover',
+    label: '📈 Energy SMA cross',
     tag: 'Trend',
-    text: 'Buy SPY when the 20-day moving average crosses above the 50-day moving average. Risk 1% per trade and exit when RSI exceeds 70.',
+    text: 'Buy XLE when the 20-day moving average crosses above the 50-day moving average. Risk 1% per trade and exit when RSI exceeds 70.',
   },
   {
     id: 'rsi-reversion',
-    label: '🔄 RSI mean reversion',
+    label: '🔄 EM RSI bounce',
     tag: 'Mean Reversion',
-    text: 'Buy when RSI falls below 30 and sell when RSI rises above 70. Risk 1% per trade.',
+    text: 'Buy EEM when RSI falls below 30 and sell when RSI rises above 70. Risk 1% per trade.',
   },
   {
     id: 'ema-stops',
-    label: '📊 EMA + stops',
+    label: '📊 Gold EMA + stops',
     tag: 'Trend',
-    text: 'Buy when the 12-day EMA crosses above the 26-day EMA and sell when it crosses below. Use a 2% stop-loss and 5% take-profit.',
+    text: 'Buy GLD when the 12-day EMA crosses above the 26-day EMA and sell when it crosses below. Use a 2% stop-loss and 5% take-profit.',
   },
   {
     id: 'bollinger-bounce',
-    label: '📉 Bollinger bounce',
+    label: '📉 Bond Bollinger',
     tag: 'Volatility',
-    text: 'Buy when price closes below the lower Bollinger Band and sell when it crosses above the middle band. Risk 1% per trade.',
+    text: 'Buy TLT when price closes below the lower Bollinger Band and sell when it crosses above the middle band. Risk 1% per trade.',
   },
   {
     id: 'turtle-breakout',
-    label: '🐢 Turtle breakout',
+    label: '🐢 Small-cap turtle',
     tag: 'Breakout',
-    text: 'Buy when price breaks above the 20-day high and sell when it breaks below the 10-day low. Risk 1% per trade.',
+    text: 'Buy IWM when price breaks above the 20-day high and sell when it breaks below the 10-day low. Risk 1% per trade.',
   },
   {
     id: 'stochastic-swing',
-    label: '〰️ Stochastic swing',
+    label: '〰️ FX stochastic',
     tag: 'Mean Reversion',
-    text: 'Buy when Stochastic %K crosses above %D below 20 and sell when %K crosses below %D above 80. Risk 1% per trade.',
+    text: 'Buy EURUSD when Stochastic %K crosses above %D below 20 and sell when %K crosses below %D above 80. Risk 1% per trade.',
   },
   {
     id: 'adx-trend',
-    label: '🧭 Trend + ADX filter',
+    label: '🧭 Nasdaq + ADX',
     tag: 'Trend',
-    text: 'Buy when the 20-day SMA crosses above the 50-day SMA and ADX above 25. Sell when the 20-day SMA crosses below the 50-day SMA. Risk 1% per trade.',
+    text: 'Buy QQQ when the 20-day SMA crosses above the 50-day SMA and ADX above 25. Sell when the 20-day SMA crosses below the 50-day SMA. Risk 1% per trade.',
   },
   {
     id: 'pinbar-support',
-    label: '🕯️ Pin-bar Rejection',
+    label: '🕯️ NVDA pin-bar',
     tag: 'Price Action',
-    text: 'Buy SPY when a Bullish Pin-bar pattern forms on daily chart. Use 2% stop-loss and 5% take-profit. Risk 1% per trade.',
+    text: 'Buy NVDA when a Bullish Pin-bar pattern forms on daily chart. Use 2% stop-loss and 5% take-profit. Risk 1% per trade.',
   },
   {
-    id: 'vwap-crossover',
-    label: '💹 VWAP Bounce',
-    tag: 'Volume Flow',
-    text: 'Buy when price crosses above VWAP and sell when price crosses below VWAP. Risk 1% per trade with 1.5% stop-loss.',
+    id: 'crypto-macd',
+    label: '₿ BTC MACD',
+    tag: 'Crypto',
+    text: 'Buy BTC-USD when MACD crosses above its signal line and sell when it crosses below. Risk 1% per trade.',
   },
   {
-    id: 'hammer-bounce',
-    label: '🔨 Hammer Reversal',
-    tag: 'Price Action',
-    text: 'Buy when Hammer candlestick pattern appears on chart. Risk 1.5% per trade with 2% stop-loss and exit when RSI exceeds 70.',
+    id: 'oil-breakout',
+    label: '🛢️ Oil breakout',
+    tag: 'Commodities',
+    text: 'Buy OIL when price breaks above the 55-day high and sell when it breaks below the 20-day low. Risk 1% per trade.',
   },
   {
     id: 'volume-spike',
-    label: '🔊 Volume Spike',
+    label: '🔊 Semis volume',
     tag: 'Breakout',
-    text: 'Buy when volume is above 20-day average volume and close is above 50-day SMA. Exit when close crosses below 20-day SMA. Use 2% stop-loss.',
+    text: 'Buy SMH when volume is above 20-day average volume and close is above 50-day SMA. Exit when close crosses below 20-day SMA. Use 2% stop-loss.',
   },
 ];
 
@@ -130,7 +130,12 @@ export function HomePage({ health }: Props) {
   const [riskPerTrade, setRiskPerTrade] = useState(0.01);
   const [commission, setCommission] = useState(0.001);
   const [slippage, setSlippage] = useState(0.0005);
+  const [spread, setSpread] = useState(0);
   const [fundingPct, setFundingPct] = useState(0);
+  const [borrowPct, setBorrowPct] = useState(0);
+  const [timeframe, setTimeframe] = useState('1d');
+  const [entryOrder, setEntryOrder] = useState<'market' | 'limit' | 'stop'>('market');
+  const [limitOffsetPct, setLimitOffsetPct] = useState(0.1);
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(-1);
   const [error, setError] = useState<string | null>(null);
@@ -144,12 +149,14 @@ export function HomePage({ health }: Props) {
     setFetchMsg(null);
     setError(null);
     try {
-      const res = await fetchMarketData(ticker);
+      const symbol = yahooSymbol(ticker);
+      const interval = ['5m', '15m', '1h', '4h'].includes(timeframe) ? (timeframe === '4h' ? '1h' : timeframe) : '1d';
+      const res = await fetchMarketData(symbol, interval);
       const items = await listDatasets();
       setDatasets(items);
       setDatasetId(res.dataset_id);
       setFetchMsg(
-        `Loaded ${res.rows.toLocaleString()} daily bars for ${ticker}, ${res.date_start.slice(0, 10)} → ${res.date_end.slice(0, 10)} (${res.source}).`,
+        `Loaded ${res.rows.toLocaleString()} daily bars for ${ticker} → ${symbol}, ${res.date_start.slice(0, 10)} → ${res.date_end.slice(0, 10)} (${res.source}).`,
       );
     } catch (err) {
       setErrorKind('load');
@@ -388,8 +395,13 @@ export function HomePage({ health }: Props) {
           initial_capital: initialCapital,
           commission,
           slippage,
+          spread: spread > 0 ? spread : undefined,
           risk_per_trade: riskPerTrade,
           funding_rate: fundingPct > 0 ? fundingPct / 100 : undefined,
+          borrow_rate: borrowPct > 0 ? borrowPct / 100 : undefined,
+          entry_order: entryOrder,
+          limit_offset: entryOrder === 'market' ? undefined : limitOffsetPct / 100,
+          timeframe,
         },
       });
       setProgressStep(PIPELINE_STEPS.length);
@@ -463,11 +475,11 @@ export function HomePage({ health }: Props) {
             <b>2</b> Pick a market <small>real prices, loaded in one click</small>
           </p>
           <div className="live-data-bar">
-            {['SPY', 'NVDA', 'AAPL', 'BTC', 'ETH', 'SOL', 'EURUSD', 'GOLD'].map((sym) => (
+            {MARKET_CHIPS.map((sym) => (
               <button
                 key={sym}
                 type="button"
-                className={`chip market-chip${datasetId.toUpperCase().startsWith(`${sym}`) ? ' active' : ''}`}
+                className={`chip market-chip${datasetId.toUpperCase().includes(sym.replace('-', '_')) || datasetId.toUpperCase().startsWith(sym) ? ' active' : ''}`}
                 disabled={loading || fetchingMarket}
                 onClick={() => handleFetchTicker(sym)}
               >
@@ -521,8 +533,48 @@ export function HomePage({ health }: Props) {
             <div className="param-grid">
               <label className="field">
                 <span>Timeframe</span>
-                <input value="Daily" readOnly disabled />
+                <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)} disabled={loading}>
+                  <option value="5m">5 minutes</option>
+                  <option value="15m">15 minutes</option>
+                  <option value="1h">1 hour</option>
+                  <option value="4h">4 hours</option>
+                  <option value="1d">1 day</option>
+                  <option value="1w">1 week</option>
+                </select>
+                <small className="hint">
+                  If your CSV is finer (e.g. 15m data + 1h strategy), the engine auto-resamples completed bars.
+                </small>
               </label>
+
+              <label className="field">
+                <span>Entry order</span>
+                <select
+                  value={entryOrder}
+                  onChange={(e) => setEntryOrder(e.target.value as 'market' | 'limit' | 'stop')}
+                  disabled={loading}
+                >
+                  <option value="market">Market (next open)</option>
+                  <option value="limit">Limit</option>
+                  <option value="stop">Stop</option>
+                </select>
+                <small className="hint">Limit/stop wait for price to trade through a level from the signal close.</small>
+              </label>
+
+              {entryOrder !== 'market' ? (
+                <label className="field">
+                  <span>Limit / stop offset, %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    step="any"
+                    value={limitOffsetPct}
+                    onChange={(e) => setLimitOffsetPct(Number(e.target.value))}
+                    disabled={loading}
+                  />
+                  <small className="hint">0.1 = 0.1% from the signal close.</small>
+                </label>
+              ) : null}
 
               <label className="field">
                 <span>Risk per trade</span>
@@ -567,6 +619,19 @@ export function HomePage({ health }: Props) {
               </label>
 
               <label className="field">
+                <span>Spread (round-trip frac)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={spread}
+                  onChange={(e) => setSpread(Number(e.target.value))}
+                  disabled={loading}
+                />
+                <small className="hint">Half-spread is applied adversarially with slippage. 0.0002 = 2 bps round-trip.</small>
+              </label>
+
+              <label className="field">
                 <span>Holding cost, % a year</span>
                 <input
                   type="number"
@@ -581,6 +646,20 @@ export function HomePage({ health }: Props) {
                   Crypto perpetual funding or margin interest, charged on the position while it is open. Around 10 for
                   leveraged crypto, 0 for spot stocks.
                 </small>
+              </label>
+
+              <label className="field">
+                <span>Short borrow, % a year</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={500}
+                  step="any"
+                  value={borrowPct}
+                  onChange={(e) => setBorrowPct(Number(e.target.value))}
+                  disabled={loading}
+                />
+                <small className="hint">Added on top of holding cost for short positions only.</small>
               </label>
             </div>
 

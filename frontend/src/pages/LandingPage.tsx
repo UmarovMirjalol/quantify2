@@ -7,6 +7,7 @@ import { InstantTry } from '../components/InstantTry';
 import { LandingDemo } from '../components/LandingDemo';
 import { LiveStats } from '../components/LiveStats';
 import { MarketTicker } from '../components/MarketTicker';
+import { ProofRail } from '../components/ProofRail';
 import { ReleasesFaq } from '../components/ReleasesFaq';
 import { StrategyGallery } from '../components/StrategyGallery';
 import { LogoMark } from '../components/LogoMark';
@@ -22,7 +23,7 @@ const HeroScene3D = lazy(() =>
 const ACCENT = '#4fd6a0';
 
 const STRATEGY =
-  'Buy SPY when the 20-day moving average crosses above the 50-day. Exit when RSI exceeds 70.';
+  'Buy QQQ when the 20-day moving average crosses above the 50-day. Exit when RSI exceeds 70.';
 
 const EQUITY_PATH =
   'M0 118 L38 110 L76 114 L114 92 L152 98 L190 74 L228 82 L266 58 L304 64 L342 40 L380 46 L418 26 L460 16';
@@ -38,7 +39,7 @@ const TOOLS = [
   {
     to: '/leaderboard',
     title: 'Leaderboard',
-    body: 'Famous strategies ranked on real prices of the S&P 500, Nasdaq, Nvidia and Bitcoin.',
+    body: 'Famous strategies ranked on 10 markets: indices, EM, gold, bonds, energy, Nvidia, Bitcoin, Ether.',
     cta: 'See who wins',
     icon: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3',
   },
@@ -74,7 +75,7 @@ const CAPABILITIES = [
   },
   {
     title: 'Portfolios and screeners',
-    body: 'One rule on a basket of up to 12 assets, or scan 40 tickers at once.',
+    body: 'One rule on up to 12 assets, or scan 60 names across 9 universes: US stocks, FX, commodities, factors, crypto.',
   },
   {
     title: 'Python when words are not enough',
@@ -98,7 +99,7 @@ const COMPARE = {
     ['Data', 'Bars from 5 minutes to weekly', 'Bars, tick-level replay on paid plans', 'Tick, quote and order-book data'],
     ['Overfitting tests built in', '9, run on every result', 'None', 'You write them yourself'],
     ['Compared with buy & hold', 'First thing you see', 'One number in the report', 'Benchmark chart'],
-    ['Many assets at once', 'Up to 12 per portfolio', 'One symbol per strategy', 'Hundreds'],
+    ['Many assets at once', 'Portfolio of 12 + 60-ticker screener', 'One symbol per strategy', 'Hundreds'],
     ['Live trading', 'No: signals and forward tests', 'Alerts to brokers', 'Yes, many brokers'],
     ['Best for', 'Checking an idea before risking money', 'Charting and most retail traders', 'Professional algo developers'],
   ],
@@ -108,7 +109,7 @@ const FLOW = ['NL', 'Spec', 'Sim', 'Results'] as const;
 const INTERP = [
   { label: 'Entry', value: 'SMA(20) × SMA(50)' },
   { label: 'Exit', value: 'RSI > 70' },
-  { label: 'Universe', value: 'SPY' },
+  { label: 'Universe', value: 'multi-asset' },
   { label: 'Size', value: '100% of capital' },
 ] as const;
 
@@ -155,8 +156,8 @@ function useInView<T extends HTMLElement>(reduced: boolean) {
 
 export function LandingPage() {
   usePageMeta(
-    'Quantify — Free Strategy Backtester',
-    'Type a trading idea in plain English. Get a look-ahead-safe backtest with next-open fills, costs, Sharpe, and a full trade blotter. Free. No signup.',
+    'Quantify — Prove the edge before you risk money',
+    'Plain-English strategies, look-ahead-safe fills, 9 overfitting tests, and a published study: most backtest winners do not keep winning. Engine verified 1,065/1,065 trades vs backtrader.',
   );
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>(reduced ? 'hold' : 'boot');
@@ -297,20 +298,17 @@ export function LandingPage() {
           <a className="btn ghost" href="#try">
             Try it
           </a>
-          <Link className="btn ghost" to="/check">
-            Guru check
+          <Link className="btn ghost" to="/research">
+            Research
           </Link>
           <Link className="btn ghost" to="/leaderboard">
             Leaderboard
           </Link>
-          <Link className="btn ghost" to="/whatif">
-            What if…
+          <Link className="btn ghost" to="/check">
+            Guru check
           </Link>
-          <Link className="btn ghost" to="/playbook">
-            Playbook
-          </Link>
-          <Link className="btn ghost" to="/guide">
-            Guide
+          <Link className="btn ghost" to="/about">
+            About
           </Link>
           <Link className="btn primary" to="/app">
             Open workspace
@@ -320,30 +318,30 @@ export function LandingPage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <Link to="/leaderboard" className="hero-pill reveal" style={{ ['--d' as string]: '0ms' }}>
-            <b>New</b>
-            Most famous strategies lose to buy &amp; hold. See the leaderboard
+          <Link to="/research" className="hero-pill reveal" style={{ ['--d' as string]: '0ms' }}>
+            <b>Study</b>
+            Best backtests beat buy &amp; hold later on only 25% of assets
             <span aria-hidden="true">→</span>
           </Link>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
-            Does your trading strategy <em>actually work?</em>
+            A research-grade backtester that tries to <em>break</em> your edge.
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Describe it in plain English. We test it on 10 years of real prices, with real fees, and show
-            whether it beats simply buying and holding.
+            Plain English in. Look-ahead-safe fills, real fees, nine overfitting tests, and a verified engine —
+            cross-checked against backtrader to the cent. Built to answer whether the curve is skill or luck.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
             <a className="btn primary" href="#try">
               Test a strategy free
             </a>
-            <Link className="btn secondary" to="/check">
-              Check a guru’s claim
+            <Link className="btn secondary" to="/research">
+              Read the study
             </Link>
           </div>
           <ul className="hero-trust reveal" style={{ ['--d' as string]: '300ms' }}>
-            <li>Stocks, crypto, forex</li>
-            <li>Fees included</li>
-            <li>No signup</li>
+            <li>1,065 / 1,065 trades verified</li>
+            <li>9 universes · FX · crypto · commodities</li>
+            <li>MIT · no signup</li>
           </ul>
         </div>
 
@@ -520,6 +518,8 @@ export function LandingPage() {
       </section>
 
       <MarketTicker />
+
+      <ProofRail />
 
       <InstantTry />
 
@@ -773,7 +773,9 @@ export function LandingPage() {
             <Link to="/about">About</Link>
           </div>
         </nav>
-        <p className="footer-fine mono">Signal at close → fill at next open · fees on every trade · Est. 2025</p>
+        <p className="footer-fine mono">
+          Signal at close → fill next open · 1,065/1,065 vs backtrader · study on 106 assets · Est. 2025
+        </p>
       </footer>
     </div>
   );

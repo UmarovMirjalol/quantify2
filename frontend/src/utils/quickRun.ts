@@ -1,21 +1,20 @@
 import { fetchMarketData, parseStrategy, runBacktest } from '../services/api';
+import { yahooSymbol } from './markets';
 
-const YAHOO_ALIASES: Record<string, string> = { BTC: 'BTC-USD', ETH: 'ETH-USD', SOL: 'SOL-USD' };
-
-export const yahooSymbol = (symbol: string) => YAHOO_ALIASES[symbol] ?? symbol;
+export { yahooSymbol } from './markets';
 
 /**
  * Parse, load 10 years of daily prices and run one backtest; returns the saved result id.
- * Leave `ticker` empty to use the asset named in the text (SPY when none is named).
+ * Leave `ticker` empty to use the asset named in the text (QQQ when none is named).
  */
 export async function quickRun(text: string, ticker: string, onStatus: (msg: string) => void): Promise<number> {
   let symbol = ticker.trim().toUpperCase();
   if (!symbol) {
     onStatus('Reading the strategy…');
     const parsed = await parseStrategy({ text });
-    symbol = parsed.strategy.asset || 'SPY';
+    symbol = parsed.strategy.asset || 'QQQ';
   }
-  symbol = YAHOO_ALIASES[symbol] ?? symbol;
+  symbol = yahooSymbol(symbol);
   onStatus(`Loading 10 years of ${symbol} prices…`);
   const data = await fetchMarketData(symbol, '1d', '10y');
   onStatus('Running the backtest…');

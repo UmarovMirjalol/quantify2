@@ -11,7 +11,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "tag": "Viral",
         "blurb": "The famous one: buy when the 50-day average crosses above the 200-day, sell on the death cross.",
         "text": (
-            "Buy SPY when the 50-day SMA crosses above the 200-day SMA and sell when it crosses below. "
+            "Buy QQQ when the 50-day SMA crosses above the 200-day SMA and sell when it crosses below. "
             "Use 100% of capital."
         ),
         "indicators": ["SMA"],
@@ -21,7 +21,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "title": "Buy Monday, sell Friday",
         "tag": "Viral",
         "blurb": "A pure calendar rule: in the market Monday to Friday, in cash over the weekend.",
-        "text": "Buy SPY on Monday and sell on Friday. Use 100% of capital.",
+        "text": "Buy IWM on Monday and sell on Friday. Use 100% of capital.",
         "indicators": ["Calendar"],
     },
     {
@@ -29,7 +29,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "title": "Buy the dip",
         "tag": "Viral",
         "blurb": "Buy after a 3% one-day drop, sell once price is back above its 20-day average.",
-        "text": "Buy SPY when the price drops 3% in a day. Use 100% of capital.",
+        "text": "Buy EEM when the price drops 3% in a day. Use 100% of capital.",
         "indicators": ["Change", "SMA"],
     },
     {
@@ -46,7 +46,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "tag": "Price action",
         "blurb": "Long when a pin bar prints and price is under the 20-day average.",
         "text": (
-            "Buy SPY when a pin bar forms on the daily chart and price is below the 20-day SMA. "
+            "Buy GLD when a pin bar forms on the daily chart and price is below the 20-day SMA. "
             "Exit when RSI exceeds 70. Risk 1% per trade."
         ),
         "indicators": ["PINBAR", "SMA", "RSI"],
@@ -90,7 +90,7 @@ PLAYBOOK: list[dict[str, Any]] = [
         "tag": "Trend",
         "blurb": "Classic 20/50 moving-average cross with RSI take-profit.",
         "text": (
-            "Buy SPY when the 20-day moving average crosses above the 50-day moving average. "
+            "Buy XLE when the 20-day moving average crosses above the 50-day moving average. "
             "Risk 1% per trade and exit when RSI exceeds 70."
         ),
         "indicators": ["SMA", "RSI"],

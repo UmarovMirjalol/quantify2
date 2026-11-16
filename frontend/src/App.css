@@ -5626,6 +5626,31 @@ h2 {
   margin-top: 0.8rem;
 }
 
+.about-author h2 {
+  margin-top: 0.2rem;
+}
+
+.about-receipts {
+  list-style: none;
+  margin: 1rem 0 0.4rem;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.about-receipts li {
+  padding: 0.7rem 0.85rem;
+  border-left: 2px solid var(--accent);
+  background: rgba(79, 214, 160, 0.05);
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.about-receipts strong {
+  color: var(--text);
+}
+
 @media print {
   :root {
     --bg: #fff;
@@ -6237,6 +6262,102 @@ h2 {
   color: var(--text-muted);
 }
 
+/* —— Admissions-grade proof rail —— */
+.proof-rail {
+  position: relative;
+  z-index: 1;
+  margin: 0.5rem auto 2.4rem;
+  padding: 2rem clamp(1.1rem, 3vw, 2.2rem) 2.2rem;
+  max-width: 1120px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(79, 214, 160, 0.08), transparent 55%),
+    radial-gradient(90% 70% at 100% 100%, rgba(122, 162, 255, 0.06), transparent 50%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.proof-rail__head {
+  max-width: 42rem;
+  margin-bottom: 1.5rem;
+}
+
+.proof-rail__head h2 {
+  font-family: var(--display);
+  font-size: clamp(1.45rem, 2.6vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--text);
+  margin: 0.35rem 0 0;
+}
+
+.proof-rail__head em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 550;
+}
+
+.proof-rail__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.proof-rail__grid article {
+  padding: 1rem 1.05rem 1.1rem;
+  border-top: 1px solid rgba(79, 214, 160, 0.35);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.proof-rail__grid strong {
+  display: block;
+  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+  font-weight: 620;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.35rem;
+}
+
+.proof-rail__grid span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.proof-rail__grid small {
+  display: block;
+  margin-top: 0.55rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.proof-rail__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.35rem;
+}
+
+@media (max-width: 960px) {
+  .proof-rail__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .proof-rail {
+    margin-inline: 0.75rem;
+    border-radius: 14px;
+  }
+
+  .proof-rail__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .live-data-bar {
   display: flex;
   flex-wrap: wrap;
@@ -6484,5 +6605,126 @@ h2 {
     z-index: 1;
     background: var(--bg-panel);
     box-shadow: 1px 0 0 var(--border);
+  }
+}
+
+/* —— TradingView-style price chart —— */
+.tv-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.tv-chart__hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.tv-chart__hud strong {
+  color: var(--text);
+  font-weight: 560;
+}
+
+.tv-chart__hud .up {
+  color: var(--accent, #4fd6a0);
+}
+
+.tv-chart__hud .down {
+  color: #ff6b7a;
+}
+
+.tv-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.85rem;
+  margin-left: auto;
+}
+
+.tv-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+.tv-chart__legend-item i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.tv-chart__canvas {
+  width: 100%;
+  min-height: 320px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 40%);
+  overflow: hidden;
+}
+
+.tv-chart__debug {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.tv-chart__debug-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}
+
+.tv-chart__debug-flags .on.entry {
+  color: var(--accent, #4fd6a0);
+}
+
+.tv-chart__debug-flags .on.exit {
+  color: #ff6b7a;
+}
+
+.tv-chart__debug-inds {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.35rem 0.9rem;
+}
+
+.tv-chart__debug-inds > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+}
+
+.tv-chart__debug-inds dt {
+  color: var(--text-muted);
+}
+
+.tv-chart__debug-inds dd {
+  margin: 0;
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .tv-chart__legend {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .tv-chart__canvas {
+    min-height: 280px;
   }
 }

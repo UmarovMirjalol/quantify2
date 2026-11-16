@@ -142,8 +142,13 @@ export async function runBacktest(payload: {
     initial_capital: number;
     commission: number;
     slippage: number;
+    spread?: number;
     risk_per_trade?: number;
     funding_rate?: number;
+    borrow_rate?: number;
+    entry_order?: 'market' | 'limit' | 'stop';
+    limit_offset?: number;
+    timeframe?: string;
   };
   asset?: string;
 }): Promise<BacktestResult> {

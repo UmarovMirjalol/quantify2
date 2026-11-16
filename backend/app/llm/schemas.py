@@ -55,6 +55,12 @@ class Side(str, Enum):
     SHORT = "short"
 
 
+class EntryOrderType(str, Enum):
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+
+
 class IndicatorRef(BaseModel):
     """Reference to an indicator series or a price field."""
 
@@ -377,8 +383,18 @@ class StrategySpec(BaseModel):
     position_sizing: PositionSizing = PositionSizing.RISK_BASED
     commission: float = Field(default=0.0, ge=0.0, le=0.05)
     slippage: float = Field(default=0.0, ge=0.0, le=0.05)
-    # Yearly cost of holding a position (perpetual funding, margin interest, borrow fee), on its value.
+    # Half-spread fraction applied adversarially on top of slippage (buy up / sell down).
+    spread: float = Field(default=0.0, ge=0.0, le=0.05)
+    # Yearly cost of holding a position (perpetual funding, margin interest), on its value.
     funding_rate: float = Field(default=0.0, ge=0.0, le=5.0)
+    # Extra yearly borrow fee for short positions (in addition to funding_rate).
+    borrow_rate: float = Field(default=0.0, ge=0.0, le=5.0)
+    # How entry signals become orders: market at next open, or limit/stop from the signal close.
+    entry_order: EntryOrderType = EntryOrderType.MARKET
+    # Offset from the signal close for limit/stop entries (0.001 = 0.1%).
+    # Long limit: buy at close*(1-offset). Short limit: sell at close*(1+offset).
+    # Long stop: buy stop at close*(1+offset). Short stop: sell stop at close*(1-offset).
+    limit_offset: float | None = Field(default=None, ge=0.0, le=0.2)
 
     @field_validator("asset")
     @classmethod
@@ -457,10 +473,15 @@ class BacktestConfig(BaseModel):
     initial_capital: float = Field(default=100_000.0, gt=0, le=1e9)
     commission: float = Field(default=0.001, ge=0.0, le=0.05)
     slippage: float = Field(default=0.0005, ge=0.0, le=0.05)
+    spread: float | None = Field(default=None, ge=0.0, le=0.05)
     risk_per_trade: float | None = Field(default=None, ge=0.0001, le=1.0)
     funding_rate: float | None = Field(default=None, ge=0.0, le=5.0)
+    borrow_rate: float | None = Field(default=None, ge=0.0, le=5.0)
+    entry_order: EntryOrderType | None = None
+    limit_offset: float | None = Field(default=None, ge=0.0, le=0.2)
+    timeframe: str | None = Field(default=None, pattern=r"^(1m|5m|15m|1h|4h|1d|1w|1D)$")
 
-    @field_validator("commission", "slippage", mode="before")
+    @field_validator("commission", "slippage", "spread", mode="before")
     @classmethod
     def _pct_cost_fields(cls, v: object) -> object:
         if v is None or v == "":

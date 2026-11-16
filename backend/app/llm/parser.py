@@ -47,7 +47,7 @@ def _extract_asset(text: str, override: str | None) -> str:
     for t in tickers:
         if t not in skip:
             return t
-    return "SPY"
+    return "QQQ"
 
 
 def _percent(value: float) -> float:

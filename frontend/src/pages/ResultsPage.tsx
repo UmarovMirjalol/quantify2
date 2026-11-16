@@ -616,7 +616,22 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           ) : null}
           <section className="panel">
             <h2>Price & trades</h2>
-            <PriceTradeChart prices={result.price_series} markers={result.markers} />
+            {result.bars ? (
+              <p className="note">
+                Bars: {result.bars.source}
+                {result.bars.resampled ? ` → ${result.bars.applied}` : ` · ${result.bars.applied}`}
+                {result.bars.resampled && result.bars.result_bars
+                  ? ` (${result.bars.source_bars.toLocaleString()} → ${result.bars.result_bars.toLocaleString()})`
+                  : null}
+                {result.bars.warning ? ` · ${result.bars.warning}` : null}
+              </p>
+            ) : null}
+            <PriceTradeChart
+              prices={result.price_series}
+              markers={result.markers}
+              indicators={result.indicator_series}
+              debugBars={result.debug_bars}
+            />
           </section>
         </div>
       ) : null}

@@ -14,7 +14,23 @@ from app.data.validators import validate_ohlcv_dataframe
 
 
 _FIAT = {"USD", "EUR", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD", "CNY", "HKD", "SGD", "SEK", "NOK", "MXN", "TRY", "RUB", "INR", "KZT", "UZS"}
-_COMMODITIES = {"GOLD": "GC=F", "XAUUSD": "GC=F", "SILVER": "SI=F", "XAGUSD": "SI=F", "OIL": "CL=F", "WTI": "CL=F", "BRENT": "BZ=F", "NATGAS": "NG=F"}
+_COMMODITIES = {
+    "GOLD": "GC=F",
+    "XAUUSD": "GC=F",
+    "SILVER": "SI=F",
+    "XAGUSD": "SI=F",
+    "OIL": "CL=F",
+    "WTI": "CL=F",
+    "BRENT": "BZ=F",
+    "NATGAS": "NG=F",
+    "COPPER": "HG=F",
+    "PLATINUM": "PL=F",
+    "PALLADIUM": "PA=F",
+    "WHEAT": "ZW=F",
+    "CORN": "ZC=F",
+    "SOY": "ZS=F",
+    "COFFEE": "KC=F",
+}
 
 
 def _normalize_symbol(ticker: str) -> tuple[str, str]:
@@ -30,7 +46,11 @@ def _normalize_symbol(ticker: str) -> tuple[str, str]:
         return f"{compact}USDT", _COMMODITIES[compact]
     if len(compact) == 6 and compact[:3] in _FIAT and compact[3:] in _FIAT and compact[:3] != compact[3:]:
         return f"{compact}USDT", f"{compact}=X"
-    crypto_bases = {"BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "NEAR", "TON"}
+    crypto_bases = {
+        "BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "NEAR", "TON",
+        "LINK", "DOT", "LTC", "TRX", "ATOM", "UNI", "AAVE", "APT", "SUI", "MATIC",
+        "SHIB", "ICP", "FIL", "ARB", "OP", "PEPE",
+    }
     if raw in crypto_bases:
         return f"{raw}USDT", f"{raw}-USD"
     if raw.endswith("USDT"):

@@ -26,8 +26,14 @@ export interface StrategySpec {
   position_sizing: string;
   commission?: number;
   slippage?: number;
+  /** Half-spread fraction applied adversarially with slippage. */
+  spread?: number;
   /** Yearly holding cost on position value (funding, margin interest). */
   funding_rate?: number;
+  /** Extra yearly borrow fee for shorts. */
+  borrow_rate?: number;
+  entry_order?: 'market' | 'limit' | 'stop';
+  limit_offset?: number | null;
 }
 
 export interface Metrics {
@@ -79,6 +85,7 @@ export interface Marker {
   date: string;
   price: number;
   type: 'entry' | 'exit' | string;
+  side?: 'long' | 'short' | string;
   reason: string;
 }
 
@@ -88,6 +95,33 @@ export interface PriceBar {
   high: number;
   low: number;
   close: number;
+  volume?: number;
+}
+
+export interface IndicatorSeries {
+  id: string;
+  label: string;
+  pane: 'overlay' | 'pane';
+  indicator: string;
+  values: (number | null)[];
+}
+
+export interface DebugBar {
+  date: string;
+  entry: boolean;
+  exit: boolean;
+  indicators: Record<string, number | null>;
+  note: string;
+}
+
+export interface BarsMeta {
+  requested: string;
+  source: string;
+  source_bars: number;
+  applied: string;
+  resampled: boolean;
+  warning?: string | null;
+  result_bars?: number;
 }
 
 export interface MonteCarloResult {
@@ -195,6 +229,9 @@ export interface BacktestResult {
   trades: Trade[];
   markers: Marker[];
   price_series: PriceBar[];
+  indicator_series?: IndicatorSeries[];
+  debug_bars?: DebugBar[];
+  bars?: BarsMeta;
   total_commission?: number;
   total_slippage?: number;
   total_funding?: number;
