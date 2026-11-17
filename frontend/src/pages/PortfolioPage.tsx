@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { EquityChart } from '../components/Charts';
 import { KpiCard } from '../components/KpiCard';
 import { HistoryPicker } from '../components/HistoryPicker';
-import { fetchMarketData, listDatasets, runPortfolio } from '../services/api';
+import { fetchMarketData, listDatasets, runDataHealth, runPortfolio, type DataHealthReport } from '../services/api';
+import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import type { DatasetInfo, EquityPoint, PortfolioResult } from '../types';
 
 const DEFAULT_TEXT =
@@ -40,6 +41,8 @@ export function PortfolioPage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<PortfolioResult | null>(null);
+  const [health, setHealth] = useState<DataHealthReport | null>(null);
+  const [healthBusy, setHealthBusy] = useState(false);
 
   useEffect(() => {
     listDatasets()
@@ -105,6 +108,27 @@ export function PortfolioPage() {
     }
   }
 
+  async function probeTickers() {
+    const list = tickers
+      .split(/[\s,;]+/)
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean)
+      .slice(0, 20);
+    if (!list.length) {
+      setError('Add tickers to probe first.');
+      return;
+    }
+    setHealthBusy(true);
+    setError('');
+    try {
+      setHealth(await runDataHealth({ universe: null, tickers: list, history: '1y' }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Health check failed.');
+    } finally {
+      setHealthBusy(false);
+    }
+  }
+
   const assets = useMemo(() => (result ? Object.entries(result.asset_results) : []), [result]);
   const benchReturn = result?.benchmark_equity_curve.length
     ? result.benchmark_equity_curve[result.benchmark_equity_curve.length - 1].equity /
@@ -120,8 +144,8 @@ export function PortfolioPage() {
           <p className="eyebrow">Multi-asset</p>
           <h1>Portfolio</h1>
           <p className="lede">
-            One rule set on a basket of assets, with equal capital in each sleeve. See whether the edge spreads across
-            markets or lives in just one, and how much the assets move together.
+            One rule set on a basket of assets with a shared cash pool — signals compete for capital like a real book.
+            Compare against equal-weight buy &amp; hold and see how much the names move together.
           </p>
         </div>
       </div>
@@ -160,6 +184,9 @@ export function PortfolioPage() {
           <button type="button" className="btn secondary" onClick={addTickers} disabled={fetching}>
             {fetching ? 'Fetching…' : 'Fetch daily data'}
           </button>
+          <button type="button" className="btn ghost" onClick={() => void probeTickers()} disabled={healthBusy}>
+            {healthBusy ? 'Probing…' : 'Data health'}
+          </button>
           <button
             type="button"
             className="btn primary"
@@ -170,6 +197,16 @@ export function PortfolioPage() {
           </button>
         </div>
         {error ? <div className="banner warn">{error}</div> : null}
+        {health ? (
+          <p className="hint" style={{ marginTop: '0.65rem' }}>
+            Health: {health.ok} ok · {health.warn} warn · {health.thin} thin · {health.fail} fail
+            {health.rows
+              .filter((r) => r.grade !== 'ok')
+              .slice(0, 6)
+              .map((r) => ` · ${r.ticker}=${r.grade}`)
+              .join('')}
+          </p>
+        ) : null}
       </section>
 
       {result && m ? (
@@ -193,6 +230,35 @@ export function PortfolioPage() {
             <KpiCard
               label="Winning sleeves"
               value={`${assets.filter(([, a]) => a.pnl > 0).length}/${assets.length}`}
+            />
+            <KpiCard
+              label="VaR 95% (daily)"
+              value={
+                result.risk?.tails?.['0.95']?.var_pct == null
+                  ? '—'
+                  : `${result.risk.tails['0.95'].var_pct}%`
+              }
+              hint="Historical left-tail loss"
+              tone="negative"
+            />
+            <KpiCard
+              label="ES 95% (daily)"
+              value={
+                result.risk?.tails?.['0.95']?.es_pct == null
+                  ? '—'
+                  : `${result.risk.tails['0.95'].es_pct}%`
+              }
+              hint="Expected shortfall beyond VaR"
+              tone="negative"
+            />
+            <KpiCard
+              label="Avg invested"
+              value={
+                result.risk?.margin?.avg_invested == null
+                  ? '—'
+                  : `${(result.risk.margin.avg_invested * 100).toFixed(0)}%`
+              }
+              hint={result.capital_mode === 'shared' ? 'Shared cash book' : 'Equal sleeves'}
             />
           </section>
 
@@ -246,7 +312,8 @@ export function PortfolioPage() {
             {result.correlation.assets.length > 1 ? (
               <section className="panel">
                 <h2>Sleeve correlation</h2>
-                <div className="heat-wrap">
+                <CorrelationHeatmap assets={result.correlation.assets} matrix={result.correlation.matrix} />
+                <div className="heat-wrap" style={{ marginTop: '0.75rem' }}>
                   <table className="heat-grid">
                     <thead>
                       <tr>

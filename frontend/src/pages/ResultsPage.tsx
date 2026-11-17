@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   DrawdownChart,
@@ -8,6 +8,7 @@ import {
   MonteCarloChart,
   PriceTradeChart,
   ReturnsDistributionChart,
+  RollingSharpeChart,
 } from '../components/Charts';
 import { ExportButtons } from '../components/ExportButtons';
 import { managementSummary } from '../components/PositionManagement';
@@ -21,7 +22,13 @@ import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
 import { VerdictCard } from '../components/VerdictCard';
 import { LiveSignalCard } from '../components/LiveSignalCard';
-import { createForwardTest, shareBacktest, unshareBacktest } from '../services/api';
+import {
+  createForwardTest,
+  getFactorReport,
+  shareBacktest,
+  unshareBacktest,
+  type FactorReport,
+} from '../services/api';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
 import { classifyRegimes } from '../utils/regimes';
@@ -30,6 +37,7 @@ import { downloadText, toCsv } from '../utils/download';
 import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStrategy';
 import { shareCard, signedPct } from '../utils/shareCard';
 import { explainResult } from '../utils/explainResult';
+import { tearsheetMarkdown } from '../utils/tearsheetMarkdown';
 
 const ACCENT_HEX = '#4fd6a0';
 const HOLD_HEX = '#98a2ac';
@@ -148,6 +156,50 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   );
   const [cardBusy, setCardBusy] = useState(false);
   const [cardNote, setCardNote] = useState<string | null>(null);
+  const [factors, setFactors] = useState<FactorReport | null>(null);
+  const [factorsErr, setFactorsErr] = useState('');
+  const [factorBench, setFactorBench] = useState('SPY');
+  const [compareNote, setCompareNote] = useState('');
+
+  useEffect(() => {
+    if (tab !== 'alpha' || result.equity_curve.length < 30) return;
+    let cancelled = false;
+    setFactorsErr('');
+    getFactorReport({ equity_curve: result.equity_curve, benchmark: factorBench, history: '10y' })
+      .then((rep) => {
+        if (!cancelled) setFactors(rep);
+      })
+      .catch((err) => {
+        if (!cancelled) setFactorsErr(err instanceof Error ? err.message : 'Factor fit failed');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, result.equity_curve, factorBench]);
+
+  function queueForCompare() {
+    const key = 'quantify_compare_a';
+    const prev = sessionStorage.getItem(key);
+    if (prev && Number(prev) !== result.id) {
+      sessionStorage.removeItem(key);
+      navigate(`/compare?a=${prev}&b=${result.id}`);
+      return;
+    }
+    sessionStorage.setItem(key, String(result.id));
+    setCompareNote(`Run #${result.id} queued. Open another result and hit Compare again.`);
+  }
+
+  function exportTearsheet() {
+    downloadText(
+      `quantify-tearsheet-${result.id}.md`,
+      tearsheetMarkdown(result, {
+        buyHold: { totalReturn: buyHold.totalReturn, finalCapital: buyHold.finalCapital },
+        vsHold,
+        factors,
+      }),
+      'text/markdown;charset=utf-8',
+    );
+  }
 
   async function downloadCard() {
     if (!holdVerdict) return;
@@ -388,6 +440,9 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
               <button type="button" onClick={exportMetricsJson}>
                 Metrics (JSON)
               </button>
+              <button type="button" onClick={exportTearsheet}>
+                Tearsheet (Markdown)
+              </button>
               <button type="button" onClick={() => window.print()}>
                 Report (PDF)
               </button>
@@ -399,6 +454,9 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             </Link>
           ) : (
             <>
+              <button type="button" className="btn secondary" onClick={queueForCompare}>
+                Compare
+              </button>
               <button type="button" className="btn secondary" onClick={share} disabled={shareBusy}>
                 {shareToken ? 'Copy share link' : 'Share link'}
               </button>
@@ -417,6 +475,12 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           )}
         </div>
       </div>
+
+      {!readOnly && compareNote ? (
+        <div className="share-bar no-print">
+          <span className="hint">{compareNote}</span>
+        </div>
+      ) : null}
 
       {!readOnly && (shareToken || shareNote) ? (
         <div className="share-bar no-print">
@@ -539,6 +603,10 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           <section className="panel">
             <h2>Portfolio equity vs buy & hold</h2>
             <EquityChart data={result.equity_curve} benchmark={buyHold.equity} />
+          </section>
+          <section className="panel">
+            <h2>Rolling Sharpe · 63 trading days</h2>
+            <RollingSharpeChart data={result.equity_curve} />
           </section>
           <div className="split">
             <section className="panel">
@@ -663,6 +731,43 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             <KpiCard label="Calmar" value={num(m.calmar_ratio)} />
             <KpiCard label="Max Drawdown" value={pct(m.max_drawdown)} tone="negative" />
             <KpiCard label="Sortino" value={num(m.sortino_ratio)} />
+            <KpiCard
+              label="VaR 95% (daily)"
+              value={
+                result.risk?.tails?.['0.95']?.var_pct == null
+                  ? '—'
+                  : `${result.risk.tails['0.95'].var_pct}%`
+              }
+              tone="negative"
+              hint="Historical left-tail loss"
+            />
+            <KpiCard
+              label="ES 95% (daily)"
+              value={
+                result.risk?.tails?.['0.95']?.es_pct == null
+                  ? '—'
+                  : `${result.risk.tails['0.95'].es_pct}%`
+              }
+              tone="negative"
+              hint="Expected shortfall beyond VaR"
+            />
+            <KpiCard
+              label="VaR 99%"
+              value={
+                result.risk?.tails?.['0.99']?.var_pct == null
+                  ? '—'
+                  : `${result.risk.tails['0.99'].var_pct}%`
+              }
+              tone="negative"
+            />
+            <KpiCard
+              label="Avg invested"
+              value={
+                result.risk?.margin?.avg_invested == null
+                  ? '—'
+                  : `${(result.risk.margin.avg_invested * 100).toFixed(0)}%`
+              }
+            />
           </section>
         </div>
       ) : null}
@@ -776,6 +881,33 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
 
       {tab === 'alpha' ? (
         <div className="tab-pane" key="alpha">
+          <label className="field" style={{ maxWidth: '14rem', marginBottom: '0.75rem' }}>
+            <span>Benchmark</span>
+            <select value={factorBench} onChange={(e) => setFactorBench(e.target.value)}>
+              <option value="SPY">SPY · S&amp;P 500</option>
+              <option value="QQQ">QQQ · Nasdaq 100</option>
+              <option value="IWM">IWM · Russell 2000</option>
+              <option value="TLT">TLT · long Treasuries</option>
+              <option value="GLD">GLD · gold</option>
+              <option value="BTC-USD">BTC-USD</option>
+            </select>
+          </label>
+          <section className="kpi-grid">
+            <KpiCard
+              label={`Beta vs ${factors?.benchmark ?? factorBench}`}
+              value={factors?.beta == null ? '—' : num(factors.beta)}
+              hint="OLS on daily equity vs benchmark returns"
+            />
+            <KpiCard
+              label="Alpha (ann.)"
+              value={factors?.alpha_annual == null ? '—' : pct(factors.alpha_annual)}
+              tone={toneFor(factors?.alpha_annual)}
+              hint="Intercept × 252"
+            />
+            <KpiCard label="R²" value={factors?.r2 == null ? '—' : num(factors.r2)} />
+            <KpiCard label="Obs" value={factors?.n == null ? '—' : String(factors.n)} />
+          </section>
+          {factorsErr ? <div className="banner error">{factorsErr}</div> : null}
           <MarketExposure report={result.market} />
         </div>
       ) : null}

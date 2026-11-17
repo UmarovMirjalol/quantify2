@@ -20,12 +20,14 @@ import pandas as pd
 
 from app.backtesting.bars import align_to_timeframe
 from app.backtesting.orders import Order, OrderSide, OrderType, resolve_pending_fill
+from app.data.sessions import filter_session
 from app.backtesting.portfolio import Portfolio
 from app.backtesting.positions import PositionSide, TradeRecord
 from app.llm.schemas import EntryOrderType, Side, StrategySpec
 from app.metrics.monte_carlo import run_monte_carlo_simulation
 from app.research.market import market_exposure
 from app.research.regimes import classify_regimes
+from app.research.risk_stats import portfolio_risk_report
 from app.metrics.performance import compute_performance_metrics
 from app.risk.risk_engine import RiskEngine, round_quantity
 from app.strategies.interpreter import (
@@ -81,6 +83,14 @@ class BacktestEngine:
             raise BacktestError(f"Data missing columns: {required - set(df.columns)}")
 
         df, bars_meta = align_to_timeframe(df, self.strategy.timeframe)
+        session = getattr(self.strategy, "session", "all") or "all"
+        if session != "all":
+            before = len(df)
+            df = filter_session(df, session=session)
+            bars_meta["session"] = session
+            bars_meta["session_bars"] = int(len(df))
+            if len(df) < before:
+                bars_meta["session_filtered"] = True
         if len(df) < 5:
             raise BacktestError(
                 f"Too few bars after aligning to {self.strategy.timeframe} "
@@ -339,6 +349,7 @@ class BacktestEngine:
                 [pt["equity"] for pt in equity_series],
                 [float(x) for x in closes[: len(equity_series)]],
             ),
+            "risk": portfolio_risk_report(equity_series),
             "execution_convention": self._execution_note(),
         }
 

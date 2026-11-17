@@ -358,6 +358,8 @@ class StrategySpec(BaseModel):
 
     asset: str = Field(default="SPY", min_length=1, max_length=32)
     timeframe: str = Field(default="1d", pattern=r"^(1m|5m|15m|1h|4h|1d|1w|1D)$")
+    # Intraday only: keep regular-hours bars (US 09:30–16:00). Daily data ignores this.
+    session: str = Field(default="all", pattern=r"^(all|rth)$")
     side: Side = Side.LONG
     initial_capital: float = Field(default=100_000.0, gt=0, le=1e9)
     entry_conditions: list[Condition] = Field(default_factory=list, max_length=5)
@@ -480,6 +482,7 @@ class BacktestConfig(BaseModel):
     entry_order: EntryOrderType | None = None
     limit_offset: float | None = Field(default=None, ge=0.0, le=0.2)
     timeframe: str | None = Field(default=None, pattern=r"^(1m|5m|15m|1h|4h|1d|1w|1D)$")
+    session: str | None = Field(default=None, pattern=r"^(all|rth)$")
 
     @field_validator("commission", "slippage", "spread", mode="before")
     @classmethod

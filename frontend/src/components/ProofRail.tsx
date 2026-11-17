@@ -99,6 +99,9 @@ export function ProofRail() {
         <Link className="btn primary" to="/research">
           Read the study
         </Link>
+        <Link className="btn ghost" to="/farm">
+          Open research farm
+        </Link>
         <Link className="btn ghost" to="/about">
           Engine principles
         </Link>

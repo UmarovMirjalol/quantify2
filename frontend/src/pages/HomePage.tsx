@@ -134,6 +134,7 @@ export function HomePage({ health }: Props) {
   const [fundingPct, setFundingPct] = useState(0);
   const [borrowPct, setBorrowPct] = useState(0);
   const [timeframe, setTimeframe] = useState('1d');
+  const [session, setSession] = useState<'all' | 'rth'>('all');
   const [entryOrder, setEntryOrder] = useState<'market' | 'limit' | 'stop'>('market');
   const [limitOffsetPct, setLimitOffsetPct] = useState(0.1);
   const [loading, setLoading] = useState(false);
@@ -402,6 +403,7 @@ export function HomePage({ health }: Props) {
           entry_order: entryOrder,
           limit_offset: entryOrder === 'market' ? undefined : limitOffsetPct / 100,
           timeframe,
+          session,
         },
       });
       setProgressStep(PIPELINE_STEPS.length);
@@ -544,6 +546,19 @@ export function HomePage({ health }: Props) {
                 <small className="hint">
                   If your CSV is finer (e.g. 15m data + 1h strategy), the engine auto-resamples completed bars.
                 </small>
+              </label>
+
+              <label className="field">
+                <span>Session</span>
+                <select
+                  value={session}
+                  onChange={(e) => setSession(e.target.value as 'all' | 'rth')}
+                  disabled={loading}
+                >
+                  <option value="all">All hours</option>
+                  <option value="rth">US RTH (09:30–16:00 ET)</option>
+                </select>
+                <small className="hint">RTH filters intraday bars only; daily data is unchanged.</small>
               </label>
 
               <label className="field">

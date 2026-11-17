@@ -37,6 +37,13 @@ const TOOLS = [
     icon: 'M9 12l2 2 4-4M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z',
   },
   {
+    to: '/farm',
+    title: 'Research farm',
+    body: 'One rule × dozens of markets, or the whole playbook grid — with paper signals and a published suite.',
+    cta: 'Open the farm',
+    icon: 'M3 17l6-6 4 4 8-8M14 7h7v7',
+  },
+  {
     to: '/leaderboard',
     title: 'Leaderboard',
     body: 'Famous strategies ranked on 10 markets: indices, EM, gold, bonds, energy, Nvidia, Bitcoin, Ether.',
@@ -62,6 +69,8 @@ const CHECKS = [
   { k: 'Parameter heatmap', d: 'Stable plateau or one lucky setting?' },
   { k: 'Market regimes', d: 'Did it earn in rising and falling markets, or only one?' },
   { k: 'Alpha vs holding', d: 'What is left after paying for plain market exposure.' },
+  { k: 'VaR / ES + factors', d: 'Daily tail risk and OLS beta/alpha vs SPY (or QQQ, gold, BTC).' },
+  { k: 'Research farm', d: 'Sweep one idea across a universe before you trust a single chart.' },
 ] as const;
 
 const CAPABILITIES = [
@@ -74,8 +83,8 @@ const CAPABILITIES = [
     body: 'Intraday and daily data, plus higher-timeframe filters like “15m entries, 4h trend”.',
   },
   {
-    title: 'Portfolios and screeners',
-    body: 'One rule on up to 12 assets, or scan 60 names across 9 universes: US stocks, FX, commodities, factors, crypto.',
+    title: 'Portfolios, farm, and screeners',
+    body: 'Shared-cash book across 12 assets, mass farm across universes, or scan 60 names: US stocks, FX, commodities, factors, crypto.',
   },
   {
     title: 'Python when words are not enough',
@@ -152,6 +161,37 @@ function useInView<T extends HTMLElement>(reduced: boolean) {
     return () => io.disconnect();
   }, [reduced]);
   return { ref, inView };
+}
+
+function BenchmarkSuiteTeaser() {
+  const [line, setLine] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    import('../services/api')
+      .then(({ getBenchmarkSuite }) => getBenchmarkSuite())
+      .then((suite) => {
+        if (!alive || !suite || suite.status === 'building') return;
+        const share = suite.beat_hold_share;
+        setLine(
+          share == null
+            ? `${suite.count ?? 0} published farm runs ready to inspect.`
+            : `${suite.count ?? 0} published farm runs · ${Math.round(share * 100)}% beat buy & hold.`,
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!line) return null;
+  return (
+    <section className="landing-suite-teaser" aria-label="Published benchmark suite">
+      <p className="mono">{line}</p>
+      <Link className="btn ghost small" to="/farm">
+        Inspect the farm →
+      </Link>
+    </section>
+  );
 }
 
 export function LandingPage() {
@@ -521,12 +561,14 @@ export function LandingPage() {
 
       <ProofRail />
 
+      <BenchmarkSuiteTeaser />
+
       <InstantTry />
 
       <section className="landing-section tools-trio in-view">
         <div className="section-head">
           <p className="eyebrow">Free tools</p>
-          <h2>Three ways to stop guessing.</h2>
+          <h2>Four ways to stop guessing.</h2>
         </div>
         <div className="tools-trio-grid">
           {TOOLS.map((t, i) => (

@@ -149,6 +149,7 @@ export async function runBacktest(payload: {
     entry_order?: 'market' | 'limit' | 'stop';
     limit_offset?: number;
     timeframe?: string;
+    session?: 'all' | 'rth';
   };
   asset?: string;
 }): Promise<BacktestResult> {
@@ -247,12 +248,202 @@ export async function runPortfolio(payload: {
   initial_capital: number;
   commission: number;
   slippage: number;
+  capital_mode?: 'shared' | 'sleeves';
+  max_positions?: number;
 }): Promise<PortfolioResult> {
   return request('/api/backtest/portfolio', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ capital_mode: 'shared', ...payload }),
   });
+}
+
+const json = (body: unknown): RequestInit => ({
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+export type FarmRow = {
+  ticker: string;
+  id?: string;
+  title?: string;
+  sharpe_ratio?: number | null;
+  total_return?: number | null;
+  alpha_vs_hold?: number | null;
+  max_drawdown?: number | null;
+  trades?: number;
+  action?: string;
+  error?: string;
+};
+
+export type FarmResult = {
+  mode: string;
+  scanned: number;
+  ok: number;
+  beat_hold?: number;
+  beat_hold_share?: number | null;
+  rows: FarmRow[];
+  top?: FarmRow[];
+  history?: string;
+};
+
+export async function runResearchFarm(payload: {
+  mode?: 'strategy' | 'playbook';
+  strategy_text?: string;
+  universe?: string | null;
+  tickers?: string[];
+  history?: string;
+  max_rules?: number;
+}): Promise<FarmResult> {
+  return request('/api/farm', json(payload));
+}
+
+export type FarmJob = {
+  id: string;
+  mode?: string;
+  status: string;
+  total: number;
+  done: number;
+  ok_count?: number;
+  fail_count?: number;
+  progress: number;
+  partial_rows?: FarmRow[];
+  result?: FarmResult | null;
+  error?: string | null;
+  meta?: Record<string, unknown>;
+};
+
+export async function startFarmJob(payload: {
+  mode?: 'strategy' | 'playbook';
+  strategy_text?: string;
+  universe?: string | null;
+  tickers?: string[];
+  history?: string;
+  max_rules?: number;
+}): Promise<FarmJob> {
+  return request('/api/farm/jobs', json(payload));
+}
+
+export async function getFarmJob(id: string): Promise<FarmJob> {
+  return request(`/api/farm/jobs/${id}`);
+}
+
+export async function cancelFarmJob(id: string): Promise<FarmJob> {
+  return request(`/api/farm/jobs/${id}/cancel`, { method: 'POST' });
+}
+
+export type DataHealthRow = {
+  ticker: string;
+  ok: boolean;
+  grade: string;
+  bars: number;
+  source?: string | null;
+  has_adj_close?: boolean;
+  gaps?: number | null;
+  max_gap_days?: number | null;
+  date_start?: string | null;
+  date_end?: string | null;
+  error?: string | null;
+};
+
+export type DataHealthReport = {
+  universe?: string | null;
+  scanned: number;
+  ok: number;
+  warn: number;
+  thin: number;
+  fail: number;
+  rows: DataHealthRow[];
+};
+
+export async function runDataHealth(payload: {
+  universe?: string | null;
+  tickers?: string[];
+  history?: string;
+}): Promise<DataHealthReport> {
+  return request('/api/data-health', json(payload));
+}
+
+export type BenchmarkSuite = {
+  status: string;
+  as_of?: string;
+  count?: number;
+  beat_hold?: number;
+  beat_hold_share?: number | null;
+  rows?: {
+    id: string;
+    title: string;
+    ticker: string;
+    sharpe: number | null;
+    total_return: number | null;
+    buy_hold: number | null;
+    var_95?: number | null;
+  }[];
+};
+
+export async function getBenchmarkSuite(force = false): Promise<BenchmarkSuite> {
+  return request(`/api/benchmark-suite${force ? '?force=true' : ''}`);
+}
+
+export type PaperResult = {
+  signals: {
+    ticker: string;
+    action: string;
+    in_position: boolean;
+    last_close: number;
+    as_of: string;
+  }[];
+  actionable: unknown[];
+  errors: { ticker: string; error: string }[];
+  webhook?: { ok?: boolean; status?: number; error?: string } | null;
+};
+
+export async function runPaperBridge(payload: {
+  strategy_text: string;
+  tickers: string[];
+  webhook_url?: string;
+  history?: string;
+  save?: boolean;
+}): Promise<PaperResult & { journal_id?: number | null }> {
+  return request('/api/paper', json(payload));
+}
+
+export type PaperJournalItem = {
+  id: number;
+  created_at: string | null;
+  strategy_text: string;
+  tickers: string[];
+  signal_count: number;
+  actionable_count: number;
+  error_count: number;
+  signals: PaperResult['signals'];
+  actionable: unknown[];
+  errors: { ticker: string; error: string }[];
+  webhook_url?: string | null;
+  webhook?: PaperResult['webhook'];
+  history: string;
+};
+
+export async function listPaperJournal(limit = 30): Promise<{ items: PaperJournalItem[]; count: number }> {
+  return request(`/api/paper/journal?limit=${limit}`);
+}
+
+export type FactorReport = {
+  benchmark: string;
+  beta: number | null;
+  alpha_daily: number | null;
+  alpha_annual: number | null;
+  r2: number | null;
+  n: number;
+};
+
+export async function getFactorReport(payload: {
+  equity_curve: { date: string; equity: number }[];
+  benchmark?: string;
+  history?: string;
+}): Promise<FactorReport> {
+  return request('/api/factors', json(payload));
 }
 
 export async function getVerdict(id: number): Promise<VerdictReport> {
@@ -262,12 +453,6 @@ export async function getVerdict(id: number): Promise<VerdictReport> {
 export async function shareBacktest(id: number): Promise<{ token: string }> {
   return request(`/api/backtests/${id}/share`, { method: 'POST' });
 }
-
-const json = (body: unknown): RequestInit => ({
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
 
 export async function listScreenerUniverses(): Promise<ScreenerUniverse[]> {
   return request('/api/screener/universes');

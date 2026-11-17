@@ -486,6 +486,8 @@ async def api_run_backtest(
         cfg_updates["limit_offset"] = body.config.limit_offset
     if body.config.timeframe is not None:
         cfg_updates["timeframe"] = body.config.timeframe
+    if body.config.session is not None:
+        cfg_updates["session"] = body.config.session
     if cfg_updates:
         strategy = strategy.model_copy(update=cfg_updates)
 
@@ -558,11 +560,14 @@ class PortfolioBacktestRequest(BaseModel):
     initial_capital: float = Field(default=100_000.0, gt=0)
     commission: float = Field(default=0.001, ge=0, le=0.05)
     slippage: float = Field(default=0.0005, ge=0, le=0.05)
+    # shared = one cash pool (professional default); sleeves = legacy equal capital silos
+    capital_mode: Literal["shared", "sleeves"] = "shared"
+    max_positions: int | None = Field(default=None, ge=1, le=12)
 
 
 @router.post("/backtest/portfolio")
 async def api_run_portfolio_backtest(req: PortfolioBacktestRequest) -> dict[str, Any]:
-    """Run one rule set on a basket of assets with equal capital per sleeve."""
+    """Run one rule set on a basket of assets (shared cash by default)."""
     try:
         if req.strategy is not None:
             strategy = req.strategy
@@ -588,7 +593,12 @@ async def api_run_portfolio_backtest(req: PortfolioBacktestRequest) -> dict[str,
         loaded_datasets[name] = df
 
     try:
-        result = PortfolioBacktestEngine(strategy, initial_capital=req.initial_capital).run(loaded_datasets)
+        result = PortfolioBacktestEngine(
+            strategy,
+            initial_capital=req.initial_capital,
+            capital_mode=req.capital_mode,
+            max_positions=req.max_positions,
+        ).run(loaded_datasets)
     except (BacktestError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {

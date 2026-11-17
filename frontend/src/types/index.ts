@@ -34,6 +34,8 @@ export interface StrategySpec {
   borrow_rate?: number;
   entry_order?: 'market' | 'limit' | 'stop';
   limit_offset?: number | null;
+  /** Intraday session filter: all hours or US regular trading hours. */
+  session?: 'all' | 'rth';
 }
 
 export interface Metrics {
@@ -243,6 +245,11 @@ export interface BacktestResult {
   live_signal?: LiveSignal;
   share_token?: string | null;
   shared?: boolean;
+  risk?: {
+    margin?: { avg_invested?: number | null; max_invested?: number | null };
+    tails?: Record<string, { var_pct?: number | null; es_pct?: number | null }>;
+    vol_annual?: number | null;
+  };
 }
 
 export interface LiveSignal {
@@ -356,11 +363,17 @@ export interface PortfolioResult {
   strategy: StrategySpec;
   datasets: string[];
   portfolio_metrics: Metrics;
-  portfolio_equity_curve: { date: string; equity: number; drawdown: number }[];
+  portfolio_equity_curve: { date: string; equity: number; drawdown: number; cash?: number }[];
   benchmark_equity_curve: { date: string; equity: number }[];
   asset_results: Record<string, PortfolioAsset>;
   correlation: { assets: string[]; matrix: number[][]; average: number | null };
   diversification_ratio: number | null;
+  capital_mode?: 'shared' | 'sleeves';
+  risk?: {
+    margin?: { avg_invested?: number | null; max_invested?: number | null };
+    tails?: Record<string, { var_pct?: number | null; es_pct?: number | null }>;
+    vol_annual?: number | null;
+  };
   trades: (Trade & { asset: string })[];
 }
 

@@ -24,6 +24,7 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
       { to: '/portfolio', label: 'Portfolio', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
       { to: '/history', label: 'Results', icon: 'M4 6h16M4 12h16M4 18h10' },
       { to: '/forward', label: 'Forward tests', icon: 'M3 17l6-6 4 4 8-8M15 7h6v6' },
+      { to: '/paper', label: 'Paper desk', icon: 'M4 4h16v4H4zM4 10h10v10H4zM16 14h4v6h-4z' },
     ],
   },
   {
@@ -42,6 +43,11 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
       },
       { to: '/screener', label: 'Screener', icon: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5' },
       { to: '/discover', label: 'Discover', icon: 'M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5z' },
+      {
+        to: '/farm',
+        label: 'Farm',
+        icon: 'M3 21h18M5 21V10l7-6 7 6v11M9 21v-6h6v6',
+      },
       { to: '/tools', label: 'Tools', icon: 'M5 3h14v18H5zM8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v6' },
     ],
   },

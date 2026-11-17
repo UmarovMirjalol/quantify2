@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import type { DebugBar, EquityPoint, IndicatorSeries, Marker, PriceBar } from '../types';
+import { rollingSharpeVol } from '../utils/rollingMetrics';
 import { TradingChart } from './TradingChart';
 
 const FONT = 'IBM Plex Sans, system-ui, sans-serif';
@@ -255,6 +256,74 @@ export function ExposureChart({ data }: { data: EquityPoint[] }) {
         ...layoutBase,
         yaxis: { ...layoutBase.yaxis, ticksuffix: '%', range: [0, 105], tickformat: '.0f' },
         height: 260,
+      }}
+      config={{ displayModeBar: false, responsive: true }}
+      style={{ width: '100%' }}
+      useResizeHandler
+    />
+  );
+}
+
+export function RollingSharpeChart({
+  data,
+  window = 63,
+  overlay,
+  name = 'Strategy',
+  overlayName = 'B',
+}: {
+  data: EquityPoint[];
+  window?: number;
+  overlay?: EquityPoint[];
+  name?: string;
+  overlayName?: string;
+}) {
+  const series = useMemo(() => rollingSharpeVol(data, window), [data, window]);
+  const other = useMemo(
+    () => (overlay?.length ? rollingSharpeVol(overlay, window) : []),
+    [overlay, window],
+  );
+
+  if (series.length < 5) {
+    return <div className="empty-state">Need more history for a rolling Sharpe window.</div>;
+  }
+
+  const traces: Record<string, unknown>[] = [
+    {
+      x: series.map((p) => p.date),
+      y: series.map((p) => p.sharpe),
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#4fd6a0', width: 1.7 },
+      name,
+      hovertemplate: `%{x}<br>Sharpe %{y:.2f}<extra>${name}</extra>`,
+    },
+  ];
+  if (other.length) {
+    traces.push({
+      x: other.map((p) => p.date),
+      y: other.map((p) => p.sharpe),
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#7aa2ff', width: 1.5, dash: 'dot' },
+      name: overlayName,
+      hovertemplate: `%{x}<br>Sharpe %{y:.2f}<extra>${overlayName}</extra>`,
+    });
+  }
+
+  return (
+    <Plot
+      data={traces}
+      layout={{
+        ...layoutBase,
+        yaxis: { ...layoutBase.yaxis, zeroline: true, zerolinecolor: 'rgba(255,255,255,0.12)' },
+        height: 280,
+        showlegend: Boolean(other.length),
+        legend: {
+          orientation: 'h',
+          y: 1.12,
+          x: 0,
+          font: { size: 11, color: '#9098a3' },
+        },
       }}
       config={{ displayModeBar: false, responsive: true }}
       style={{ width: '100%' }}

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { EquityChart } from '../components/Charts';
+import { EquityChart, RollingSharpeChart } from '../components/Charts';
 import { getBacktest, getVerdict } from '../services/api';
 import type { BacktestResult, EquityPoint, VerdictReport } from '../types';
+import { downloadText } from '../utils/download';
+import { duelTearsheetMarkdown } from '../utils/tearsheetMarkdown';
 
 type Better = 'higher' | 'lower';
 
@@ -69,7 +71,13 @@ export function ComparePage() {
       { label: 'Trades', a: a.metrics.number_of_trades, b: b.metrics.number_of_trades, format: count, better: 'higher' },
       { label: 'Alpha (ann.)', a: a.market?.alpha_annual, b: b.market?.alpha_annual, format: pct, better: 'higher' },
       { label: 'Beta', a: a.market?.beta, b: b.market?.beta, format: fixed, better: 'lower' },
-      { label: 'Monte Carlo 5th pct', a: a.monte_carlo?.confidence_95_lower, b: b.monte_carlo?.confidence_95_lower, format: pct, better: 'higher' },
+      {
+        label: 'Monte Carlo 5th pct',
+        a: a.monte_carlo?.confidence_95_lower,
+        b: b.monte_carlo?.confidence_95_lower,
+        format: pct,
+        better: 'higher',
+      },
       { label: 'Verdict score', a: verdicts[0]?.score, b: verdicts[1]?.score, format: count, better: 'higher' },
     ];
   }, [runs, verdicts]);
@@ -93,6 +101,8 @@ export function ComparePage() {
   const wins = rows.map(winner);
   const aWins = wins.filter((w) => w === 'a').length;
   const bWins = wins.filter((w) => w === 'b').length;
+  const total = Math.max(1, aWins + bWins);
+  const aShare = (aWins / total) * 100;
 
   return (
     <div className="results compare">
@@ -110,12 +120,37 @@ export function ComparePage() {
           </p>
         </div>
         <div className="results-actions no-print">
+          <button
+            type="button"
+            className="btn secondary small"
+            onClick={() =>
+              downloadText(
+                `quantify-duel-${a.id}-vs-${b.id}.md`,
+                duelTearsheetMarkdown(a, b, aWins, bWins, rows.length),
+                'text/markdown;charset=utf-8',
+              )
+            }
+          >
+            Tearsheet
+          </button>
           <button type="button" className="btn secondary small" onClick={() => window.print()}>
             Save PDF
           </button>
           <Link className="btn secondary" to="/history">
             Pick other runs
           </Link>
+        </div>
+      </div>
+
+      <div className="compare-scorebar" aria-hidden="true">
+        <div className="compare-scorebar__a" style={{ width: `${aShare}%` }} />
+        <div className="compare-scorebar__labels">
+          <span>
+            A · {aWins}
+          </span>
+          <span>
+            B · {bWins}
+          </span>
         </div>
       </div>
 
@@ -141,6 +176,16 @@ export function ComparePage() {
           benchmark={rebase(b.equity_curve, start)}
           name={`A · #${a.id}`}
           benchmarkName={`B · #${b.id}`}
+        />
+      </section>
+
+      <section className="panel">
+        <h2>Rolling Sharpe · 63 days</h2>
+        <RollingSharpeChart
+          data={a.equity_curve}
+          overlay={b.equity_curve}
+          name={`A · #${a.id}`}
+          overlayName={`B · #${b.id}`}
         />
       </section>
 

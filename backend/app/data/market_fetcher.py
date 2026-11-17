@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 
 from app.config import UPLOAD_DIR
+from app.data.adjust import ensure_adjusted
 from app.data.validators import validate_ohlcv_dataframe
 
 
@@ -101,21 +102,25 @@ def fetch_from_yahoo(symbol: str, interval: str = "1d", range_param: str = "10y"
     if not timestamps:
         raise ValueError(f"No timestamps returned for {symbol}")
     quote = result["indicators"]["quote"][0]
+    adj_rows = (result.get("indicators") or {}).get("adjclose") or []
+    adjclose = adj_rows[0].get("adjclose") if adj_rows else None
 
     date_format = "%Y-%m-%d %H:%M:%S" if inv in ("5m", "15m", "1h") else "%Y-%m-%d"
     dates = [pd.to_datetime(t, unit="s").strftime(date_format) for t in timestamps]
 
-    df = pd.DataFrame(
-        {
-            "date": dates,
-            "open": quote.get("open", []),
-            "high": quote.get("high", []),
-            "low": quote.get("low", []),
-            "close": quote.get("close", []),
-            "volume": quote.get("volume", []),
-        }
-    ).dropna()
+    payload: dict[str, Any] = {
+        "date": dates,
+        "open": quote.get("open", []),
+        "high": quote.get("high", []),
+        "low": quote.get("low", []),
+        "close": quote.get("close", []),
+        "volume": quote.get("volume", []),
+    }
+    if adjclose is not None:
+        payload["adj_close"] = adjclose
+    df = pd.DataFrame(payload).dropna(subset=["open", "high", "low", "close"])
 
+    df = ensure_adjusted(df)
     df["open"] = df["open"].round(4)
     df["high"] = df["high"].round(4)
     df["low"] = df["low"].round(4)

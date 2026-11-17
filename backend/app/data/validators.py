@@ -18,8 +18,8 @@ COLUMN_ALIASES = {
     "l": "low",
     "c": "close",
     "vol": "volume",
-    "adj_close": "close",
-    "adjclose": "close",
+    "adjclose": "adj_close",
+    "adjusted_close": "adj_close",
 }
 
 
@@ -145,12 +145,16 @@ def load_ohlcv_csv(path: str | Path) -> pd.DataFrame:
 
     df = _normalize_columns(df)
     df["date"] = pd.to_datetime(df["date"])
-    for col in ("open", "high", "low", "close", "volume"):
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in ("open", "high", "low", "close", "volume", "adj_close"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df = df.sort_values("date").drop_duplicates(subset=["date"], keep="first")
     df = df.reset_index(drop=True)
     df["date"] = df["date"].dt.tz_localize(None)
+    from app.data.adjust import ensure_adjusted
+
+    df = ensure_adjusted(df)
     return df[["date", "open", "high", "low", "close", "volume"]]
 
 
@@ -169,10 +173,14 @@ def load_ohlcv_bytes(content: bytes, filename: str = "upload.csv") -> tuple[pd.D
 
     df = _normalize_columns(df)
     df["date"] = pd.to_datetime(df["date"])
-    for col in ("open", "high", "low", "close", "volume"):
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in ("open", "high", "low", "close", "volume", "adj_close"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
     df = df.sort_values("date").drop_duplicates(subset=["date"], keep="first")
     df = df.reset_index(drop=True)
     df["date"] = df["date"].dt.tz_localize(None)
+    from app.data.adjust import ensure_adjusted
+
+    df = ensure_adjusted(df)
     clean = df[["date", "open", "high", "low", "close", "volume"]]
     return clean, result

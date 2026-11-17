@@ -19,9 +19,23 @@ from app.llm.parser import StrategyParseError, parse_strategy
 from app.llm.schemas import PositionSizing, StrategySpec
 from app.models.backtest import BacktestRecord
 from app.models.forward import ForwardTest
+from app.models.paper import PaperJournalEntry
+from app.research.benchmark_suite import suite as benchmark_suite
+from app.research.data_health import universe_health
 from app.research.discovery import run_discovery
+from app.research.farm import run_farm, run_playbook_farm
+from app.research.farm_jobs import (
+    cancel_job as cancel_farm_job,
+    get_job as get_farm_job,
+    list_jobs as list_farm_jobs,
+    public_job as public_farm_job,
+    start_playbook_farm,
+    start_strategy_farm,
+)
+from app.research.factors import factor_report
 from app.research.forward import WARMUP_HISTORY, evaluate_forward
 from app.research.leaderboard import leaderboard
+from app.research.paper import paper_bridge
 from app.research.screener import UNIVERSES, run_screener, universe_list
 from app.research.whatif import what_if
 
@@ -324,3 +338,226 @@ def api_forward_delete(
     db.delete(row)
     db.commit()
     return {"deleted": True}
+
+
+# --- Research farm / suite / paper --------------------------------------------
+
+
+class FarmRequest(BaseModel):
+    strategy_text: str | None = Field(default=None, max_length=4000)
+    strategy: StrategySpec | None = None
+    universe: str | None = None
+    tickers: list[str] = Field(default_factory=list, max_length=80)
+    history: str = Field(default="5y", pattern=r"^(1y|5y|10y|max)$")
+    mode: str = Field(default="strategy", pattern=r"^(strategy|playbook)$")
+    max_rules: int = Field(default=20, ge=1, le=40)
+
+
+@router.post("/farm")
+async def api_research_farm(body: FarmRequest) -> dict[str, Any]:
+    """Mass research: one strategy × many tickers, or playbook × universe (blocking)."""
+    try:
+        if body.mode == "playbook":
+            return run_playbook_farm(
+                universe=body.universe or "etfs",
+                tickers=body.tickers,
+                history=body.history,
+                max_rules=body.max_rules,
+            )
+        strategy, _ = await _strategy(body.strategy_text, body.strategy)
+        return {
+            **run_farm(strategy, universe=body.universe, tickers=body.tickers, history=body.history),
+            "strategy": strategy.model_dump(mode="json"),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/farm/jobs")
+async def api_farm_job_start(body: FarmRequest) -> dict[str, Any]:
+    """Start a background farm job; poll GET /farm/jobs/{id}."""
+    try:
+        if body.mode == "playbook":
+            raw = start_playbook_farm(
+                universe=body.universe or "etfs",
+                tickers=body.tickers,
+                history=body.history,
+                max_rules=body.max_rules,
+            )
+        else:
+            strategy, _ = await _strategy(body.strategy_text, body.strategy)
+            raw = start_strategy_farm(
+                strategy,
+                universe=body.universe,
+                tickers=body.tickers,
+                history=body.history,
+            )
+        job = get_farm_job(raw["id"])
+        return public_farm_job(job) if job else raw
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/farm/jobs")
+def api_farm_jobs_list() -> dict[str, Any]:
+    return {"jobs": [public_farm_job(j) for j in list_farm_jobs()]}
+
+
+@router.get("/farm/jobs/{job_id}")
+def api_farm_job_status(job_id: str) -> dict[str, Any]:
+    job = get_farm_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Farm job not found.")
+    return public_farm_job(job)
+
+
+@router.post("/farm/jobs/{job_id}/cancel")
+def api_farm_job_cancel(job_id: str) -> dict[str, Any]:
+    job = cancel_farm_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Farm job not found.")
+    return public_farm_job(job)
+
+
+@router.get("/benchmark-suite")
+def api_benchmark_suite(force: bool = False) -> dict[str, Any]:
+    """Fixed playbook × markets board (builds in background on first hit)."""
+    return benchmark_suite(force=force)
+
+
+class PaperRequest(BaseModel):
+    strategy_text: str | None = Field(default=None, max_length=4000)
+    strategy: StrategySpec | None = None
+    tickers: list[str] = Field(default_factory=list, max_length=40)
+    webhook_url: str | None = Field(default=None, max_length=500)
+    history: str = Field(default="1y", pattern=r"^(1y|5y|10y)$")
+    save: bool = True
+
+
+@router.post("/paper")
+async def api_paper_bridge(
+    body: PaperRequest,
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+) -> dict[str, Any]:
+    """Next-open paper signals for a ticker list; optional webhook; journals by default."""
+    strategy, _ = await _strategy(body.strategy_text, body.strategy)
+    if not body.tickers:
+        raise HTTPException(status_code=422, detail="Add at least one ticker.")
+    try:
+        out = paper_bridge(
+            strategy,
+            body.tickers,
+            webhook_url=body.webhook_url,
+            history=body.history,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(exc)[:200]) from exc
+    entry_id = None
+    if body.save:
+        row = PaperJournalEntry(
+            client_id=_scope(client_id),
+            strategy_text=(body.strategy_text or "")[:4000],
+            tickers_json=json.dumps([t.strip().upper() for t in body.tickers if t.strip()]),
+            signals_json=json.dumps(out.get("signals") or []),
+            actionable_json=json.dumps(out.get("actionable") or []),
+            errors_json=json.dumps(out.get("errors") or []),
+            webhook_url=(body.webhook_url or "")[:500],
+            webhook_json=json.dumps(out.get("webhook") or {}),
+            history=body.history,
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        entry_id = row.id
+        # Cap journal size per client.
+        old = (
+            db.query(PaperJournalEntry)
+            .filter(PaperJournalEntry.client_id == _scope(client_id))
+            .order_by(PaperJournalEntry.created_at.desc())
+            .offset(80)
+            .all()
+        )
+        for o in old:
+            db.delete(o)
+        if old:
+            db.commit()
+    return {**out, "journal_id": entry_id}
+
+
+@router.get("/paper/journal")
+def api_paper_journal(
+    db: Session = Depends(get_db),
+    client_id: str = Depends(_client_id),
+    limit: int = 30,
+) -> dict[str, Any]:
+    rows = (
+        db.query(PaperJournalEntry)
+        .filter(PaperJournalEntry.client_id == _scope(client_id))
+        .order_by(PaperJournalEntry.created_at.desc())
+        .limit(max(1, min(limit, 80)))
+        .all()
+    )
+    items = []
+    for r in rows:
+        try:
+            signals = json.loads(r.signals_json or "[]")
+            actionable = json.loads(r.actionable_json or "[]")
+            webhook = json.loads(r.webhook_json or "{}") or None
+            errors = json.loads(r.errors_json or "[]")
+            tickers = json.loads(r.tickers_json or "[]")
+        except json.JSONDecodeError:
+            signals, actionable, webhook, errors, tickers = [], [], None, [], []
+        items.append(
+            {
+                "id": r.id,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "strategy_text": r.strategy_text,
+                "tickers": tickers,
+                "signal_count": len(signals),
+                "actionable_count": len(actionable),
+                "error_count": len(errors),
+                "signals": signals,
+                "actionable": actionable,
+                "errors": errors,
+                "webhook_url": r.webhook_url or None,
+                "webhook": webhook,
+                "history": r.history,
+            }
+        )
+    return {"items": items, "count": len(items)}
+
+
+class DataHealthRequest(BaseModel):
+    universe: str | None = Field(default=None, max_length=40)
+    tickers: list[str] = Field(default_factory=list, max_length=40)
+    history: str = Field(default="1y", pattern=r"^(1y|5y|10y)$")
+
+
+@router.post("/data-health")
+def api_data_health(body: DataHealthRequest) -> dict[str, Any]:
+    try:
+        return universe_health(
+            universe=body.universe,
+            tickers=body.tickers,
+            history=body.history,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class FactorRequest(BaseModel):
+    equity_curve: list[dict[str, Any]] = Field(default_factory=list, max_length=20000)
+    benchmark: str = Field(default="SPY", max_length=20)
+    history: str = Field(default="10y", pattern=r"^(1y|5y|10y|max)$")
+
+
+@router.post("/factors")
+def api_factor_report(body: FactorRequest) -> dict[str, Any]:
+    if len(body.equity_curve) < 30:
+        raise HTTPException(status_code=422, detail="Need a longer equity curve.")
+    try:
+        df, _ = fetch_market_frame(body.benchmark, history=body.history)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Benchmark fetch failed: {exc}") from exc
+    return factor_report(body.equity_curve, df, name=body.benchmark.upper())

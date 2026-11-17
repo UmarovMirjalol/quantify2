@@ -5858,9 +5858,15 @@ h2 {
 
 .tools-trio-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-top: 1.6rem;
+}
+
+@media (min-width: 960px) {
+  .tools-trio-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .tool-card {
@@ -6356,6 +6362,128 @@ h2 {
   .proof-rail__grid {
     grid-template-columns: 1fr;
   }
+}
+
+.landing-suite-teaser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 1120px;
+  margin: -0.6rem auto 2rem;
+  padding: 0.85rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(122, 162, 255, 0.06);
+}
+
+.landing-suite-teaser p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+/* —— Research farm wow —— */
+.farm-scatter-panel h2 {
+  margin-bottom: 0.35rem;
+}
+
+.farm-scatter__legend {
+  margin-top: 0.35rem;
+}
+
+.farm-progress {
+  position: relative;
+  overflow: hidden;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(79, 214, 160, 0.05);
+}
+
+.farm-progress--meter .farm-progress__track {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin-bottom: 0.45rem;
+}
+
+.farm-progress__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(79, 214, 160, 0.45), rgba(79, 214, 160, 0.9));
+  transition: width 0.35s ease;
+}
+
+.farm-progress__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(79, 214, 160, 0.35), transparent);
+  animation: farm-sweep 1.4s ease-in-out infinite;
+}
+
+.health-ok {
+  color: var(--accent);
+}
+.health-warn {
+  color: #e0b45a;
+}
+.health-thin {
+  color: #98a2ac;
+}
+.health-fail {
+  color: #e57a84;
+}
+
+@keyframes farm-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .farm-progress__bar {
+    animation: none;
+    width: 100%;
+    opacity: 0.25;
+  }
+}
+
+.compare-scorebar {
+  position: relative;
+  height: 2.4rem;
+  margin: 0 0 1.1rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(122, 162, 255, 0.18);
+  border: 1px solid var(--border);
+}
+
+.compare-scorebar__a {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(79, 214, 160, 0.55), rgba(79, 214, 160, 0.28));
+  transition: width 0.6s ease;
+}
+
+.compare-scorebar__labels {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  pointer-events: none;
 }
 
 .live-data-bar {
