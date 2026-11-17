@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { CommandHint, CommandPalette } from './CommandPalette';
+import { ToastHost } from './ToastHost';
 import { getAccount } from '../services/session';
 import type { HealthStatus } from '../types';
 
@@ -108,7 +110,13 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
   }, [location.pathname]);
 
   if (isLanding) {
-    return <div className="app-shell landing-mode">{children}</div>;
+    return (
+      <div className="app-shell landing-mode">
+        {children}
+        <CommandPalette />
+        <ToastHost />
+      </div>
+    );
   }
 
   return (
@@ -128,6 +136,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             <span className="brand-tag">Quant research</span>
           </span>
         </Link>
+
+        <div className="sidebar-cmd">
+          <CommandHint />
+        </div>
 
         <nav className="nav" onClick={() => setOpen(false)}>
           {NAV.map((group) => (
@@ -169,10 +181,12 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             </span>
             <span className="brand-name">Quantify</span>
           </Link>
-          <span style={{ width: 52 }} />
+          <CommandHint />
         </div>
         <main className="main">{children}</main>
       </div>
+      <CommandPalette />
+      <ToastHost />
     </div>
   );
 }

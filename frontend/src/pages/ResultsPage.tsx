@@ -38,6 +38,8 @@ import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStra
 import { shareCard, signedPct } from '../utils/shareCard';
 import { explainResult } from '../utils/explainResult';
 import { tearsheetMarkdown } from '../utils/tearsheetMarkdown';
+import { ResultsDock } from '../components/ResultsDock';
+import { toast } from '../components/ToastHost';
 
 const ACCENT_HEX = '#4fd6a0';
 const HOLD_HEX = '#98a2ac';
@@ -372,6 +374,7 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
       try {
         await navigator.clipboard.writeText(reportUrl(token));
         setShareNote('Link copied. Anyone with it can view this report, no account needed.');
+        toast('Share link copied', { tone: 'ok', body: `Report #${result.id}` });
       } catch {
         setShareNote('Anyone with this link can view the report, no account needed.');
       }
@@ -408,7 +411,8 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   }
 
   return (
-    <div className="results">
+    <div className="results results--docked">
+      <ResultsDock result={result} vsHold={vsHold} onCompare={readOnly ? undefined : queueForCompare} readOnly={readOnly} />
       <div className="page-header">
         <div>
           <p className="eyebrow">{readOnly ? 'Shared report' : `Backtest #${result.id}`}</p>
@@ -583,7 +587,7 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
 
       {readOnly ? null : <ExportButtons strategy={result.strategy} title={result.strategy_description} />}
 
-      <div className="tabs no-print" role="tablist">
+      <div className="tabs no-print" role="tablist" id="results-tabs">
         {tabs.map((t) => (
           <button
             key={t.id}

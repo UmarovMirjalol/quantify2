@@ -20,6 +20,7 @@ import {
   type DataHealthReport,
 } from '../services/api';
 import type { ScreenerUniverse } from '../types';
+import { toast } from '../components/ToastHost';
 import { pct } from '../utils/signal';
 
 const DEFAULT =
@@ -98,10 +99,17 @@ export function FarmPage() {
               setFarm(j.result);
               setRunning(false);
               stopPoll();
+              toast('Farm finished', {
+                tone: 'ok',
+                body: `${j.result.ok ?? j.ok_count ?? 0} ok · ${j.result.scanned ?? j.done} scanned`,
+              });
             } else if (j.status === 'cancelled' || j.status === 'error') {
               setError(j.error || (j.status === 'cancelled' ? 'Farm cancelled.' : 'Farm failed.'));
               setRunning(false);
               stopPoll();
+              toast(j.status === 'cancelled' ? 'Farm cancelled' : 'Farm failed', {
+                tone: j.status === 'cancelled' ? 'warn' : 'error',
+              });
             }
           })
           .catch((err: Error) => {
@@ -159,7 +167,9 @@ export function FarmPage() {
     }
   }
 
-  const rows = farm?.top ?? farm?.rows?.slice(0, 40) ?? [];
+  const liveRows = job?.partial_rows?.length ? job.partial_rows : null;
+  const rows = farm?.top ?? farm?.rows?.slice(0, 40) ?? liveRows?.slice(0, 40) ?? [];
+  const scatterRows = farm?.rows?.length ? farm.rows : liveRows ?? [];
 
   return (
     <div className="results">
@@ -175,6 +185,16 @@ export function FarmPage() {
       </div>
 
       <ActivityPulse />
+
+      {!farm && !running ? (
+        <section className="farm-empty">
+          <h2>Sweep first. Trust later.</h2>
+          <p>
+            One lucky SPY chart is not evidence. Run a strategy across a universe — the scatter fills live as jobs finish.
+            Press <kbd className="cmdk__kbd">Ctrl</kbd>+<kbd className="cmdk__kbd">K</kbd> anytime to jump here again.
+          </p>
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="btn-row" style={{ marginBottom: '0.8rem' }}>
@@ -299,14 +319,18 @@ export function FarmPage() {
         </section>
       ) : null}
 
-      {farm?.rows?.length ? (
+      {scatterRows.length >= 2 ? (
         <section className="panel farm-scatter-panel">
-          <h2>Sharpe vs return</h2>
+          <h2>
+            Sharpe vs return
+            {running && liveRows ? <span className="farm-live-badge">live</span> : null}
+          </h2>
           <FarmScatter
-            rows={farm.rows}
+            rows={scatterRows}
             onPick={(row) => {
               setPinned(row);
               setTickers((t) => (t.includes(row.ticker) ? t : `${t}${t.trim() ? ', ' : ''}${row.ticker}`));
+              toast(`Pinned ${row.ticker}`, { tone: 'info', body: row.title });
             }}
           />
           {pinned ? (

@@ -8,6 +8,7 @@ import {
   type PaperJournalItem,
   type PaperResult,
 } from '../services/api';
+import { toast } from '../components/ToastHost';
 
 const DEFAULT =
   'Buy when the 20-day SMA crosses above the 50-day SMA and sell when it crosses below.';
@@ -53,8 +54,13 @@ export function PaperDeskPage() {
       });
       setLatest(out);
       refresh();
+      toast('Paper signals journaled', {
+        tone: 'ok',
+        body: `${out.signals.length} names · ${out.actionable?.length ?? 0} actionable`,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Paper pull failed.');
+      toast('Paper pull failed', { tone: 'error' });
     } finally {
       setBusy(false);
     }
