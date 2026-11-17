@@ -98,41 +98,77 @@ def run_synthetic(
     sharpes: list[float] = []
     trades: list[int] = []
     holds: list[float] = []
+    drawdowns: list[float] = []
+    samples: list[dict[str, Any]] = []
     frames = [synthetic_path(df, rng, block) for _ in range(paths)]
     precomputed = (
         run_custom_batch(strategy.custom_code or "", frames) if strategy.is_custom else [None] * len(frames)
     )
-    for frame, signals in zip(frames, precomputed):
+    for i, (frame, signals) in enumerate(zip(frames, precomputed)):
         try:
             metrics = BacktestEngine(strategy).run(frame, signals=signals, metrics_only=True)["metrics"]
         except (BacktestError, ValueError):
             continue
-        returns.append(float(metrics.get("total_return") or 0.0))
-        sharpes.append(float(metrics.get("sharpe_ratio") or 0.0))
-        trades.append(int(metrics.get("number_of_trades") or 0))
-        holds.append(float(frame["close"].iloc[-1] / frame["close"].iloc[0] - 1.0))
+        ret = float(metrics.get("total_return") or 0.0)
+        sh = float(metrics.get("sharpe_ratio") or 0.0)
+        n_trades = int(metrics.get("number_of_trades") or 0)
+        hold = float(frame["close"].iloc[-1] / frame["close"].iloc[0] - 1.0)
+        dd = float(metrics.get("max_drawdown") or 0.0)
+        returns.append(ret)
+        sharpes.append(sh)
+        trades.append(n_trades)
+        holds.append(hold)
+        drawdowns.append(dd)
+        samples.append(
+            {
+                "path": i + 1,
+                "total_return": round(ret, 4),
+                "sharpe_ratio": round(sh, 4),
+                "max_drawdown": round(dd, 4),
+                "trades": n_trades,
+                "hold_return": round(hold, 4),
+            }
+        )
 
     r = np.asarray(returns)
     s = np.asarray(sharpes)
+    dds = np.asarray(drawdowns)
     profitable = float((r > 0).mean()) if r.size else 0.0
     rank = float((r < real_return).mean()) if r.size else 0.0
     median_trades = float(np.median(trades)) if trades else 0.0
     median_sharpe = float(np.median(s)) if s.size else 0.0
     verdict, headline = _verdict(profitable, median_sharpe, median_trades, real_return, rank, r.size)
 
+    samples_sorted = sorted(samples, key=lambda row: row["total_return"], reverse=True)
+    path_table = samples_sorted[:12] + (
+        samples_sorted[-8:] if len(samples_sorted) > 20 else samples_sorted[12:]
+    )
+    # de-dupe while preserving order
+    seen: set[int] = set()
+    unique_paths: list[dict[str, Any]] = []
+    for row in path_table:
+        if row["path"] in seen:
+            continue
+        seen.add(row["path"])
+        unique_paths.append(row)
+
     return {
         "verdict": verdict,
         "headline": headline,
         "paths": int(r.size),
         "block": block,
+        "seed": seed,
         "real": {"total_return": round(real_return, 4), "sharpe_ratio": round(real_sharpe, 4)},
         "profitable_share": round(profitable, 4),
         "real_rank": round(rank, 4),
         "median_trades": median_trades,
         "returns": _pcts(r),
         "sharpes": _pcts(s),
+        "drawdowns": _pcts(dds),
         "hold_median": round(float(np.median(holds)), 4) if holds else 0.0,
         "histogram": _histogram(r),
+        "sharpe_histogram": _histogram(s),
+        "path_samples": unique_paths,
     }
 
 

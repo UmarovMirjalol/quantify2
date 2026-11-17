@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { EquityChart } from '../components/Charts';
 import { EquitySparkline } from '../components/EquitySparkline';
+import { KpiCard } from '../components/KpiCard';
+import { ResearchScatter } from '../components/ResearchScatter';
 import { toast } from '../components/ToastHost';
 import { exportAllBacktests, listBacktests } from '../services/api';
-import type { BacktestSummary } from '../types';
+import type { BacktestResult, BacktestSummary, EquityPoint } from '../types';
 import { downloadText } from '../utils/download';
 import { isFavorite, listFavorites, toggleFavorite } from '../utils/favorites';
+import { getNote } from '../utils/researchNotes';
 import { allTags, getTags, idsWithTag } from '../utils/runTags';
+import { tearsheetMarkdown } from '../utils/tearsheetMarkdown';
 
 function pct(v: number | null): string {
   if (v === null || v === undefined) return '—';
@@ -24,7 +29,11 @@ export function HistoryPage() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [picked, setPicked] = useState<number[]>([]);
+  const [cohort, setCohort] = useState<number[]>([]);
   const [archiving, setArchiving] = useState(false);
+  const [libraryBusy, setLibraryBusy] = useState(false);
+  const [library, setLibrary] = useState<BacktestResult[] | null>(null);
+  const [scatterMode, setScatterMode] = useState<'sharpe_dd' | 'return_trades'>('sharpe_dd');
   const [favTick, setFavTick] = useState(0);
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [tagFilter, setTagFilter] = useState('');
@@ -35,6 +44,10 @@ export function HistoryPage() {
     setPicked((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-2),
     );
+  }
+
+  function toggleCohort(id: number) {
+    setCohort((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-8)));
   }
 
   async function downloadArchive() {
@@ -48,6 +61,28 @@ export function HistoryPage() {
     } finally {
       setArchiving(false);
     }
+  }
+
+  async function loadLibrary() {
+    setLibraryBusy(true);
+    setError(null);
+    try {
+      const archive = await exportAllBacktests();
+      setLibrary(archive.backtests || []);
+      toast(`Library loaded · ${archive.count} runs`, { tone: 'ok' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load library');
+    } finally {
+      setLibraryBusy(false);
+    }
+  }
+
+  function exportCohortPack() {
+    if (!library?.length || !cohort.length) return;
+    const pack = library.filter((r) => cohort.includes(r.id));
+    const md = pack.map((r) => tearsheetMarkdown(r)).join('\n\n---\n\n');
+    downloadText(`quantify-cohort-${cohort.join('-')}.md`, md, 'text/markdown;charset=utf-8');
+    toast('Cohort tearsheet pack downloaded', { tone: 'ok' });
   }
 
   useEffect(() => {
@@ -245,7 +280,104 @@ export function HistoryPage() {
             >
               Compare {picked.length}/2
             </button>
+            <button
+              type="button"
+              className="btn secondary small"
+              disabled={libraryBusy}
+              onClick={() => void loadLibrary()}
+              title="Load full runs for library scatter and cohort overlay"
+            >
+              {libraryBusy ? 'Loading library…' : library ? 'Reload library' : 'Open library desk'}
+            </button>
           </div>
+
+          <section className="panel history-library">
+            <div className="page-header" style={{ marginBottom: '0.5rem' }}>
+              <div>
+                <p className="eyebrow">Library desk</p>
+                <h2 style={{ margin: 0 }}>Sharpe × drawdown map</h2>
+                <p className="hint">Click a point to open. Shift-click rows below to build a cohort of up to 8 for equity overlay.</p>
+              </div>
+              <div className="whatif-picks">
+                <button
+                  type="button"
+                  className={`chip${scatterMode === 'sharpe_dd' ? ' active' : ''}`}
+                  onClick={() => setScatterMode('sharpe_dd')}
+                >
+                  Sharpe × DD
+                </button>
+                <button
+                  type="button"
+                  className={`chip${scatterMode === 'return_trades' ? ' active' : ''}`}
+                  onClick={() => setScatterMode('return_trades')}
+                >
+                  Return × trades
+                </button>
+              </div>
+            </div>
+            <div className="kpi-grid">
+              <KpiCard label="Shown" value={String(filtered.length)} />
+              <KpiCard
+                label="Median Sharpe"
+                value={
+                  (() => {
+                    const s = filtered
+                      .map((i) => i.sharpe_ratio)
+                      .filter((v): v is number => v != null)
+                      .sort((a, b) => a - b);
+                    if (!s.length) return '—';
+                    return s[Math.floor(s.length / 2)].toFixed(2);
+                  })()
+                }
+              />
+              <KpiCard
+                label="With notes"
+                value={String(filtered.filter((i) => getNote(i.id).trim()).length)}
+              />
+              <KpiCard label="Cohort" value={`${cohort.length}/8`} hint="Shift-click table rows" />
+            </div>
+            <ResearchScatter
+              points={filtered
+                .filter((i) =>
+                  scatterMode === 'sharpe_dd'
+                    ? i.sharpe_ratio != null && i.max_drawdown != null
+                    : i.total_return != null && i.number_of_trades != null,
+                )
+                .map((i) => ({
+                  id: String(i.id),
+                  x:
+                    scatterMode === 'sharpe_dd'
+                      ? Math.abs(i.max_drawdown ?? 0) * 100
+                      : i.number_of_trades ?? 0,
+                  y: scatterMode === 'sharpe_dd' ? i.sharpe_ratio ?? 0 : (i.total_return ?? 0) * 100,
+                  label: `#${i.id} ${i.strategy_description.slice(0, 40)}`,
+                  tone: (i.total_return ?? 0) >= 0 ? 'pos' : 'neg',
+                  r: cohort.includes(i.id) ? 2.6 : 1.8,
+                }))}
+              xLabel={scatterMode === 'sharpe_dd' ? '|Max DD| %' : 'Trades'}
+              yLabel={scatterMode === 'sharpe_dd' ? 'Sharpe' : 'Return %'}
+              onSelect={(id) => navigate(`/results/${id}`)}
+            />
+            {library && cohort.length ? (
+              <div style={{ marginTop: '1rem' }}>
+                <div className="btn-row" style={{ marginBottom: '0.5rem' }}>
+                  <h3 style={{ margin: 0, flex: 1 }}>Cohort equity overlay</h3>
+                  <button type="button" className="btn secondary small" onClick={exportCohortPack}>
+                    Download tearsheet pack
+                  </button>
+                  <button type="button" className="btn ghost small" onClick={() => setCohort([])}>
+                    Clear cohort
+                  </button>
+                </div>
+                <CohortOverlay library={library} cohort={cohort} />
+              </div>
+            ) : null}
+            {library == null ? (
+              <p className="hint" style={{ marginTop: '0.75rem' }}>
+                Open the library desk to unlock cohort equity overlays from full saved runs.
+              </p>
+            ) : null}
+          </section>
           <div className="table-wrap panel">
             <table className="data-table">
               <thead>
@@ -290,7 +422,16 @@ export function HistoryPage() {
               </thead>
               <tbody>
                 {filtered.map((item) => (
-                  <tr key={item.id} className={picked.includes(item.id) ? 'picked' : ''}>
+                  <tr
+                    key={item.id}
+                    className={`${picked.includes(item.id) ? 'picked' : ''}${cohort.includes(item.id) ? ' cohort' : ''}`}
+                    onClick={(e) => {
+                      if (e.shiftKey) {
+                        e.preventDefault();
+                        toggleCohort(item.id);
+                      }
+                    }}
+                  >
                     <td>
                       <input
                         type="checkbox"
@@ -310,6 +451,12 @@ export function HistoryPage() {
                               {t}
                             </span>
                           ))}
+                        </div>
+                      ) : null}
+                      {getNote(item.id).trim() ? (
+                        <div className="hint" title={getNote(item.id)}>
+                          Note · {getNote(item.id).slice(0, 60)}
+                          {getNote(item.id).length > 60 ? '…' : ''}
                         </div>
                       ) : null}
                     </td>
@@ -336,6 +483,44 @@ export function HistoryPage() {
             ) : null}
           </div>
         </>
+      ) : null}
+    </div>
+  );
+}
+
+const COHORT_COLORS = ['#4fd6a0', '#6ea8fe', '#f0c14a', '#e57a84', '#c4b5fd', '#94a3b8', '#2dd4bf', '#fb923c'];
+
+function CohortOverlay({ library, cohort }: { library: BacktestResult[]; cohort: number[] }) {
+  const runs = library.filter((r) => cohort.includes(r.id));
+  if (runs.length < 1) return null;
+  const primary = runs[0];
+  const rest = runs.slice(1);
+  // Normalize each curve to start at 10_000 for visual compare
+  const norm = (curve: EquityPoint[]): EquityPoint[] => {
+    const start = curve[0]?.equity || 1;
+    return curve.map((p) => ({
+      ...p,
+      equity: start > 0 ? (p.equity / start) * 10_000 : p.equity,
+    }));
+  };
+  return (
+    <div className="history-cohort">
+      <EquityChart
+        data={norm(primary.equity_curve)}
+        name={`#${primary.id}`}
+        benchmark={rest[0] ? norm(rest[0].equity_curve) : undefined}
+        benchmarkName={rest[0] ? `#${rest[0].id}` : undefined}
+      />
+      {rest.length > 1 ? (
+        <ul className="hint" style={{ marginTop: '0.5rem' }}>
+          {runs.map((r, i) => (
+            <li key={r.id} style={{ color: COHORT_COLORS[i % COHORT_COLORS.length] }}>
+              #{r.id} · {r.strategy_description.slice(0, 48)} ·{' '}
+              {r.metrics.total_return == null ? '—' : pct(r.metrics.total_return)}
+            </li>
+          ))}
+          <li className="hint">First two curves plotted; pack download includes all {runs.length} tearsheets.</li>
+        </ul>
       ) : null}
     </div>
   );

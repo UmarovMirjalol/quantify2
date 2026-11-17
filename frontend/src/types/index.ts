@@ -300,19 +300,32 @@ export interface Percentiles {
   p95: number;
 }
 
+export interface SyntheticPathSample {
+  path: number;
+  total_return: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  trades: number;
+  hold_return: number;
+}
+
 export interface SyntheticReport {
   verdict: 'robust' | 'fragile' | 'history_only' | 'no_edge' | 'thin';
   headline: string;
   paths: number;
   block: number;
+  seed?: number;
   real: { total_return: number; sharpe_ratio: number };
   profitable_share: number;
   real_rank: number;
   median_trades: number;
   returns: Percentiles;
   sharpes: Percentiles;
+  drawdowns?: Percentiles;
   hold_median: number;
   histogram: { edges: number[]; counts: number[] };
+  sharpe_histogram?: { edges: number[]; counts: number[] };
+  path_samples?: SyntheticPathSample[];
 }
 
 export interface OptimizerScore {
@@ -376,7 +389,11 @@ export interface PortfolioResult {
   diversification_ratio: number | null;
   capital_mode?: 'shared' | 'sleeves';
   risk?: {
-    margin?: { avg_invested?: number | null; max_invested?: number | null };
+    margin?: {
+      avg_invested?: number | null;
+      max_invested?: number | null;
+      avg_cash_share?: number | null;
+    };
     tails?: Record<string, { var_pct?: number | null; es_pct?: number | null }>;
     vol_annual?: number | null;
   };

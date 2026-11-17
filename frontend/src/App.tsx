@@ -37,6 +37,9 @@ const DiscoverPage = lazy(() =>
 );
 const FarmPage = lazy(() => import('./pages/FarmPage').then((m) => ({ default: m.FarmPage })));
 const PaperDeskPage = lazy(() => import('./pages/PaperDeskPage').then((m) => ({ default: m.PaperDeskPage })));
+const DataHealthPage = lazy(() =>
+  import('./pages/DataHealthPage').then((m) => ({ default: m.DataHealthPage })),
+);
 const ToolsPage = lazy(() => import('./pages/ToolsPage').then((m) => ({ default: m.ToolsPage })));
 const WhatIfPage = lazy(() => import('./pages/WhatIfPage').then((m) => ({ default: m.WhatIfPage })));
 const CheckPage = lazy(() => import('./pages/CheckPage').then((m) => ({ default: m.CheckPage })));
@@ -238,6 +241,7 @@ export default function App() {
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/farm" element={<FarmPage />} />
           <Route path="/paper" element={<PaperDeskPage />} />
+          <Route path="/data-health" element={<DataHealthPage />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/whatif" element={<WhatIfPage />} />
           <Route path="/check" element={<CheckPage />} />

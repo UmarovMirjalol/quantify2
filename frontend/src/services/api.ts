@@ -239,8 +239,15 @@ export async function getOptimizer(id: number): Promise<OptimizerReport> {
   return request(`/api/backtests/${id}/optimize`);
 }
 
-export async function getSynthetic(id: number): Promise<SyntheticReport> {
-  return request(`/api/backtests/${id}/synthetic`);
+export async function getSynthetic(
+  id: number,
+  params?: { paths?: number; block?: number },
+): Promise<SyntheticReport> {
+  const q = new URLSearchParams();
+  if (params?.paths != null) q.set('paths', String(params.paths));
+  if (params?.block != null) q.set('block', String(params.block));
+  const qs = q.toString();
+  return request(`/api/backtests/${id}/synthetic${qs ? `?${qs}` : ''}`);
 }
 
 export async function runPortfolio(payload: {
@@ -350,6 +357,7 @@ export type DataHealthRow = {
   has_adj_close?: boolean;
   gaps?: number | null;
   max_gap_days?: number | null;
+  median_gap_days?: number | null;
   date_start?: string | null;
   date_end?: string | null;
   error?: string | null;
@@ -461,6 +469,13 @@ export async function getMonteCarlo(
   return request(`/api/backtests/${id}/monte-carlo${qs ? `?${qs}` : ''}`);
 }
 
+export type FactorRollingPoint = {
+  date: string;
+  beta: number | null;
+  alpha_annual: number | null;
+  r2: number | null;
+};
+
 export type FactorReport = {
   benchmark: string;
   beta: number | null;
@@ -468,12 +483,17 @@ export type FactorReport = {
   alpha_annual: number | null;
   r2: number | null;
   n: number;
+  residual_equity?: { date: string; equity: number }[];
+  rolling?: FactorRollingPoint[];
+  aligned_equity?: { date: string; equity: number; benchmark: number }[];
 };
 
 export async function getFactorReport(payload: {
   equity_curve: { date: string; equity: number }[];
   benchmark?: string;
   history?: string;
+  detail?: boolean;
+  rolling_window?: number;
 }): Promise<FactorReport> {
   return request('/api/factors', json(payload));
 }

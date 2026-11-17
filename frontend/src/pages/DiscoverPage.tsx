@@ -1,9 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HistoryPicker } from '../components/HistoryPicker';
+import { KpiCard } from '../components/KpiCard';
+import { ResearchScatter } from '../components/ResearchScatter';
+import { toast } from '../components/ToastHost';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { createForwardTest, fetchMarketData, listDatasets, runBacktest, runDiscovery } from '../services/api';
 import type { DatasetInfo, DiscoveryCandidate, DiscoveryResult } from '../types';
+import { downloadText, toCsv } from '../utils/download';
+import {
+  listDiscoverArchive,
+  removeDiscoverArchive,
+  saveDiscoverArchive,
+  type DiscoverArchiveEntry,
+} from '../utils/scanArchive';
 import { pct } from '../utils/signal';
 
 const QUICK = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'BTC', 'ETH', 'GLD'];
@@ -39,6 +49,11 @@ export function DiscoverPage() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [result, setResult] = useState<DiscoveryResult | null>(null);
+  const [family, setFamily] = useState('all');
+  const [passesOnly, setPassesOnly] = useState(false);
+  const [beatHoldOnly, setBeatHoldOnly] = useState(false);
+  const [archive, setArchive] = useState<DiscoverArchiveEntry[]>(() => listDiscoverArchive());
+  const [focus, setFocus] = useState<string | null>(null);
 
   useEffect(() => {
     listDatasets()
@@ -64,14 +79,58 @@ export function DiscoverPage() {
     setRunning(true);
     setError('');
     setResult(null);
+    setFocus(null);
     try {
-      setResult(await runDiscovery(datasetId));
+      const out = await runDiscovery(datasetId);
+      setResult(out);
+      saveDiscoverArchive({
+        label: `${out.asset} · ${out.verdict}`,
+        asset: out.asset,
+        verdict: out.verdict,
+        candidates: out.candidates.length,
+        result: out,
+      });
+      setArchive(listDiscoverArchive());
+      toast('Discovery finished', {
+        tone: 'ok',
+        body: `${out.candidates.length} candidates · ${out.verdict}`,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed.');
     } finally {
       setRunning(false);
     }
   }
+
+  const families = useMemo(() => {
+    if (!result) return [] as string[];
+    return [...new Set(result.candidates.map((c) => c.family))].sort();
+  }, [result]);
+
+  const filtered = useMemo(() => {
+    if (!result) return [] as DiscoveryCandidate[];
+    return result.candidates.filter((c) => {
+      if (family !== 'all' && c.family !== family) return false;
+      if (passesOnly && !c.passes) return false;
+      if (beatHoldOnly && !c.beats_hold_test) return false;
+      return true;
+    });
+  }, [result, family, passesOnly, beatHoldOnly]);
+
+  const scatter = useMemo(
+    () =>
+      filtered
+        .filter((c) => c.train.sharpe_ratio != null && c.test?.sharpe_ratio != null)
+        .map((c) => ({
+          id: c.label,
+          x: c.train.sharpe_ratio as number,
+          y: c.test!.sharpe_ratio as number,
+          label: c.label,
+          tone: c.passes ? ('pos' as const) : ('muted' as const),
+          r: focus === c.label ? 2.6 : 1.8,
+        })),
+    [filtered, focus],
+  );
 
   async function backtest(c: DiscoveryCandidate) {
     if (!result) return;
@@ -114,13 +173,55 @@ export function DiscoverPage() {
       <div className="page-header">
         <div>
           <p className="eyebrow">Idea search</p>
-          <h1>Discover</h1>
+          <h1>Discover studio</h1>
           <p className="lede">
-            Quantify tries 30 classic rule sets on your asset: trend, breakout, momentum and mean reversion. Each is ranked on
-            the first 70% of history only; the last 30% is never used to pick, just to show what held up.
+            Thirty classic templates ranked on the first 70% only — scatter train vs unseen, family filters, archive, and
+            one-click full tests.
           </p>
         </div>
       </div>
+
+      {archive.length ? (
+        <section className="panel">
+          <h2>Discover archive</h2>
+          <ul className="paper-inbox__list">
+            {archive.slice(0, 6).map((e) => (
+              <li key={e.id}>
+                <div>
+                  <strong>
+                    {e.asset} · {e.verdict}
+                  </strong>
+                  <span className="hint mono">
+                    {e.candidates} candidates · {e.saved_at.slice(0, 16).replace('T', ' ')}
+                  </span>
+                </div>
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="btn primary small"
+                    onClick={() => {
+                      setResult(e.result as DiscoveryResult);
+                      toast('Archive restored', { tone: 'ok' });
+                    }}
+                  >
+                    Reopen
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => {
+                      removeDiscoverArchive(e.id);
+                      setArchive(listDiscoverArchive());
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="panel portfolio-form">
         <label className="field">
@@ -169,9 +270,93 @@ export function DiscoverPage() {
             </p>
           </section>
 
+          <section className="kpi-grid">
+            <KpiCard label="Candidates" value={String(result.candidates.length)} />
+            <KpiCard
+              label="Held up"
+              value={String(result.candidates.filter((c) => c.passes).length)}
+              tone="positive"
+            />
+            <KpiCard
+              label="Beat hold (unseen)"
+              value={String(result.candidates.filter((c) => c.beats_hold_test).length)}
+            />
+            <KpiCard
+              label="P(real edge)"
+              value={
+                result.deflated?.probability == null
+                  ? '—'
+                  : `${Math.round(result.deflated.probability * 100)}%`
+              }
+              hint={result.deflated?.verdict}
+            />
+          </section>
+
+          {scatter.length > 1 ? (
+            <section className="panel">
+              <h2>Train Sharpe vs unseen Sharpe</h2>
+              <p className="hint">Click a dot to highlight the row. Green = held up on the unseen window.</p>
+              <ResearchScatter
+                points={scatter}
+                xLabel="Train Sharpe"
+                yLabel="Unseen Sharpe"
+                onSelect={(id) => setFocus(id)}
+              />
+            </section>
+          ) : null}
+
           {result.candidates.length ? (
             <section className="panel table-wrap">
-              <h2>Top {result.candidates.length} by training Sharpe</h2>
+              <div className="page-header" style={{ marginBottom: '0.65rem' }}>
+                <h2 style={{ margin: 0 }}>
+                  {filtered.length} of {result.candidates.length} by training Sharpe
+                </h2>
+                <div className="btn-row">
+                  <select value={family} onChange={(e) => setFamily(e.target.value)} aria-label="Family">
+                    <option value="all">All families</option>
+                    {families.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className={`chip${passesOnly ? ' active' : ''}`}
+                    onClick={() => setPassesOnly((v) => !v)}
+                  >
+                    Held up
+                  </button>
+                  <button
+                    type="button"
+                    className={`chip${beatHoldOnly ? ' active' : ''}`}
+                    onClick={() => setBeatHoldOnly((v) => !v)}
+                  >
+                    Beat hold
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => {
+                      const csv = toCsv([
+                        ['label', 'family', 'train_sharpe', 'test_sharpe', 'passes', 'beat_hold'],
+                        ...filtered.map((c) => [
+                          c.label,
+                          c.family,
+                          c.train.sharpe_ratio ?? '',
+                          c.test?.sharpe_ratio ?? '',
+                          c.passes ? 1 : 0,
+                          c.beats_hold_test ? 1 : 0,
+                        ]),
+                      ]);
+                      downloadText(`quantify-discover-${Date.now()}.csv`, csv, 'text/csv;charset=utf-8');
+                      toast('Discover CSV ready', { tone: 'ok' });
+                    }}
+                  >
+                    CSV
+                  </button>
+                </div>
+              </div>
               <table className="data-table">
                 <thead>
                   <tr>
@@ -188,8 +373,8 @@ export function DiscoverPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {result.candidates.map((c) => (
-                    <tr key={c.label}>
+                  {filtered.map((c) => (
+                    <tr key={c.label} className={focus === c.label ? 'picked' : ''}>
                       <td title={c.text}>
                         <strong>{c.label}</strong>
                         <div className="hint">{c.text}</div>

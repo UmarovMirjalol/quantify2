@@ -107,7 +107,31 @@ export function tearsheetMarkdown(
   return lines.join('\n');
 }
 
-export function duelTearsheetMarkdown(a: BacktestResult, b: BacktestResult, aWins: number, bWins: number, n: number): string {
+export function duelTearsheetMarkdown(
+  a: BacktestResult,
+  b: BacktestResult,
+  aWins: number,
+  bWins: number,
+  n: number,
+  research?: {
+    researchA?: {
+      stress?: { verdict?: string } | null;
+      walk?: { verdict?: string; hit_rate?: number | null } | null;
+      synth?: { verdict?: string; profitable_share?: number } | null;
+      opt?: { verdict?: string } | null;
+      mc?: { risk_of_ruin?: number; num_simulations?: number } | null;
+    };
+    researchB?: {
+      stress?: { verdict?: string } | null;
+      walk?: { verdict?: string; hit_rate?: number | null } | null;
+      synth?: { verdict?: string; profitable_share?: number } | null;
+      opt?: { verdict?: string } | null;
+      mc?: { risk_of_ruin?: number; num_simulations?: number } | null;
+    };
+  },
+): string {
+  const ra = research?.researchA;
+  const rb = research?.researchB;
   return [
     `# Quantify duel · #${a.id} vs #${b.id}`,
     '',
@@ -122,6 +146,18 @@ export function duelTearsheetMarkdown(a: BacktestResult, b: BacktestResult, aWin
     `## B · #${b.id}`,
     b.strategy_description,
     `Return ${pct(b.metrics.total_return)} · Sharpe ${num(b.metrics.sharpe_ratio)} · DD ${pct(b.metrics.max_drawdown)}`,
+    '',
+    '## Research',
+    '',
+    `| Check | A | B |`,
+    `| --- | --- | --- |`,
+    `| Holdout | ${ra?.stress?.verdict ?? '—'} | ${rb?.stress?.verdict ?? '—'} |`,
+    `| Walk-forward | ${ra?.walk?.verdict ?? '—'} | ${rb?.walk?.verdict ?? '—'} |`,
+    `| Synthetic | ${ra?.synth?.verdict ?? '—'} | ${rb?.synth?.verdict ?? '—'} |`,
+    `| Optimizer | ${ra?.opt?.verdict ?? '—'} | ${rb?.opt?.verdict ?? '—'} |`,
+    `| MC ruin | ${ra?.mc?.num_simulations ? pct(ra.mc.risk_of_ruin) : '—'} | ${
+      rb?.mc?.num_simulations ? pct(rb.mc.risk_of_ruin) : '—'
+    } |`,
     '',
   ].join('\n');
 }

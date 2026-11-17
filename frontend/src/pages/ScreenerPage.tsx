@@ -1,17 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   createForwardTest,
   fetchMarketData,
   listScreenerUniverses,
   runBacktest,
+  runPaperBridge,
   runScreener,
 } from '../services/api';
 import type { ScreenerResult, ScreenerRow, ScreenerUniverse } from '../types';
 import { actionLabel, actionTone, pct, price } from '../utils/signal';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { KpiCard } from '../components/KpiCard';
+import { ResearchScatter } from '../components/ResearchScatter';
+import { toast } from '../components/ToastHost';
+import { WatchlistBar } from '../components/WatchlistBar';
 import type { HistoryRange } from '../components/HistoryPicker';
+import { downloadText, toCsv } from '../utils/download';
+import {
+  listScreenerArchive,
+  removeScreenerArchive,
+  saveScreenerArchive,
+  type ScreenerArchiveEntry,
+} from '../utils/scanArchive';
 
 const DEFAULT_TEXT = 'Buy when the 20-day SMA crosses above the 50-day SMA and sell when it crosses below.';
 
@@ -37,7 +48,11 @@ export function ScreenerPage() {
   const [error, setError] = useState('');
   const [result, setResult] = useState<ScreenerResult | null>(null);
   const [actionableOnly, setActionableOnly] = useState(false);
+  const [beatHoldOnly, setBeatHoldOnly] = useState(false);
+  const [inPosOnly, setInPosOnly] = useState(false);
   const [busyRow, setBusyRow] = useState('');
+  const [archive, setArchive] = useState<ScreenerArchiveEntry[]>(() => listScreenerArchive());
+  const [paperBusy, setPaperBusy] = useState(false);
   const resultsRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -60,12 +75,46 @@ export function ScreenerPage() {
     setRunning(true);
     setError('');
     try {
-      setResult(await runScreener({ strategy_text: text, universe, tickers: custom, history }));
+      const out = await runScreener({ strategy_text: text, universe, tickers: custom, history });
+      setResult(out);
+      const actionable = out.rows.filter((r) => r.action === 'enter' || r.action === 'exit' || r.action === 'add');
+      saveScreenerArchive({
+        label: `${text.slice(0, 48)} · ${universe || 'custom'} · ${history}`,
+        history,
+        scanned: out.scanned,
+        actionable: actionable.length,
+        strategy_text: text,
+        result: out,
+      });
+      setArchive(listScreenerArchive());
+      toast('Screener finished', { tone: 'ok', body: `${out.scanned} scanned · ${actionable.length} actionable` });
       window.setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Scan failed.');
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function sendPaper() {
+    if (!result) return;
+    const list = result.rows
+      .filter((r) => r.action === 'enter' || r.action === 'exit' || r.action === 'add')
+      .map((r) => r.symbol);
+    if (!list.length) {
+      toast('No actionable tickers', { tone: 'warn' });
+      return;
+    }
+    setPaperBusy(true);
+    try {
+      await runPaperBridge({ strategy_text: text, tickers: list, history: '1y', save: true });
+      toast('Sent to paper desk', { tone: 'ok', body: `${list.length} tickers` });
+      navigate('/paper');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Paper handoff failed.');
+      toast('Paper handoff failed', { tone: 'error' });
+    } finally {
+      setPaperBusy(false);
     }
   }
 
@@ -101,23 +150,92 @@ export function ScreenerPage() {
     }
   }
 
-  const rows = (result?.rows ?? []).filter(
-    (r) => !actionableOnly || r.action === 'enter' || r.action === 'exit' || r.action === 'add',
-  );
+  const rows = (result?.rows ?? []).filter((r) => {
+    if (actionableOnly && !(r.action === 'enter' || r.action === 'exit' || r.action === 'add')) return false;
+    if (inPosOnly && !r.in_position) return false;
+    if (
+      beatHoldOnly &&
+      !(r.total_return != null && r.buy_hold_return != null && r.total_return > r.buy_hold_return)
+    ) {
+      return false;
+    }
+    return true;
+  });
   const side = result?.side ?? 'long';
+  const scatterPoints = rows
+    .filter((r) => r.sharpe_ratio != null && r.total_return != null)
+    .map((r) => ({
+      id: r.ticker,
+      x: r.sharpe_ratio as number,
+      y: (r.total_return as number) * 100,
+      label: r.ticker,
+      tone:
+        r.action === 'enter' || r.action === 'add'
+          ? ('pos' as const)
+          : r.action === 'exit'
+            ? ('neg' as const)
+            : ('muted' as const),
+    }));
 
   return (
     <div className="results screener">
       <div className="page-header">
         <div>
           <p className="eyebrow">Live signals</p>
-          <h1>Screener</h1>
+          <h1>Screener studio</h1>
           <p className="lede">
-            One rule set across a whole market. See which tickers signal a {side === 'short' ? 'short' : 'buy'} or an exit
-            on the latest close, which are already in a position, and how the rules did on each over the chosen history.
+            Universe scan with scatter, archive, paper handoff, and forward tracking. Orders would fill at the next open.
           </p>
         </div>
       </div>
+
+      <WatchlistBar
+        onApply={(list) => {
+          setTickers(list.join(', '));
+          toast('Watchlist applied', { tone: 'ok', body: `${list.length} tickers` });
+        }}
+      />
+
+      {archive.length ? (
+        <section className="panel">
+          <h2>Scan archive</h2>
+          <ul className="paper-inbox__list">
+            {archive.slice(0, 6).map((e) => (
+              <li key={e.id}>
+                <div>
+                  <strong>{e.label}</strong>
+                  <span className="hint mono">
+                    {e.scanned} scanned · {e.actionable} actionable · {e.saved_at.slice(0, 16).replace('T', ' ')}
+                  </span>
+                </div>
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="btn primary small"
+                    onClick={() => {
+                      setResult(e.result as ScreenerResult);
+                      setText(e.strategy_text);
+                      toast('Archive restored', { tone: 'ok' });
+                    }}
+                  >
+                    Reopen
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => {
+                      removeScreenerArchive(e.id);
+                      setArchive(listScreenerArchive());
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="panel portfolio-form">
         <label className="field">
@@ -186,15 +304,75 @@ export function ScreenerPage() {
             <KpiCard label="Waiting" value={String(result.counts.wait)} hint={`${result.scanned} scanned`} />
           </section>
 
+          {scatterPoints.length > 1 ? (
+            <section className="panel">
+              <h2>Return vs Sharpe</h2>
+              <p className="hint">Green = enter/add · red = exit · muted = hold/wait.</p>
+              <ResearchScatter points={scatterPoints} xLabel="Sharpe" yLabel="Return %" />
+            </section>
+          ) : null}
+
           <section className="panel table-wrap">
             <div className="screener-head">
               <h2>
                 {rows.length} of {result.rows.length} tickers
               </h2>
-              <label className="inline-check">
-                <input type="checkbox" checked={actionableOnly} onChange={(e) => setActionableOnly(e.target.checked)} />
-                Only tickers with an order for the next open
-              </label>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className={`chip${actionableOnly ? ' active' : ''}`}
+                  onClick={() => setActionableOnly((v) => !v)}
+                >
+                  Actionable
+                </button>
+                <button
+                  type="button"
+                  className={`chip${inPosOnly ? ' active' : ''}`}
+                  onClick={() => setInPosOnly((v) => !v)}
+                >
+                  In position
+                </button>
+                <button
+                  type="button"
+                  className={`chip${beatHoldOnly ? ' active' : ''}`}
+                  onClick={() => setBeatHoldOnly((v) => !v)}
+                >
+                  Beat hold
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  disabled={paperBusy}
+                  onClick={() => void sendPaper()}
+                >
+                  {paperBusy ? '…' : 'Send actionable → Paper'}
+                </button>
+                <Link className="btn ghost small" to="/paper">
+                  Paper desk
+                </Link>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  onClick={() => {
+                    const csv = toCsv([
+                      ['ticker', 'action', 'return', 'hold', 'sharpe', 'max_dd', 'trades'],
+                      ...rows.map((r) => [
+                        r.ticker,
+                        r.action,
+                        r.total_return ?? '',
+                        r.buy_hold_return ?? '',
+                        r.sharpe_ratio ?? '',
+                        r.max_drawdown ?? '',
+                        r.trades,
+                      ]),
+                    ]);
+                    downloadText(`quantify-screener-${Date.now()}.csv`, csv, 'text/csv;charset=utf-8');
+                    toast('Screener CSV ready', { tone: 'ok' });
+                  }}
+                >
+                  CSV
+                </button>
+              </div>
             </div>
             <table className="data-table">
               <thead>

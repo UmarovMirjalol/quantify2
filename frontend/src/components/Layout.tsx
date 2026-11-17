@@ -53,6 +53,11 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
         label: 'Farm',
         icon: 'M3 21h18M5 21V10l7-6 7 6v11M9 21v-6h6v6',
       },
+      {
+        to: '/data-health',
+        label: 'Data health',
+        icon: 'M4 19h16M6 16V9M10 16V5M14 16v-4M18 16V7',
+      },
       { to: '/tools', label: 'Tools', icon: 'M5 3h14v18H5zM8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v6' },
     ],
   },

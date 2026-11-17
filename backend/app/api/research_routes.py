@@ -551,6 +551,8 @@ class FactorRequest(BaseModel):
     equity_curve: list[dict[str, Any]] = Field(default_factory=list, max_length=20000)
     benchmark: str = Field(default="SPY", max_length=20)
     history: str = Field(default="10y", pattern=r"^(1y|5y|10y|max)$")
+    detail: bool = True
+    rolling_window: int = Field(default=63, ge=30, le=252)
 
 
 @router.post("/factors")
@@ -561,7 +563,13 @@ def api_factor_report(body: FactorRequest) -> dict[str, Any]:
         df, _ = fetch_market_frame(body.benchmark, history=body.history)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Benchmark fetch failed: {exc}") from exc
-    return factor_report(body.equity_curve, df, name=body.benchmark.upper())
+    return factor_report(
+        body.equity_curve,
+        df,
+        name=body.benchmark.upper(),
+        detail=body.detail,
+        rolling_window=body.rolling_window,
+    )
 
 
 class MultiFactorRequest(BaseModel):

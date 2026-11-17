@@ -15,7 +15,13 @@ function money(n: number) {
   })}`;
 }
 
-export function TradeTable({ trades, asset }: { trades: Trade[]; asset?: string }) {
+export function TradeTable({
+  trades,
+  asset,
+}: {
+  trades: (Trade & { asset?: string })[];
+  asset?: string;
+}) {
   if (!trades.length) {
     return <div className="empty-state">No trades were executed in this backtest.</div>;
   }
@@ -43,7 +49,7 @@ export function TradeTable({ trades, asset }: { trades: Trade[]; asset?: string 
                 {t.entry_date.slice(0, 10)}
                 <span className="hint"> → {t.exit_date.slice(0, 10)}</span>
               </td>
-              <td className="mono">{asset ?? '—'}</td>
+              <td className="mono">{t.asset ?? asset ?? '—'}</td>
               <td>
                 <span className="tag">{t.side || 'long'}</span>
               </td>

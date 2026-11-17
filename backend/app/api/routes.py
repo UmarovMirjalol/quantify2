@@ -788,12 +788,18 @@ def api_backtest_optimize(
 @router.get("/backtests/{backtest_id}/synthetic")
 def api_backtest_synthetic(
     backtest_id: int,
+    paths: int = Query(default=100, ge=40, le=200),
+    block: int = Query(default=20, ge=5, le=60),
     db: Session = Depends(get_db),
     client_id: str = Depends(_client_id),
 ) -> dict[str, Any]:
-    """Rerun the rules on 100 block-bootstrapped alternate histories of the same asset."""
+    """Rerun the rules on block-bootstrapped alternate histories of the same asset."""
     return _research(
-        backtest_id, db, client_id, "Synthetic markets", lambda r, s, d: run_synthetic(s, d, seed=r.id)
+        backtest_id,
+        db,
+        client_id,
+        "Synthetic markets",
+        lambda r, s, d: run_synthetic(s, d, paths=paths, block=block, seed=r.id),
     )
 
 

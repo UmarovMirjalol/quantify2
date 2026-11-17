@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { EquityChart } from '../components/Charts';
+import { DrawdownChart, EquityChart } from '../components/Charts';
 import { KpiCard } from '../components/KpiCard';
 import { HistoryPicker } from '../components/HistoryPicker';
+import { TradeTable } from '../components/TradeTable';
+import { WatchlistBar } from '../components/WatchlistBar';
+import { toast } from '../components/ToastHost';
 import { fetchMarketData, listDatasets, runDataHealth, runPortfolio, type DataHealthReport } from '../services/api';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import type { DatasetInfo, EquityPoint, PortfolioResult } from '../types';
+import { downloadText, toCsv } from '../utils/download';
 
 const DEFAULT_TEXT =
   'Buy when the 20-day SMA crosses above the 50-day SMA and sell when it crosses below. Risk 1% per trade.';
@@ -28,8 +32,15 @@ function corrColor(v: number): string {
   return v >= 0 ? `rgba(229, 122, 132, ${0.08 + s * 0.6})` : `rgba(79, 214, 160, ${0.08 + s * 0.6})`;
 }
 
-function toPoints(rows: { date: string; equity: number }[]): EquityPoint[] {
-  return rows.map((r) => ({ date: r.date, equity: r.equity, cash: r.equity, drawdown: null }));
+function toPoints(
+  rows: { date: string; equity: number; cash?: number; drawdown?: number | null }[],
+): EquityPoint[] {
+  return rows.map((r) => ({
+    date: r.date,
+    equity: r.equity,
+    cash: r.cash ?? r.equity,
+    drawdown: r.drawdown ?? null,
+  }));
 }
 
 export function PortfolioPage() {
@@ -43,6 +54,12 @@ export function PortfolioPage() {
   const [result, setResult] = useState<PortfolioResult | null>(null);
   const [health, setHealth] = useState<DataHealthReport | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
+  const [capitalMode, setCapitalMode] = useState<'shared' | 'sleeves'>('shared');
+  const [maxPositions, setMaxPositions] = useState(0);
+  const [capital, setCapital] = useState(100000);
+  const [commission, setCommission] = useState(0.001);
+  const [slippage, setSlippage] = useState(0.0005);
+  const [blotterAsset, setBlotterAsset] = useState('all');
 
   useEffect(() => {
     listDatasets()
@@ -92,15 +109,21 @@ export function PortfolioPage() {
     setRunning(true);
     setError('');
     try {
-      setResult(
-        await runPortfolio({
-          strategy_text: text,
-          datasets: picked,
-          initial_capital: 100000,
-          commission: 0.001,
-          slippage: 0.0005,
-        }),
-      );
+      const out = await runPortfolio({
+        strategy_text: text,
+        datasets: picked,
+        initial_capital: capital,
+        commission,
+        slippage,
+        capital_mode: capitalMode,
+        max_positions: maxPositions > 0 ? maxPositions : undefined,
+      });
+      setResult(out);
+      setBlotterAsset('all');
+      toast('Portfolio finished', {
+        tone: 'ok',
+        body: `${out.capital_mode ?? capitalMode} · ${out.trades.length} fills · ${Object.keys(out.asset_results).length} sleeves`,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Portfolio run failed.');
     } finally {
@@ -144,17 +167,83 @@ export function PortfolioPage() {
           <p className="eyebrow">Multi-asset</p>
           <h1>Portfolio</h1>
           <p className="lede">
-            One rule set on a basket of assets with a shared cash pool — signals compete for capital like a real book.
+            Shared cash book or equal sleeves — same rules on a basket, with a real trade blotter and risk margins.
             Compare against equal-weight buy &amp; hold and see how much the names move together.
           </p>
         </div>
       </div>
+
+      <WatchlistBar
+        onApply={(list) => {
+          setTickers(list.join(', '));
+          toast('Watchlist applied', { tone: 'ok', body: `${list.length} tickers` });
+        }}
+      />
 
       <section className="panel portfolio-form">
         <label className="field">
           <span>Strategy</span>
           <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
         </label>
+        <div className="btn-row" style={{ marginBottom: '0.75rem' }}>
+          <button
+            type="button"
+            className={`chip${capitalMode === 'shared' ? ' active' : ''}`}
+            onClick={() => setCapitalMode('shared')}
+          >
+            Shared cash
+          </button>
+          <button
+            type="button"
+            className={`chip${capitalMode === 'sleeves' ? ' active' : ''}`}
+            onClick={() => setCapitalMode('sleeves')}
+          >
+            Equal sleeves
+          </button>
+        </div>
+        <div className="param-grid">
+          <label className="field">
+            <span>Initial capital</span>
+            <input
+              type="number"
+              value={capital}
+              min={1000}
+              step={1000}
+              onChange={(e) => setCapital(Number(e.target.value) || 100000)}
+            />
+          </label>
+          <label className="field">
+            <span>Max open positions</span>
+            <input
+              type="number"
+              value={maxPositions}
+              min={0}
+              max={12}
+              onChange={(e) => setMaxPositions(Math.max(0, Number(e.target.value) || 0))}
+            />
+            <span className="hint">0 = unlimited</span>
+          </label>
+          <label className="field">
+            <span>Commission / side</span>
+            <input
+              type="number"
+              value={commission}
+              step={0.0001}
+              min={0}
+              onChange={(e) => setCommission(Number(e.target.value) || 0)}
+            />
+          </label>
+          <label className="field">
+            <span>Slippage / side</span>
+            <input
+              type="number"
+              value={slippage}
+              step={0.0001}
+              min={0}
+              onChange={(e) => setSlippage(Number(e.target.value) || 0)}
+            />
+          </label>
+        </div>
         <div className="field">
           <span>Assets ({picked.length} picked, up to 12)</span>
           <div className="chip-row">
@@ -198,14 +287,37 @@ export function PortfolioPage() {
         </div>
         {error ? <div className="banner warn">{error}</div> : null}
         {health ? (
-          <p className="hint" style={{ marginTop: '0.65rem' }}>
-            Health: {health.ok} ok · {health.warn} warn · {health.thin} thin · {health.fail} fail
-            {health.rows
-              .filter((r) => r.grade !== 'ok')
-              .slice(0, 6)
-              .map((r) => ` · ${r.ticker}=${r.grade}`)
-              .join('')}
-          </p>
+          <div className="table-wrap" style={{ marginTop: '0.85rem' }}>
+            <p className="hint">
+              Health: {health.ok} ok · {health.warn} warn · {health.thin} thin · {health.fail} fail
+            </p>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Grade</th>
+                  <th>Bars</th>
+                  <th>Gaps</th>
+                  <th>Max gap</th>
+                  <th>Range</th>
+                </tr>
+              </thead>
+              <tbody>
+                {health.rows.slice(0, 24).map((r) => (
+                  <tr key={r.ticker}>
+                    <td className="mono">{r.ticker}</td>
+                    <td className={`mono health-${r.grade}`}>{r.grade}</td>
+                    <td className="mono">{r.bars}</td>
+                    <td className="mono">{r.gaps ?? '—'}</td>
+                    <td className="mono">{r.max_gap_days ?? '—'}</td>
+                    <td className="mono">
+                      {r.date_start && r.date_end ? `${r.date_start} → ${r.date_end}` : r.error ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </section>
 
@@ -217,6 +329,11 @@ export function PortfolioPage() {
             <KpiCard label="Sharpe" value={m.sharpe_ratio == null ? '—' : m.sharpe_ratio.toFixed(2)} />
             <KpiCard label="Max drawdown" value={pct(m.max_drawdown)} tone="negative" />
             <KpiCard label="Trades" value={String(result.trades.length)} />
+            <KpiCard
+              label="Capital mode"
+              value={result.capital_mode === 'sleeves' ? 'Sleeves' : 'Shared'}
+              hint={maxPositions > 0 ? `Max ${maxPositions} open` : 'No position cap'}
+            />
             <KpiCard
               label="Avg correlation"
               value={result.correlation.average == null ? '—' : result.correlation.average.toFixed(2)}
@@ -232,6 +349,12 @@ export function PortfolioPage() {
               value={`${assets.filter(([, a]) => a.pnl > 0).length}/${assets.length}`}
             />
             <KpiCard
+              label="Vol (ann.)"
+              value={
+                result.risk?.vol_annual == null ? '—' : `${(result.risk.vol_annual * 100).toFixed(1)}%`
+              }
+            />
+            <KpiCard
               label="VaR 95% (daily)"
               value={
                 result.risk?.tails?.['0.95']?.var_pct == null
@@ -242,13 +365,15 @@ export function PortfolioPage() {
               tone="negative"
             />
             <KpiCard
-              label="ES 95% (daily)"
+              label="ES 99% (daily)"
               value={
-                result.risk?.tails?.['0.95']?.es_pct == null
-                  ? '—'
-                  : `${result.risk.tails['0.95'].es_pct}%`
+                result.risk?.tails?.['0.99']?.es_pct == null
+                  ? result.risk?.tails?.['0.95']?.es_pct == null
+                    ? '—'
+                    : `${result.risk.tails['0.95'].es_pct}%`
+                  : `${result.risk.tails['0.99'].es_pct}%`
               }
-              hint="Expected shortfall beyond VaR"
+              hint="Expected shortfall"
               tone="negative"
             />
             <KpiCard
@@ -258,19 +383,37 @@ export function PortfolioPage() {
                   ? '—'
                   : `${(result.risk.margin.avg_invested * 100).toFixed(0)}%`
               }
-              hint={result.capital_mode === 'shared' ? 'Shared cash book' : 'Equal sleeves'}
+              hint={
+                result.risk?.margin?.max_invested == null
+                  ? undefined
+                  : `Peak ${(result.risk.margin.max_invested * 100).toFixed(0)}%`
+              }
+            />
+            <KpiCard
+              label="Avg cash"
+              value={
+                result.risk?.margin?.avg_cash_share == null
+                  ? '—'
+                  : `${(result.risk.margin.avg_cash_share * 100).toFixed(0)}%`
+              }
             />
           </section>
 
-          <section className="panel">
-            <h2>Portfolio equity vs equal-weight buy & hold</h2>
-            <EquityChart
-              data={toPoints(result.portfolio_equity_curve)}
-              benchmark={toPoints(result.benchmark_equity_curve)}
-              name="Portfolio"
-              benchmarkName="Equal-weight hold"
-            />
-          </section>
+          <div className="split">
+            <section className="panel">
+              <h2>Portfolio equity vs equal-weight buy & hold</h2>
+              <EquityChart
+                data={toPoints(result.portfolio_equity_curve)}
+                benchmark={toPoints(result.benchmark_equity_curve)}
+                name="Portfolio"
+                benchmarkName="Equal-weight hold"
+              />
+            </section>
+            <section className="panel">
+              <h2>Drawdown</h2>
+              <DrawdownChart data={toPoints(result.portfolio_equity_curve)} />
+            </section>
+          </div>
 
           <div className="split">
             <section className="panel table-wrap">
@@ -346,6 +489,65 @@ export function PortfolioPage() {
               </section>
             ) : null}
           </div>
+
+          <section className="panel">
+            <div className="page-header" style={{ marginBottom: '0.65rem' }}>
+              <div>
+                <h2 style={{ margin: 0 }}>Trade blotter</h2>
+                <p className="hint" style={{ margin: '0.2rem 0 0' }}>
+                  Every fill across the book — filter by sleeve.
+                </p>
+              </div>
+              <div className="btn-row">
+                <select
+                  value={blotterAsset}
+                  onChange={(e) => setBlotterAsset(e.target.value)}
+                  aria-label="Filter blotter by asset"
+                >
+                  <option value="all">All assets</option>
+                  {assets.map(([name]) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  disabled={!result.trades.length}
+                  onClick={() => {
+                    const rows =
+                      blotterAsset === 'all'
+                        ? result.trades
+                        : result.trades.filter((t) => t.asset === blotterAsset);
+                    const csv = toCsv([
+                      ['asset', 'entry', 'exit', 'side', 'pnl', 'return_pct', 'bars'],
+                      ...rows.map((t) => [
+                        t.asset,
+                        t.entry_date,
+                        t.exit_date,
+                        t.side,
+                        t.pnl,
+                        t.return_pct,
+                        t.bars_held,
+                      ]),
+                    ]);
+                    downloadText(`quantify-portfolio-blotter-${Date.now()}.csv`, csv, 'text/csv;charset=utf-8');
+                    toast('Blotter CSV ready', { tone: 'ok' });
+                  }}
+                >
+                  Export CSV
+                </button>
+              </div>
+            </div>
+            <TradeTable
+              trades={
+                blotterAsset === 'all'
+                  ? result.trades
+                  : result.trades.filter((t) => t.asset === blotterAsset)
+              }
+            />
+          </section>
         </>
       ) : null}
     </div>

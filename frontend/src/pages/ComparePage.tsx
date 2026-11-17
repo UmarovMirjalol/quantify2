@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { EquityChart, RollingSharpeChart } from '../components/Charts';
+import {
+  CompareResearchGrid,
+  emptyResearchPack,
+  type ResearchPack,
+} from '../components/CompareResearchGrid';
 import { EquitySparkline } from '../components/EquitySparkline';
-import { getBacktest, getVerdict } from '../services/api';
+import {
+  getBacktest,
+  getMonteCarlo,
+  getOptimizer,
+  getStress,
+  getSynthetic,
+  getVerdict,
+  getWalkForward,
+} from '../services/api';
 import type { BacktestResult, EquityPoint, VerdictReport } from '../types';
 import { downloadText } from '../utils/download';
 import { strategyFingerprint } from '../utils/strategyFingerprint';
@@ -38,13 +51,19 @@ export function ComparePage() {
   const ids = [Number(params.get('a')), Number(params.get('b'))];
   const [runs, setRuns] = useState<BacktestResult[] | null>(null);
   const [verdicts, setVerdicts] = useState<(VerdictReport | null)[]>([null, null]);
+  const [packs, setPacks] = useState<[ResearchPack, ResearchPack]>([
+    emptyResearchPack(),
+    emptyResearchPack(),
+  ]);
+  const [researchBusy, setResearchBusy] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!ids.every((id) => Number.isFinite(id) && id > 0)) {
-      setError('Pick two runs on the Results page to compare.');
+      setError('Pick two runs on the Results or History page to compare.');
       return;
     }
+    setPacks([emptyResearchPack(), emptyResearchPack()]);
     Promise.all(ids.map((id) => getBacktest(id)))
       .then((loaded) => {
         setRuns(loaded);
@@ -54,6 +73,23 @@ export function ComparePage() {
             .then((v) => setVerdicts((prev) => prev.map((old, j) => (j === i ? v : old))))
             .catch(() => undefined);
         });
+        setResearchBusy(true);
+        Promise.all(
+          ids.map(async (id, i) => {
+            const [stress, walk, synth, opt, mc] = await Promise.all([
+              getStress(id).catch(() => null),
+              getWalkForward(id).catch(() => null),
+              getSynthetic(id).catch(() => null),
+              getOptimizer(id).catch(() => null),
+              loaded[i].monte_carlo && loaded[i].monte_carlo!.num_simulations > 0
+                ? Promise.resolve(loaded[i].monte_carlo!)
+                : getMonteCarlo(id).catch(() => null),
+            ]);
+            return { stress, walk, synth, opt, mc } satisfies ResearchPack;
+          }),
+        )
+          .then((next) => setPacks([next[0], next[1]]))
+          .finally(() => setResearchBusy(false));
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,7 +164,10 @@ export function ComparePage() {
             onClick={() =>
               downloadText(
                 `quantify-duel-${a.id}-vs-${b.id}.md`,
-                duelTearsheetMarkdown(a, b, aWins, bWins, rows.length),
+                duelTearsheetMarkdown(a, b, aWins, bWins, rows.length, {
+                  researchA: packs[0],
+                  researchB: packs[1],
+                }),
                 'text/markdown;charset=utf-8',
               )
             }
@@ -182,6 +221,14 @@ export function ComparePage() {
       ) : (
         <div className="banner warn">Different strategy DNA — rules or risk settings diverge.</div>
       )}
+
+      <CompareResearchGrid
+        aId={a.id}
+        bId={b.id}
+        a={packs[0]}
+        b={packs[1]}
+        loading={researchBusy}
+      />
 
       <section className="panel">
         <h2>Equity, both rebased to the same start</h2>

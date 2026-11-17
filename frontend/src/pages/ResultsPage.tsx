@@ -13,10 +13,11 @@ import { MonteCarloLab } from '../components/MonteCarloLab';
 import { ExportButtons } from '../components/ExportButtons';
 import { managementSummary } from '../components/PositionManagement';
 import { KpiCard } from '../components/KpiCard';
-import { MarketExposure } from '../components/MarketExposure';
+import { FactorAlphaLab } from '../components/FactorAlphaLab';
+import { Optimizer } from '../components/Optimizer';
 import { ParamSurfaceLab } from '../components/ParamSurfaceLab';
 import { SyntheticMarkets } from '../components/SyntheticMarkets';
-import { RegimeSplit } from '../components/RegimeSplit';
+import { RegimeLab } from '../components/RegimeLab';
 import { Robustness } from '../components/Robustness';
 import { StressAudit } from '../components/StressAudit';
 import { TradeTable } from '../components/TradeTable';
@@ -33,7 +34,6 @@ import {
 } from '../services/api';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
-import { classifyRegimes } from '../utils/regimes';
 import { WalkForward } from '../components/WalkForward';
 import { downloadText, toCsv } from '../utils/download';
 import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStrategy';
@@ -82,9 +82,10 @@ type Tab =
   | 'robust'
   | 'synthetic'
   | 'lab'
+  | 'optimize'
   | 'alpha';
 
-const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust', 'synthetic', 'lab'];
+const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust', 'synthetic', 'lab', 'optimize'];
 
 export function reportUrl(token: string): string {
   return `${window.location.origin}/r/${token}`;
@@ -127,6 +128,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'robust', label: 'Robustness' },
   { id: 'synthetic', label: 'Synthetic markets' },
   { id: 'lab', label: 'Lab' },
+  { id: 'optimize', label: 'Optimizer' },
   { id: 'alpha', label: 'Alpha & beta' },
 ];
 
@@ -134,7 +136,6 @@ const TAB_IDS = new Set(TABS.map((t) => t.id));
 
 function tabFromHash(): Tab {
   const raw = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
-  if (raw === 'optimize') return 'lab';
   return TAB_IDS.has(raw as Tab) ? (raw as Tab) : 'overview';
 }
 
@@ -145,17 +146,14 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState('');
   const isCustom = Boolean(result.strategy.custom_code);
-  const tabs = TABS.filter((t) => !(readOnly && OWNER_ONLY.includes(t.id)));
+  const tabs = TABS.filter(
+    (t) => !(readOnly && OWNER_ONLY.includes(t.id)) && !(isCustom && t.id === 'optimize'),
+  );
   const isShort = result.strategy.side === 'short';
   const m = result.metrics;
   const strategyJson = useMemo(
     () => JSON.stringify(result.strategy, null, 2),
     [result.strategy],
-  );
-
-  const regimes = useMemo(
-    () => result.regimes ?? classifyRegimes(result.price_series, result.trades),
-    [result],
   );
 
   const buyHold = useMemo(
@@ -1084,7 +1082,7 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
 
       {tab === 'regimes' ? (
         <div className="tab-pane" key="regimes">
-          <RegimeSplit report={regimes} />
+          <RegimeLab result={result} />
         </div>
       ) : null}
 
@@ -1112,68 +1110,22 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
         </div>
       ) : null}
 
+      {tab === 'optimize' ? (
+        <div className="tab-pane" key="optimize">
+          <Optimizer result={result} />
+        </div>
+      ) : null}
+
       {tab === 'alpha' ? (
         <div className="tab-pane" key="alpha">
-          <label className="field" style={{ maxWidth: '14rem', marginBottom: '0.75rem' }}>
-            <span>Benchmark</span>
-            <select value={factorBench} onChange={(e) => setFactorBench(e.target.value)}>
-              <option value="SPY">SPY · S&amp;P 500</option>
-              <option value="QQQ">QQQ · Nasdaq 100</option>
-              <option value="IWM">IWM · Russell 2000</option>
-              <option value="TLT">TLT · long Treasuries</option>
-              <option value="GLD">GLD · gold</option>
-              <option value="BTC-USD">BTC-USD</option>
-            </select>
-          </label>
-          <section className="kpi-grid">
-            <KpiCard
-              label={`Beta vs ${factors?.benchmark ?? factorBench}`}
-              value={factors?.beta == null ? '—' : num(factors.beta)}
-              hint="OLS on daily equity vs benchmark returns"
-            />
-            <KpiCard
-              label="Alpha (ann.)"
-              value={factors?.alpha_annual == null ? '—' : pct(factors.alpha_annual)}
-              tone={toneFor(factors?.alpha_annual)}
-              hint="Intercept × 252"
-            />
-            <KpiCard label="R²" value={factors?.r2 == null ? '—' : num(factors.r2)} />
-            <KpiCard label="Obs" value={factors?.n == null ? '—' : String(factors.n)} />
-          </section>
-          {factorsErr ? <div className="banner error">{factorsErr}</div> : null}
-          {multiFactors?.rows?.length ? (
-            <section className="panel table-wrap" style={{ marginBottom: '1rem' }}>
-              <h2>Multi-benchmark grid</h2>
-              <p className="hint">
-                Best fit by R²: <span className="mono">{multiFactors.best_fit ?? '—'}</span>
-              </p>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Benchmark</th>
-                    <th>Beta</th>
-                    <th>Alpha (ann.)</th>
-                    <th>R²</th>
-                    <th>n</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {multiFactors.rows.map((r) => (
-                    <tr key={r.benchmark}>
-                      <td className="mono">{r.benchmark}</td>
-                      <td className="mono">{r.beta == null ? '—' : num(r.beta)}</td>
-                      <td className={(r.alpha_annual ?? 0) >= 0 ? 'pos' : 'neg'}>
-                        {r.alpha_annual == null ? '—' : pct(r.alpha_annual)}
-                      </td>
-                      <td className="mono">{r.r2 == null ? '—' : num(r.r2)}</td>
-                      <td className="mono">{r.n}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ) : null}
-          <MarketExposure report={result.market} />
+          <FactorAlphaLab
+            result={result}
+            factors={factors}
+            multiFactors={multiFactors}
+            factorsErr={factorsErr}
+            factorBench={factorBench}
+            onBenchChange={setFactorBench}
+          />
         </div>
       ) : null}
 
