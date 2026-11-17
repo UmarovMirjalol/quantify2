@@ -8,6 +8,7 @@ import type {
   ForwardSummary,
   HealthStatus,
   LiveSignal,
+  MonteCarloResult,
   ScreenerResult,
   ScreenerUniverse,
   LLMStatus,
@@ -312,6 +313,8 @@ export type FarmJob = {
   result?: FarmResult | null;
   error?: string | null;
   meta?: Record<string, unknown>;
+  started_at?: number | string | null;
+  finished_at?: number | string | null;
 };
 
 export async function startFarmJob(payload: {
@@ -331,6 +334,11 @@ export async function getFarmJob(id: string): Promise<FarmJob> {
 
 export async function cancelFarmJob(id: string): Promise<FarmJob> {
   return request(`/api/farm/jobs/${id}/cancel`, { method: 'POST' });
+}
+
+export async function listFarmJobs(): Promise<FarmJob[]> {
+  const data = await request<{ jobs: FarmJob[] }>('/api/farm/jobs');
+  return data.jobs ?? [];
 }
 
 export type DataHealthRow = {
@@ -386,15 +394,27 @@ export async function getBenchmarkSuite(force = false): Promise<BenchmarkSuite> 
   return request(`/api/benchmark-suite${force ? '?force=true' : ''}`);
 }
 
+export type PaperSignal = {
+  ticker: string;
+  action: string;
+  in_position: boolean;
+  last_close: number;
+  as_of: string;
+  source?: string;
+  side?: string;
+  entry_price?: number | null;
+  unrealized_pct?: number | null;
+  order_for_next_open?: string | null;
+  metrics_snapshot?: {
+    sharpe_ratio?: number | null;
+    total_return?: number | null;
+    trades?: number | null;
+  };
+};
+
 export type PaperResult = {
-  signals: {
-    ticker: string;
-    action: string;
-    in_position: boolean;
-    last_close: number;
-    as_of: string;
-  }[];
-  actionable: unknown[];
+  signals: PaperSignal[];
+  actionable: PaperSignal[];
   errors: { ticker: string; error: string }[];
   webhook?: { ok?: boolean; status?: number; error?: string } | null;
 };
@@ -417,8 +437,8 @@ export type PaperJournalItem = {
   signal_count: number;
   actionable_count: number;
   error_count: number;
-  signals: PaperResult['signals'];
-  actionable: unknown[];
+  signals: PaperSignal[];
+  actionable: PaperSignal[];
   errors: { ticker: string; error: string }[];
   webhook_url?: string | null;
   webhook?: PaperResult['webhook'];
@@ -427,6 +447,18 @@ export type PaperJournalItem = {
 
 export async function listPaperJournal(limit = 30): Promise<{ items: PaperJournalItem[]; count: number }> {
   return request(`/api/paper/journal?limit=${limit}`);
+}
+
+export async function getMonteCarlo(
+  id: number,
+  params?: { sims?: number; ruin?: number; seed?: number },
+): Promise<MonteCarloResult> {
+  const q = new URLSearchParams();
+  if (params?.sims != null) q.set('sims', String(params.sims));
+  if (params?.ruin != null) q.set('ruin', String(params.ruin));
+  if (params?.seed != null) q.set('seed', String(params.seed));
+  const qs = q.toString();
+  return request(`/api/backtests/${id}/monte-carlo${qs ? `?${qs}` : ''}`);
 }
 
 export type FactorReport = {
@@ -444,6 +476,22 @@ export async function getFactorReport(payload: {
   history?: string;
 }): Promise<FactorReport> {
   return request('/api/factors', json(payload));
+}
+
+export type MultiFactorReport = {
+  benchmarks: string[];
+  rows: FactorReport[];
+  best_fit?: string | null;
+  count: number;
+  errors?: { benchmark: string; error: string }[];
+};
+
+export async function getMultiFactorReport(payload: {
+  equity_curve: { date: string; equity: number }[];
+  benchmarks?: string[];
+  history?: string;
+}): Promise<MultiFactorReport> {
+  return request('/api/factors/multi', json(payload));
 }
 
 export async function getVerdict(id: number): Promise<VerdictReport> {

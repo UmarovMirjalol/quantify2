@@ -32,7 +32,7 @@ from app.research.farm_jobs import (
     start_playbook_farm,
     start_strategy_farm,
 )
-from app.research.factors import factor_report
+from app.research.factors import DEFAULT_BENCHMARKS, factor_report, multi_factor_report
 from app.research.forward import WARMUP_HISTORY, evaluate_forward
 from app.research.leaderboard import leaderboard
 from app.research.paper import paper_bridge
@@ -385,12 +385,13 @@ async def api_farm_job_start(body: FarmRequest) -> dict[str, Any]:
                 max_rules=body.max_rules,
             )
         else:
-            strategy, _ = await _strategy(body.strategy_text, body.strategy)
+            strategy, text = await _strategy(body.strategy_text, body.strategy)
             raw = start_strategy_farm(
                 strategy,
                 universe=body.universe,
                 tickers=body.tickers,
                 history=body.history,
+                strategy_text=text or body.strategy_text,
             )
         job = get_farm_job(raw["id"])
         return public_farm_job(job) if job else raw
@@ -561,3 +562,29 @@ def api_factor_report(body: FactorRequest) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Benchmark fetch failed: {exc}") from exc
     return factor_report(body.equity_curve, df, name=body.benchmark.upper())
+
+
+class MultiFactorRequest(BaseModel):
+    equity_curve: list[dict[str, Any]] = Field(default_factory=list, max_length=20000)
+    benchmarks: list[str] = Field(default_factory=list, max_length=8)
+    history: str = Field(default="10y", pattern=r"^(1y|5y|10y|max)$")
+
+
+@router.post("/factors/multi")
+def api_multi_factor_report(body: MultiFactorRequest) -> dict[str, Any]:
+    if len(body.equity_curve) < 30:
+        raise HTTPException(status_code=422, detail="Need a longer equity curve.")
+    names = [b.strip().upper() for b in (body.benchmarks or list(DEFAULT_BENCHMARKS)) if b.strip()][:8]
+    if not names:
+        names = list(DEFAULT_BENCHMARKS)
+    frames: dict[str, Any] = {}
+    errors: list[dict[str, str]] = []
+    for name in names:
+        try:
+            df, _ = fetch_market_frame(name, history=body.history)
+            frames[name] = df
+        except Exception as exc:  # noqa: BLE001
+            errors.append({"benchmark": name, "error": str(exc)[:160]})
+    if not frames:
+        raise HTTPException(status_code=502, detail="Could not fetch any benchmarks.")
+    return {**multi_factor_report(body.equity_curve, frames), "errors": errors}

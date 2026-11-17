@@ -21,7 +21,13 @@ import {
 } from '../services/api';
 import type { ScreenerUniverse } from '../types';
 import { toast } from '../components/ToastHost';
+import { WatchlistBar } from '../components/WatchlistBar';
+import { FarmSweepLibrary } from '../components/FarmSweepLibrary';
+import { logActivity } from '../utils/activityLog';
+import { downloadText, toCsv } from '../utils/download';
+import { saveFarmArchive } from '../utils/farmArchive';
 import { pct } from '../utils/signal';
+import { toggleWatch } from '../utils/watchlist';
 
 const DEFAULT =
   'Buy when the 20-day SMA crosses above the 50-day SMA and sell when it crosses below.';
@@ -99,10 +105,15 @@ export function FarmPage() {
               setFarm(j.result);
               setRunning(false);
               stopPoll();
+              saveFarmArchive(j, j.result);
               toast('Farm finished', {
                 tone: 'ok',
                 body: `${j.result.ok ?? j.ok_count ?? 0} ok · ${j.result.scanned ?? j.done} scanned`,
               });
+              logActivity(
+                `Farm done · ${j.result.ok ?? j.ok_count ?? 0}/${j.result.scanned ?? j.done}`,
+                '/farm',
+              );
             } else if (j.status === 'cancelled' || j.status === 'error') {
               setError(j.error || (j.status === 'cancelled' ? 'Farm cancelled.' : 'Farm failed.'));
               setRunning(false);
@@ -185,6 +196,55 @@ export function FarmPage() {
       </div>
 
       <ActivityPulse />
+      <WatchlistBar
+        onApply={(list) => {
+          setTickers(list.join(', '));
+          setPaperTickers(list.join(', '));
+          toast('Watchlist applied', { tone: 'ok', body: `${list.length} tickers` });
+        }}
+      />
+
+      <FarmSweepLibrary
+        activeJobId={job?.id}
+        onOpenResult={(result) => {
+          setFarm(result);
+          setError('');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onResumeJob={(j) => {
+          setJob(j);
+          setRunning(j.status === 'running' || j.status === 'queued');
+          stopPoll();
+          if (j.status === 'running' || j.status === 'queued') {
+            pollRef.current = window.setInterval(() => {
+              void getFarmJob(j.id)
+                .then((next) => {
+                  setJob(next);
+                  if (next.status === 'done' && next.result) {
+                    setFarm(next.result);
+                    setRunning(false);
+                    stopPoll();
+                    saveFarmArchive(next, next.result);
+                    toast('Farm finished', { tone: 'ok' });
+                  } else if (next.status === 'cancelled' || next.status === 'error') {
+                    setError(next.error || next.status);
+                    setRunning(false);
+                    stopPoll();
+                  }
+                })
+                .catch((err: Error) => {
+                  setError(err.message);
+                  setRunning(false);
+                  stopPoll();
+                });
+            }, 700);
+          } else if (j.result) {
+            setFarm(j.result);
+            setRunning(false);
+          }
+          toast('Attached to job', { tone: 'info', body: j.id.slice(0, 8) });
+        }}
+      />
 
       {!farm && !running ? (
         <section className="farm-empty">
@@ -307,16 +367,95 @@ export function FarmPage() {
       ) : null}
 
       {farm ? (
-        <section className="kpi-grid">
-          <KpiCard label="Scanned" value={String(farm.scanned)} />
-          <KpiCard label="OK" value={String(farm.ok)} />
-          <KpiCard
-            label="Beat buy & hold"
-            value={farm.beat_hold_share == null ? '—' : pct(farm.beat_hold_share)}
-            hint={farm.beat_hold != null ? `${farm.beat_hold} names` : undefined}
-          />
-          <KpiCard label="Mode" value={farm.mode} />
-        </section>
+        <>
+          <section className="kpi-grid">
+            <KpiCard label="Scanned" value={String(farm.scanned)} />
+            <KpiCard label="OK" value={String(farm.ok)} />
+            <KpiCard
+              label="Beat buy & hold"
+              value={farm.beat_hold_share == null ? '—' : pct(farm.beat_hold_share)}
+              hint={farm.beat_hold != null ? `${farm.beat_hold} names` : undefined}
+            />
+            <KpiCard label="Mode" value={farm.mode} />
+          </section>
+          <section className="farm-next panel">
+            <h2>What next</h2>
+            <div className="btn-row">
+              <Link className="btn primary" to="/paper">
+                Paper the top names
+              </Link>
+              <Link className="btn secondary" to="/portfolio">
+                Build a portfolio sleeve
+              </Link>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  const top = (farm.top ?? farm.rows ?? []).slice(0, 8).map((r) => r.ticker);
+                  if (top.length) {
+                    setPaperTickers(top.join(', '));
+                    toast('Loaded top tickers into paper bridge', { tone: 'ok' });
+                  }
+                }}
+              >
+                Load top into paper
+              </button>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  const list = farm.rows ?? farm.top ?? [];
+                  if (!list.length) return;
+                  const csv = toCsv([
+                    ['ticker', 'title', 'sharpe', 'return', 'alpha_vs_hold', 'max_dd', 'trades', 'action'],
+                    ...list.map((r) => [
+                      r.ticker,
+                      r.title ?? '',
+                      r.sharpe_ratio,
+                      r.total_return,
+                      r.alpha_vs_hold,
+                      r.max_drawdown,
+                      r.trades,
+                      r.action ?? '',
+                    ]),
+                  ]);
+                  downloadText(`quantify-farm-${Date.now()}.csv`, csv, 'text/csv;charset=utf-8');
+                  toast('Farm CSV downloaded', { tone: 'ok', body: `${list.length} rows` });
+                }}
+              >
+                Export CSV
+              </button>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  const list = (farm.top ?? farm.rows ?? []).slice(0, 25);
+                  if (!list.length) return;
+                  const lines = [
+                    `# Quantify farm summary`,
+                    ``,
+                    `Mode: ${farm.mode} · scanned ${farm.scanned} · ok ${farm.ok}`,
+                    `Beat hold: ${farm.beat_hold_share == null ? '—' : pct(farm.beat_hold_share)}`,
+                    ``,
+                    `| Ticker | Sharpe | Return | vs hold |`,
+                    `| --- | --- | --- | --- |`,
+                    ...list.map(
+                      (r) =>
+                        `| ${r.ticker} | ${r.sharpe_ratio?.toFixed(2) ?? '—'} | ${
+                          r.total_return == null ? '—' : pct(r.total_return)
+                        } | ${r.alpha_vs_hold == null ? '—' : pct(r.alpha_vs_hold)} |`,
+                    ),
+                    ``,
+                  ];
+                  downloadText(`quantify-farm-${Date.now()}.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
+                  toast('Farm markdown ready', { tone: 'ok' });
+                }}
+              >
+                Export MD
+              </button>
+            </div>
+          </section>
+        </>
       ) : null}
 
       {scatterRows.length >= 2 ? (
@@ -330,13 +469,14 @@ export function FarmPage() {
             onPick={(row) => {
               setPinned(row);
               setTickers((t) => (t.includes(row.ticker) ? t : `${t}${t.trim() ? ', ' : ''}${row.ticker}`));
-              toast(`Pinned ${row.ticker}`, { tone: 'info', body: row.title });
+              toggleWatch(row.ticker);
+              toast(`Watching ${row.ticker}`, { tone: 'ok', body: row.title });
             }}
           />
           {pinned ? (
             <p className="hint">
               Pinned <span className="mono">{pinned.ticker}</span>
-              {pinned.title ? ` · ${pinned.title}` : ''} —{' '}
+              {pinned.title ? ` · ${pinned.title}` : ''} — added to watchlist ·{' '}
               <Link to="/app">open workspace →</Link>
             </p>
           ) : null}

@@ -17,3 +17,5 @@ def test_walk_forward_refits_without_reading_the_test_slice(sample_df):
     assert len(report["folds"]) == 4
     assert report["folds"][0]["end_date"] <= report["folds"][1]["start_date"]
     assert all(fold["parameter"] for fold in report["folds"])
+    assert "equity" in report["folds"][0]
+    assert "max_drawdown" in report["folds"][0]

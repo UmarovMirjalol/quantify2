@@ -16,7 +16,12 @@ function num(v: number | null | undefined, digits = 2): string {
 /** Investor-ready Markdown tearsheet from a single backtest. */
 export function tearsheetMarkdown(
   result: BacktestResult,
-  opts?: { buyHold?: Hold; vsHold?: number | null; factors?: FactorReport | null },
+  opts?: {
+    buyHold?: Hold;
+    vsHold?: number | null;
+    factors?: FactorReport | null;
+    multiFactors?: FactorReport[] | null;
+  },
 ): string {
   const m = result.metrics;
   const risk = result.risk;
@@ -71,15 +76,20 @@ export function tearsheetMarkdown(
     lines.push('');
   }
 
-  if (opts?.factors?.beta != null) {
-    lines.push(
-      '## Factor exposure',
-      '',
-      `| Benchmark | Beta | Alpha (ann.) | R² |`,
-      `| --- | --- | --- | --- |`,
-      `| ${opts.factors.benchmark} | ${num(opts.factors.beta)} | ${pct(opts.factors.alpha_annual)} | ${num(opts.factors.r2)} |`,
-      '',
-    );
+  const factorRows =
+    opts?.multiFactors?.length
+      ? opts.multiFactors
+      : opts?.factors?.beta != null
+        ? [opts.factors]
+        : [];
+  if (factorRows.length) {
+    lines.push('## Factor exposure', '', `| Benchmark | Beta | Alpha (ann.) | R² |`, `| --- | --- | --- | --- |`);
+    for (const f of factorRows) {
+      lines.push(
+        `| ${f.benchmark} | ${num(f.beta)} | ${pct(f.alpha_annual)} | ${num(f.r2)} |`,
+      );
+    }
+    lines.push('');
   }
 
   if (result.market) {

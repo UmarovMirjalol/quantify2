@@ -85,6 +85,7 @@ def start_strategy_farm(
     universe: str | None = None,
     tickers: list[str] | None = None,
     history: str = "5y",
+    strategy_text: str | None = None,
 ) -> dict[str, Any]:
     symbols = _symbols(universe, tickers or [])
     if not symbols:
@@ -92,7 +93,13 @@ def start_strategy_farm(
     return _spawn(
         mode="strategy_x_tickers",
         total=len(symbols),
-        meta={"universe": universe, "history": history, "tickers": symbols},
+        meta={
+            "universe": universe,
+            "history": history,
+            "tickers": symbols,
+            "strategy_text": (strategy_text or "")[:240] or None,
+            "asset": strategy.asset,
+        },
         runner=lambda job_id, cancel: _run_strategy(job_id, cancel, strategy, symbols, history),
     )
 

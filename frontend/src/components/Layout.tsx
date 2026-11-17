@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useDensity } from '../hooks/useDensity';
 import { CommandHint, CommandPalette } from './CommandPalette';
+import { ActivityFeed } from './ActivityFeed';
+import { FavoritesRail } from './FavoritesRail';
 import { ToastHost } from './ToastHost';
 import { getAccount } from '../services/session';
 import type { HealthStatus } from '../types';
@@ -85,6 +88,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
   const isLanding = location.pathname === '/';
   const llmOn = Boolean(health?.llm_enabled);
   const [username, setUsername] = useState(() => getAccount()?.username ?? null);
+  const { density, toggle: toggleDensity } = useDensity();
 
   useEffect(() => {
     const sync = () => setUsername(getAccount()?.username ?? null);
@@ -140,6 +144,8 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
         <div className="sidebar-cmd">
           <CommandHint />
         </div>
+        <FavoritesRail />
+        <ActivityFeed />
 
         <nav className="nav" onClick={() => setOpen(false)}>
           {NAV.map((group) => (
@@ -156,6 +162,9 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
         </nav>
 
         <div className="sidebar-foot">
+          <button type="button" className="density-toggle" onClick={toggleDensity} title="Toggle compact density">
+            Density · {density === 'compact' ? 'compact' : 'comfy'}
+          </button>
           <div className="mode-pill" data-llm={llmOn ? 'true' : 'false'}>
             <span className="mode-dot" />
             {llmOn ? `LLM · ${health?.llm_model}` : 'Built-in parser'}

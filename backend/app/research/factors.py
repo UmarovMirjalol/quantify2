@@ -47,3 +47,24 @@ def factor_report(strategy_equity: list[dict[str, Any]], benchmark: pd.DataFrame
     y, x = align_returns(strategy_equity, benchmark)
     stats = ols_beta_alpha(y, x)
     return {"benchmark": name, **stats}
+
+
+DEFAULT_BENCHMARKS = ("SPY", "QQQ", "IWM", "TLT", "GLD")
+
+
+def multi_factor_report(
+    strategy_equity: list[dict[str, Any]],
+    frames: dict[str, pd.DataFrame],
+) -> dict[str, Any]:
+    """OLS beta/alpha vs several benchmarks for a tearsheet grid."""
+    rows: list[dict[str, Any]] = []
+    for name, df in frames.items():
+        rows.append(factor_report(strategy_equity, df, name=name.upper()))
+    rows.sort(key=lambda r: (-(r.get("r2") or -1), r.get("benchmark") or ""))
+    best = next((r for r in rows if r.get("r2") is not None), None)
+    return {
+        "benchmarks": list(frames.keys()),
+        "rows": rows,
+        "best_fit": None if best is None else best.get("benchmark"),
+        "count": len(rows),
+    }

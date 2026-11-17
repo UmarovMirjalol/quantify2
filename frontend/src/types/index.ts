@@ -124,6 +124,10 @@ export interface BarsMeta {
   resampled: boolean;
   warning?: string | null;
   result_bars?: number;
+  timeframe?: string;
+  session?: string;
+  session_bars?: number;
+  session_filtered?: boolean;
 }
 
 export interface MonteCarloResult {
@@ -190,8 +194,10 @@ export interface WalkForwardFold {
   test_return: number | null;
   test_sharpe: number | null;
   test_trades: number;
+  max_drawdown?: number | null;
   start_date: string;
   end_date: string;
+  equity?: { date: string; equity: number }[];
 }
 
 export interface WalkForwardReport {
@@ -443,6 +449,8 @@ export interface BacktestSummary {
   max_drawdown: number | null;
   final_capital: number | null;
   number_of_trades: number | null;
+  /** Downsampled equity for history filmstrip. */
+  equity_spark?: number[];
 }
 
 export interface DatasetInfo {

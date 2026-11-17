@@ -42,14 +42,16 @@ def run_walk_forward(strategy: StrategySpec, data: pd.DataFrame) -> dict[str, An
         test = data.iloc[k * size : end]
         chosen, label, value = _pick(strategy, train, knob)
         try:
-            tested = _summarize(chosen, test, with_equity=False)
+            tested = _summarize(chosen, test, with_equity=True)
         except (BacktestError, ValueError):
             tested = {
                 "total_return": None,
                 "sharpe_ratio": None,
+                "max_drawdown": None,
                 "number_of_trades": 0,
                 "start_date": "",
                 "end_date": "",
+                "equity": [],
             }
         folds.append(
             {
@@ -59,8 +61,10 @@ def run_walk_forward(strategy: StrategySpec, data: pd.DataFrame) -> dict[str, An
                 "test_return": tested["total_return"],
                 "test_sharpe": tested["sharpe_ratio"],
                 "test_trades": tested["number_of_trades"],
+                "max_drawdown": tested.get("max_drawdown"),
                 "start_date": tested["start_date"],
                 "end_date": tested["end_date"],
+                "equity": tested.get("equity") or [],
             }
         )
 

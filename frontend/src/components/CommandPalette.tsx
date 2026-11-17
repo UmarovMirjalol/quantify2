@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { listFavorites } from '../utils/favorites';
+import { listRecentRuns } from '../utils/recentRuns';
 
 type Cmd = { id: string; label: string; hint: string; to: string; group: string };
 
@@ -18,6 +20,7 @@ const COMMANDS: Cmd[] = [
   { id: 'research', label: 'Research study', hint: 'Survival evidence', to: '/research', group: 'Learn' },
   { id: 'about', label: 'About the engine', hint: 'Principles', to: '/about', group: 'Learn' },
   { id: 'home', label: 'Landing', hint: 'Marketing + proof', to: '/', group: 'Learn' },
+  { id: 'settings', label: 'Settings', hint: 'Secrets & density', to: '/settings', group: 'You' },
 ];
 
 function isMac() {
@@ -42,16 +45,31 @@ export function CommandPalette() {
   }, []);
 
   const filtered = useMemo(() => {
+    const recent: Cmd[] = listRecentRuns().slice(0, 5).map((r) => ({
+      id: `recent-${r.id}`,
+      label: `#${r.id} ${r.title.slice(0, 42)}`,
+      hint: 'Recent',
+      to: `/results/${r.id}`,
+      group: 'Recent',
+    }));
+    const favs: Cmd[] = listFavorites().slice(0, 5).map((f) => ({
+      id: `fav-${f.id}`,
+      label: `#${f.id} ${f.title.slice(0, 42)}`,
+      hint: f.dataset,
+      to: `/results/${f.id}`,
+      group: 'Pinned',
+    }));
+    const all = [...recent, ...favs, ...COMMANDS];
     const needle = q.trim().toLowerCase();
-    if (!needle) return COMMANDS;
-    return COMMANDS.filter(
+    if (!needle) return all;
+    return all.filter(
       (c) =>
         c.label.toLowerCase().includes(needle) ||
         c.hint.toLowerCase().includes(needle) ||
         c.group.toLowerCase().includes(needle) ||
         c.to.includes(needle),
     );
-  }, [q]);
+  }, [q, open]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

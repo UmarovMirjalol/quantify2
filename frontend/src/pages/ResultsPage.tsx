@@ -5,16 +5,16 @@ import {
   EquityChart,
   ExposureChart,
   MonthlyReturnsChart,
-  MonteCarloChart,
   PriceTradeChart,
   ReturnsDistributionChart,
   RollingSharpeChart,
 } from '../components/Charts';
+import { MonteCarloLab } from '../components/MonteCarloLab';
 import { ExportButtons } from '../components/ExportButtons';
 import { managementSummary } from '../components/PositionManagement';
 import { KpiCard } from '../components/KpiCard';
 import { MarketExposure } from '../components/MarketExposure';
-import { Optimizer } from '../components/Optimizer';
+import { ParamSurfaceLab } from '../components/ParamSurfaceLab';
 import { SyntheticMarkets } from '../components/SyntheticMarkets';
 import { RegimeSplit } from '../components/RegimeSplit';
 import { Robustness } from '../components/Robustness';
@@ -25,9 +25,11 @@ import { LiveSignalCard } from '../components/LiveSignalCard';
 import {
   createForwardTest,
   getFactorReport,
+  getMultiFactorReport,
   shareBacktest,
   unshareBacktest,
   type FactorReport,
+  type MultiFactorReport,
 } from '../services/api';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
@@ -38,8 +40,31 @@ import { formatConditions, riskWarnings, sizingLabel } from '../utils/formatStra
 import { shareCard, signedPct } from '../utils/shareCard';
 import { explainResult } from '../utils/explainResult';
 import { tearsheetMarkdown } from '../utils/tearsheetMarkdown';
+import { reproduceNotebook, reproducePython } from '../utils/notebookExport';
 import { ResultsDock } from '../components/ResultsDock';
+import { TradeReplay } from '../components/TradeReplay';
+import { CostCapacityPanel } from '../components/CostCapacityPanel';
+import { MonthlyHeatmap } from '../components/MonthlyHeatmap';
+import { SessionBadge } from '../components/SessionBadge';
+import { EquityRace } from '../components/EquityRace';
+import { ResearchNotes } from '../components/ResearchNotes';
+import { ExitAttribution } from '../components/ExitAttribution';
+import { WeekdayPnl } from '../components/WeekdayPnl';
+import { UnderwaterPeriods } from '../components/UnderwaterPeriods';
+import { RunTags } from '../components/RunTags';
+import { TradeSpotlight } from '../components/TradeSpotlight';
+import { RecoveryClock } from '../components/RecoveryClock';
+import { StrategyFingerprint } from '../components/StrategyFingerprint';
+import { HoldDuration } from '../components/HoldDuration';
+import { StreakStrip } from '../components/StreakStrip';
+import { TradeEquityPath } from '../components/TradeEquityPath';
+import { ExcursionPanel } from '../components/ExcursionPanel';
 import { toast } from '../components/ToastHost';
+import { logActivity } from '../utils/activityLog';
+import { isFavorite, toggleFavorite } from '../utils/favorites';
+import { pushRecentRun } from '../utils/recentRuns';
+import { tradeStreaks } from '../utils/streaks';
+import { underwaterReport } from '../utils/underwater';
 
 const ACCENT_HEX = '#4fd6a0';
 const HOLD_HEX = '#98a2ac';
@@ -56,10 +81,10 @@ type Tab =
   | 'walk'
   | 'robust'
   | 'synthetic'
-  | 'optimize'
+  | 'lab'
   | 'alpha';
 
-const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust', 'synthetic', 'optimize'];
+const OWNER_ONLY: Tab[] = ['stress', 'walk', 'robust', 'synthetic', 'lab'];
 
 export function reportUrl(token: string): string {
   return `${window.location.origin}/r/${token}`;
@@ -101,20 +126,26 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'walk', label: 'Walk-forward' },
   { id: 'robust', label: 'Robustness' },
   { id: 'synthetic', label: 'Synthetic markets' },
-  { id: 'optimize', label: 'Optimizer' },
+  { id: 'lab', label: 'Lab' },
   { id: 'alpha', label: 'Alpha & beta' },
 ];
 
+const TAB_IDS = new Set(TABS.map((t) => t.id));
+
+function tabFromHash(): Tab {
+  const raw = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
+  if (raw === 'optimize') return 'lab';
+  return TAB_IDS.has(raw as Tab) ? (raw as Tab) : 'overview';
+}
+
 export function ResultsView({ result, readOnly = false }: { result: BacktestResult; readOnly?: boolean }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>(() => tabFromHash());
   const [shareToken, setShareToken] = useState<string | null>(result.share_token ?? null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState('');
   const isCustom = Boolean(result.strategy.custom_code);
-  const tabs = TABS.filter(
-    (t) => !(readOnly && OWNER_ONLY.includes(t.id)) && !(isCustom && t.id === 'optimize'),
-  );
+  const tabs = TABS.filter((t) => !(readOnly && OWNER_ONLY.includes(t.id)));
   const isShort = result.strategy.side === 'short';
   const m = result.metrics;
   const strategyJson = useMemo(
@@ -159,9 +190,125 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   const [cardBusy, setCardBusy] = useState(false);
   const [cardNote, setCardNote] = useState<string | null>(null);
   const [factors, setFactors] = useState<FactorReport | null>(null);
+  const [multiFactors, setMultiFactors] = useState<MultiFactorReport | null>(null);
   const [factorsErr, setFactorsErr] = useState('');
   const [factorBench, setFactorBench] = useState('SPY');
   const [compareNote, setCompareNote] = useState('');
+  const [favorited, setFavorited] = useState(() => isFavorite(result.id));
+  const [focusMode, setFocusMode] = useState(false);
+  const streaks = useMemo(() => tradeStreaks(result.trades), [result.trades]);
+  const underwater = useMemo(() => underwaterReport(result.equity_curve), [result.equity_curve]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('results-focus', focusMode);
+    return () => document.documentElement.classList.remove('results-focus');
+  }, [focusMode]);
+
+  useEffect(() => {
+    pushRecentRun(result.id, result.strategy_description);
+    logActivity(`Opened #${result.id}`, `/results/${result.id}`);
+  }, [result.id, result.strategy_description]);
+
+  useEffect(() => {
+    const next = `#${tab}`;
+    if (window.location.hash !== next) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${next}`);
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        toast('Shortcuts', {
+          tone: 'info',
+          body: '1–9 tabs · [ ] · c compare · p pin · t tearsheet · f focus · l link',
+        });
+        return;
+      }
+      if (e.key >= '1' && e.key <= '9') {
+        const i = Number(e.key) - 1;
+        if (tabs[i]) {
+          e.preventDefault();
+          setTab(tabs[i].id);
+        }
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        setTab((cur) => {
+          const i = tabs.findIndex((t) => t.id === cur);
+          return tabs[Math.max(0, i - 1)]?.id ?? cur;
+        });
+        return;
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        setTab((cur) => {
+          const i = tabs.findIndex((t) => t.id === cur);
+          return tabs[Math.min(tabs.length - 1, i + 1)]?.id ?? cur;
+        });
+        return;
+      }
+      if (e.key.toLowerCase() === 'c' && !readOnly) {
+        e.preventDefault();
+        queueForCompare();
+        return;
+      }
+      if (e.key.toLowerCase() === 'p' && !readOnly) {
+        e.preventDefault();
+        const next = toggleFavorite({
+          id: result.id,
+          title: result.strategy_description,
+          dataset: result.dataset_name,
+          return_pct: result.metrics.total_return,
+          sharpe: result.metrics.sharpe_ratio,
+        });
+        const on = next.some((f) => f.id === result.id);
+        setFavorited(on);
+        toast(on ? 'Pinned' : 'Unpinned', { tone: 'ok' });
+        return;
+      }
+      if (e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        void navigator.clipboard
+          .writeText(
+            tearsheetMarkdown(result, {
+              buyHold: { totalReturn: buyHold.totalReturn, finalCapital: buyHold.finalCapital },
+              vsHold,
+              factors,
+              multiFactors: multiFactors?.rows,
+            }),
+          )
+          .then(() => toast('Tearsheet copied', { tone: 'ok' }))
+          .catch(() => exportTearsheet());
+        return;
+      }
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFocusMode((v) => !v);
+        toast(focusMode ? 'Focus off' : 'Focus on', { tone: 'info', body: 'Press F again to toggle' });
+        return;
+      }
+      if (e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        const url = `${window.location.origin}/results/${result.id}`;
+        void navigator.clipboard.writeText(url).then(() => toast('Result link copied', { tone: 'ok' }));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tabs, readOnly, result, buyHold, vsHold, factors, multiFactors, focusMode]);
 
   useEffect(() => {
     if (tab !== 'alpha' || result.equity_curve.length < 30) return;
@@ -173,6 +320,17 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
       })
       .catch((err) => {
         if (!cancelled) setFactorsErr(err instanceof Error ? err.message : 'Factor fit failed');
+      });
+    getMultiFactorReport({
+      equity_curve: result.equity_curve,
+      benchmarks: ['SPY', 'QQQ', 'IWM', 'TLT', 'GLD'],
+      history: '10y',
+    })
+      .then((rep) => {
+        if (!cancelled) setMultiFactors(rep);
+      })
+      .catch(() => {
+        if (!cancelled) setMultiFactors(null);
       });
     return () => {
       cancelled = true;
@@ -198,9 +356,20 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
         buyHold: { totalReturn: buyHold.totalReturn, finalCapital: buyHold.finalCapital },
         vsHold,
         factors,
+        multiFactors: multiFactors?.rows,
       }),
       'text/markdown;charset=utf-8',
     );
+    toast('Tearsheet downloaded', { tone: 'ok' });
+  }
+
+  function exportNotebook() {
+    downloadText(`quantify-reproduce-${result.id}.ipynb`, reproduceNotebook(result), 'application/json;charset=utf-8');
+    toast('Notebook ready', { tone: 'ok', body: 'Open in Jupyter / VS Code' });
+  }
+
+  function exportReproducePy() {
+    downloadText(`quantify-reproduce-${result.id}.py`, reproducePython(result), 'text/x-python;charset=utf-8');
   }
 
   async function downloadCard() {
@@ -421,6 +590,7 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           <div className="meta-row">
             <span className="mono">{result.dataset_name}</span>
             <span>{result.created_at?.slice(0, 19).replace('T', ' ')} UTC</span>
+            <SessionBadge strategy={result.strategy} bars={result.bars} />
             {isCustom ? (
               <span className="tag llm">Python</span>
             ) : result.parser === 'llm' ? (
@@ -447,6 +617,33 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
               <button type="button" onClick={exportTearsheet}>
                 Tearsheet (Markdown)
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(
+                      tearsheetMarkdown(result, {
+                        buyHold: { totalReturn: buyHold.totalReturn, finalCapital: buyHold.finalCapital },
+                        vsHold,
+                        factors,
+                        multiFactors: multiFactors?.rows,
+                      }),
+                    )
+                    .then(() => {
+                      toast('Tearsheet copied', { tone: 'ok' });
+                      logActivity(`Copied tearsheet #${result.id}`, `/results/${result.id}`);
+                    })
+                    .catch(() => toast('Copy failed', { tone: 'error' }));
+                }}
+              >
+                Copy tearsheet
+              </button>
+              <button type="button" onClick={exportNotebook}>
+                Reproduce (.ipynb)
+              </button>
+              <button type="button" onClick={exportReproducePy}>
+                Reproduce (.py)
+              </button>
               <button type="button" onClick={() => window.print()}>
                 Report (PDF)
               </button>
@@ -458,6 +655,32 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             </Link>
           ) : (
             <>
+              <button
+                type="button"
+                className={`btn ${favorited ? 'primary' : 'secondary'}`}
+                onClick={() => {
+                  const next = toggleFavorite({
+                    id: result.id,
+                    title: result.strategy_description,
+                    dataset: result.dataset_name,
+                    return_pct: result.metrics.total_return,
+                    sharpe: result.metrics.sharpe_ratio,
+                  });
+                  const on = next.some((f) => f.id === result.id);
+                  setFavorited(on);
+                  toast(on ? 'Pinned to favorites' : 'Removed from favorites', { tone: 'ok' });
+                }}
+              >
+                {favorited ? '★ Pinned' : '☆ Pin'}
+              </button>
+              <button
+                type="button"
+                className={`btn ${focusMode ? 'primary' : 'secondary'}`}
+                onClick={() => setFocusMode((v) => !v)}
+                title="Hide chrome (F)"
+              >
+                {focusMode ? 'Focus · on' : 'Focus'}
+              </button>
               <button type="button" className="btn secondary" onClick={queueForCompare}>
                 Compare
               </button>
@@ -574,6 +797,32 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           value={String(m.number_of_trades)}
           hint={`Final ${money(m.final_capital)}`}
         />
+        <KpiCard
+          label="Max win streak"
+          value={String(streaks.max_win)}
+          hint={`${streaks.win_trades} winners`}
+          tone="positive"
+        />
+        <KpiCard
+          label="Max loss streak"
+          value={String(streaks.max_loss)}
+          hint={
+            streaks.current_kind === 'flat'
+              ? `${streaks.loss_trades} losers`
+              : `Now ${streaks.current} ${streaks.current_kind}`
+          }
+          tone="negative"
+        />
+        <KpiCard
+          label="Longest underwater"
+          value={`${underwater.longest_days}d`}
+          hint={
+            underwater.currently_underwater
+              ? `Still under · ${pct(underwater.time_underwater)} of bars`
+              : `Avg recovery ${underwater.avg_recovery_days ?? '—'}d · ${underwater.periods} spells`
+          }
+          tone="negative"
+        />
       </section>
 
       <VerdictCard backtestId={result.id} initial={result.verdict} />
@@ -608,10 +857,17 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             <h2>Portfolio equity vs buy & hold</h2>
             <EquityChart data={result.equity_curve} benchmark={buyHold.equity} />
           </section>
+          <EquityRace strategy={result.equity_curve} hold={buyHold.equity} />
           <section className="panel">
             <h2>Rolling Sharpe · 63 trading days</h2>
             <RollingSharpeChart data={result.equity_curve} />
           </section>
+          {!readOnly ? <RunTags backtestId={result.id} /> : null}
+          {!readOnly ? <ResearchNotes backtestId={result.id} /> : null}
+          <div className="split">
+            <RecoveryClock curve={result.equity_curve} />
+            <StrategyFingerprint strategy={result.strategy} />
+          </div>
           <div className="split">
             <section className="panel">
               <h2>Drawdown</h2>
@@ -730,6 +986,14 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
               <ReturnsDistributionChart data={result.equity_curve} />
             </section>
           </div>
+          <section className="panel">
+            <h2>Return calendar</h2>
+            <MonthlyHeatmap data={result.equity_curve} />
+          </section>
+          <section className="panel">
+            <h2>Worst underwater spells</h2>
+            <UnderwaterPeriods curve={result.equity_curve} />
+          </section>
           <section className="kpi-grid">
             <KpiCard label="Volatility (ann.)" value={pct(m.annualized_volatility)} />
             <KpiCard label="Calmar" value={num(m.calmar_ratio)} />
@@ -773,68 +1037,33 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
               }
             />
           </section>
+          <CostCapacityPanel result={result} />
         </div>
       ) : null}
 
       {tab === 'monte_carlo' ? (
         <div className="tab-pane" key="monte_carlo">
-          {result.monte_carlo && result.monte_carlo.num_simulations > 0 ? (
-            <>
-              <section className="kpi-grid">
-                <KpiCard
-                  label="Risk of Ruin (>40% DD)"
-                  value={pct(result.monte_carlo.risk_of_ruin)}
-                  tone={
-                    result.monte_carlo.risk_of_ruin === 0
-                      ? 'positive'
-                      : result.monte_carlo.risk_of_ruin > 0.1
-                        ? 'negative'
-                        : 'neutral'
-                  }
-                  hint="Simulated severe drawdown risk"
-                />
-                <KpiCard
-                  label="95% Worst Drawdown"
-                  value={pct(result.monte_carlo.worst_drawdown_p95)}
-                  tone="negative"
-                  hint="Pessimistic stress outcome"
-                />
-                <KpiCard
-                  label="Median Return"
-                  value={pct(result.monte_carlo.median_return)}
-                  tone={toneFor(result.monte_carlo.median_return)}
-                  hint="50th percentile expectation"
-                />
-                <KpiCard
-                  label="95% Confidence Band"
-                  value={`${pct(result.monte_carlo.confidence_95_lower)} … ${pct(result.monte_carlo.confidence_95_upper)}`}
-                  hint="Expected return range"
-                />
-              </section>
-
-              <section className="panel">
-                <div className="page-header" style={{ marginBottom: '0.75rem' }}>
-                  <div>
-                    <h2 style={{ margin: 0 }}>Monte Carlo Fan Chart (1,000 Resamplings)</h2>
-                    <p className="hint">
-                      Simulates 1,000 alternative market paths by randomly permuting your trade outcomes.
-                    </p>
-                  </div>
-                </div>
-                <MonteCarloChart fanChart={result.monte_carlo.fan_chart} />
-              </section>
-            </>
-          ) : (
-            <div className="banner warn">
-              {result.monte_carlo?.error ||
-                'At least 3 closed trades are required to run Monte Carlo stress simulations.'}
-            </div>
-          )}
+          <MonteCarloLab backtestId={result.id} initial={result.monte_carlo} />
         </div>
       ) : null}
 
       {tab === 'trades' ? (
         <div className="tab-pane" key="trades">
+          <TradeReplay trades={result.trades} equity={result.equity_curve} prices={result.price_series} />
+          <TradeSpotlight trades={result.trades} />
+          <StreakStrip trades={result.trades} />
+          <div className="split">
+            <TradeEquityPath
+              trades={result.trades}
+              initial={m.initial_capital ?? result.strategy.initial_capital}
+            />
+            <HoldDuration trades={result.trades} />
+          </div>
+          <div className="split">
+            <ExitAttribution trades={result.trades} />
+            <WeekdayPnl trades={result.trades} />
+          </div>
+          <ExcursionPanel trades={result.trades} prices={result.price_series} />
           <section className="panel">
             <div className="page-header" style={{ marginBottom: '0.75rem' }}>
               <h2 style={{ margin: 0 }}>Trade ledger</h2>
@@ -877,9 +1106,9 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
         </div>
       ) : null}
 
-      {tab === 'optimize' ? (
-        <div className="tab-pane" key="optimize">
-          <Optimizer result={result} />
+      {tab === 'lab' ? (
+        <div className="tab-pane" key="lab">
+          <ParamSurfaceLab result={result} />
         </div>
       ) : null}
 
@@ -912,6 +1141,38 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
             <KpiCard label="Obs" value={factors?.n == null ? '—' : String(factors.n)} />
           </section>
           {factorsErr ? <div className="banner error">{factorsErr}</div> : null}
+          {multiFactors?.rows?.length ? (
+            <section className="panel table-wrap" style={{ marginBottom: '1rem' }}>
+              <h2>Multi-benchmark grid</h2>
+              <p className="hint">
+                Best fit by R²: <span className="mono">{multiFactors.best_fit ?? '—'}</span>
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Benchmark</th>
+                    <th>Beta</th>
+                    <th>Alpha (ann.)</th>
+                    <th>R²</th>
+                    <th>n</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {multiFactors.rows.map((r) => (
+                    <tr key={r.benchmark}>
+                      <td className="mono">{r.benchmark}</td>
+                      <td className="mono">{r.beta == null ? '—' : num(r.beta)}</td>
+                      <td className={(r.alpha_annual ?? 0) >= 0 ? 'pos' : 'neg'}>
+                        {r.alpha_annual == null ? '—' : pct(r.alpha_annual)}
+                      </td>
+                      <td className="mono">{r.r2 == null ? '—' : num(r.r2)}</td>
+                      <td className="mono">{r.n}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
           <MarketExposure report={result.market} />
         </div>
       ) : null}

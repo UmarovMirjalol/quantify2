@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getRobustness } from '../services/api';
 import type { RobustnessReport } from '../types';
+import { ParamSurfaceGrid } from './ParamSurfaceGrid';
 
 type Costs = RobustnessReport['costs'];
 type Heatmap = Extract<RobustnessReport['heatmap'], { available: true }>;
@@ -64,58 +65,6 @@ function CostCurve({ costs }: { costs: Costs }) {
       ) : null}
       <path d={path} />
     </svg>
-  );
-}
-
-function heatColor(value: number | null, peak: number): string {
-  if (value == null) return 'transparent';
-  const strength = Math.min(1, Math.abs(value) / peak);
-  return value >= 0
-    ? `rgba(79, 214, 160, ${0.08 + strength * 0.62})`
-    : `rgba(229, 122, 132, ${0.08 + strength * 0.62})`;
-}
-
-function HeatGrid({ map }: { map: Heatmap }) {
-  const lookup = new Map(map.cells.map((cell) => [`${cell.fast}:${cell.slow}`, cell]));
-  const peak = Math.max(0.25, ...map.cells.map((cell) => Math.abs(cell.sharpe ?? 0)));
-  return (
-    <div className="heat-wrap">
-      <table className="heat-grid">
-        <thead>
-          <tr>
-            <th className="mono">
-              fast ↓ / slow →
-            </th>
-            {map.slow_values.map((slow) => (
-              <th key={slow} className="mono">
-                {slow}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {map.fast_values.map((fast) => (
-            <tr key={fast}>
-              <th className="mono">{fast}</th>
-              {map.slow_values.map((slow) => {
-                const cell = lookup.get(`${fast}:${slow}`);
-                if (!cell) return <td key={slow} className="heat-empty" />;
-                return (
-                  <td
-                    key={slow}
-                    className={cell.chosen ? 'chosen' : ''}
-                    style={{ background: heatColor(cell.sharpe, peak) }}
-                    title={`${map.indicator} ${fast} × ${slow}: Sharpe ${fixed(cell.sharpe)}`}
-                  >
-                    <span className="mono">{fixed(cell.sharpe, 1)}</span>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -191,9 +140,10 @@ export function Robustness({ backtestId }: { backtestId: number }) {
         <p>{heatmap.headline}</p>
         {heatmap.available ? (
           <>
-            <HeatGrid map={heatmap} />
+            <ParamSurfaceGrid map={heatmap} />
             <p className="mono stress-split">
-              Sharpe for every {heatmap.indicator} fast × slow pair on the same data · outlined cell is your run
+              Sharpe for every {heatmap.indicator} fast × slow pair · outlined = your run · open{' '}
+              <strong>Lab</strong> to click a cell and re-run it
             </p>
           </>
         ) : null}

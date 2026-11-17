@@ -56,6 +56,20 @@ def test_ols_beta():
     assert out["r2"] is not None and out["r2"] > 0.7
 
 
+def test_multi_factor_report():
+    from app.research.factors import multi_factor_report
+
+    dates = pd.date_range("2020-01-01", periods=120, freq="D")
+    rng = np.random.default_rng(4)
+    equity = 100_000 * np.cumprod(1 + rng.normal(0.0004, 0.01, len(dates)))
+    curve = [{"date": d.isoformat(), "equity": float(e)} for d, e in zip(dates, equity)]
+    spy = pd.DataFrame({"date": dates, "close": 100 * np.cumprod(1 + rng.normal(0.0003, 0.009, len(dates)))})
+    qqq = pd.DataFrame({"date": dates, "close": 100 * np.cumprod(1 + rng.normal(0.0005, 0.012, len(dates)))})
+    out = multi_factor_report(curve, {"SPY": spy, "QQQ": qqq})
+    assert out["count"] == 2
+    assert len(out["rows"]) == 2
+
+
 def test_shared_portfolio_includes_risk(two_assets_pro):
     spec = parse_builtin("Buy when SMA 5 crosses above SMA 15 and sell when it crosses below.").strategy
     out = PortfolioBacktestEngine(spec, capital_mode="shared").run(two_assets_pro)

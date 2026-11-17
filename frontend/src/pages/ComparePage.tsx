@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { EquityChart, RollingSharpeChart } from '../components/Charts';
+import { EquitySparkline } from '../components/EquitySparkline';
 import { getBacktest, getVerdict } from '../services/api';
 import type { BacktestResult, EquityPoint, VerdictReport } from '../types';
 import { downloadText } from '../utils/download';
+import { strategyFingerprint } from '../utils/strategyFingerprint';
 import { duelTearsheetMarkdown } from '../utils/tearsheetMarkdown';
 
 type Better = 'higher' | 'lower';
@@ -162,12 +164,24 @@ export function ComparePage() {
             </span>
             <strong>{run.strategy_description}</strong>
             <span className="mono hint">{run.dataset_name}</span>
+            <EquitySparkline
+              values={run.equity_curve.map((p) => p.equity)}
+              width={180}
+              height={34}
+              positive={(run.metrics.total_return ?? 0) >= 0}
+            />
             <span className="compare-grade">
               {verdicts[i] ? `${verdicts[i]!.grade.replace('_', ' ')} · ${verdicts[i]!.score}/100` : 'Grading…'}
             </span>
+            <span className="mono hint compare-dna">DNA {strategyFingerprint(run.strategy)}</span>
           </Link>
         ))}
       </div>
+      {strategyFingerprint(a.strategy) === strategyFingerprint(b.strategy) ? (
+        <div className="banner ok">Same strategy DNA — difference is data, costs, or period.</div>
+      ) : (
+        <div className="banner warn">Different strategy DNA — rules or risk settings diverge.</div>
+      )}
 
       <section className="panel">
         <h2>Equity, both rebased to the same start</h2>

@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { EquitySparkline } from '../components/EquitySparkline';
+import { toast } from '../components/ToastHost';
 import { exportAllBacktests, listBacktests } from '../services/api';
 import type { BacktestSummary } from '../types';
 import { downloadText } from '../utils/download';
+import { isFavorite, listFavorites, toggleFavorite } from '../utils/favorites';
+import { allTags, getTags, idsWithTag } from '../utils/runTags';
 
 function pct(v: number | null): string {
   if (v === null || v === undefined) return '—';
@@ -21,7 +25,11 @@ export function HistoryPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [picked, setPicked] = useState<number[]>([]);
   const [archiving, setArchiving] = useState(false);
+  const [favTick, setFavTick] = useState(0);
+  const [pinnedOnly, setPinnedOnly] = useState(false);
+  const [tagFilter, setTagFilter] = useState('');
   const navigate = useNavigate();
+  const tagOptions = useMemo(() => allTags(), [favTick, items]);
 
   function togglePick(id: number) {
     setPicked((prev) =>
@@ -51,7 +59,8 @@ export function HistoryPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = q
+    const pinnedIds = new Set(listFavorites().map((f) => f.id));
+    let base = q
       ? items.filter(
           (item) =>
             item.strategy_description.toLowerCase().includes(q) ||
@@ -59,6 +68,11 @@ export function HistoryPage() {
             String(item.id).includes(q),
         )
       : items.slice();
+    if (pinnedOnly) base = base.filter((item) => pinnedIds.has(item.id));
+    if (tagFilter) {
+      const tagged = new Set(idsWithTag(tagFilter));
+      base = base.filter((item) => tagged.has(item.id));
+    }
 
     base.sort((a, b) => {
       const av = a[sortKey];
@@ -74,7 +88,7 @@ export function HistoryPage() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return base;
-  }, [items, query, sortKey, sortDir]);
+  }, [items, query, sortKey, sortDir, pinnedOnly, favTick, tagFilter]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -152,6 +166,46 @@ export function HistoryPage() {
 
       {items.length > 0 ? (
         <>
+          <div className="history-filmstrip" aria-label="Recent equity curves">
+            {filtered.slice(0, 12).map((item) => (
+              <div key={item.id} className={`history-film${picked.includes(item.id) ? ' picked' : ''}`}>
+                <div className="history-film__meta">
+                  <Link to={`/results/${item.id}`} className="mono">
+                    #{item.id}
+                  </Link>
+                  <span className={(item.total_return ?? 0) >= 0 ? 'pos' : 'neg'}>{pct(item.total_return)}</span>
+                  <button
+                    type="button"
+                    className="history-film__pin"
+                    title={isFavorite(item.id) ? 'Unpin' : 'Pin'}
+                    onClick={() => {
+                      const next = toggleFavorite({
+                        id: item.id,
+                        title: item.strategy_description,
+                        dataset: item.dataset_name,
+                        return_pct: item.total_return,
+                        sharpe: item.sharpe_ratio,
+                      });
+                      setFavTick((n) => n + 1);
+                      toast(next.some((f) => f.id === item.id) ? 'Pinned' : 'Unpinned', { tone: 'ok' });
+                    }}
+                  >
+                    {favTick >= 0 && isFavorite(item.id) ? '★' : '☆'}
+                  </button>
+                </div>
+                <Link to={`/results/${item.id}`}>
+                  <EquitySparkline
+                    values={item.equity_spark ?? []}
+                    width={148}
+                    height={36}
+                    positive={(item.total_return ?? 0) >= 0}
+                  />
+                  <p className="history-film__title">{item.strategy_description}</p>
+                  <span className="hint mono">{item.dataset_name}</span>
+                </Link>
+              </div>
+            ))}
+          </div>
           <div className="btn-row" style={{ marginBottom: '0.75rem' }}>
             <label className="field" style={{ flex: '1 1 220px', margin: 0 }}>
               <span className="sr-only">Search</span>
@@ -165,6 +219,23 @@ export function HistoryPage() {
             <span className="hint mono">
               {filtered.length}/{items.length} runs
             </span>
+            <button
+              type="button"
+              className={`chip${pinnedOnly ? ' active' : ''}`}
+              onClick={() => setPinnedOnly((v) => !v)}
+            >
+              ★ Pinned only
+            </button>
+            {tagOptions.length ? (
+              <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} aria-label="Filter by tag">
+                <option value="">All tags</option>
+                {tagOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <button
               type="button"
               className="btn primary small"
@@ -230,7 +301,18 @@ export function HistoryPage() {
                     </td>
                     <td className="mono">#{item.id}</td>
                     <td className="mono">{item.created_at.slice(0, 19).replace('T', ' ')}</td>
-                    <td className="truncate">{item.strategy_description}</td>
+                    <td className="truncate">
+                      {item.strategy_description}
+                      {getTags(item.id).length ? (
+                        <div className="history-tags">
+                          {getTags(item.id).map((t) => (
+                            <span key={t} className="chip tiny">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </td>
                     <td className="mono">{item.dataset_name}</td>
                     <td className={(item.total_return ?? 0) >= 0 ? 'pos' : 'neg'}>
                       {pct(item.total_return)}

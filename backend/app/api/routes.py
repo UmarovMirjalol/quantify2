@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -132,6 +132,20 @@ class BacktestSummary(BaseModel):
     max_drawdown: float | None
     final_capital: float | None
     number_of_trades: int | None
+    equity_spark: list[float] = []
+
+
+def _equity_spark(results_json: str, points: int = 48) -> list[float]:
+    """Downsample equity curve for history filmstrip cards."""
+    try:
+        curve = json.loads(results_json or "{}").get("equity_curve") or []
+    except json.JSONDecodeError:
+        return []
+    vals = [float(pt.get("equity")) for pt in curve if pt.get("equity") is not None]
+    if len(vals) <= points:
+        return [round(v, 2) for v in vals]
+    step = (len(vals) - 1) / (points - 1)
+    return [round(vals[int(round(i * step))], 2) for i in range(points)]
 
 
 class StatusResponse(BaseModel):
@@ -635,6 +649,7 @@ def api_list_backtests(
             max_drawdown=r.max_drawdown,
             final_capital=r.final_capital,
             number_of_trades=r.number_of_trades,
+            equity_spark=_equity_spark(r.results_json),
         )
         for r in rows
     ]
@@ -974,6 +989,9 @@ def api_export_backtest(
 @router.get("/backtests/{backtest_id}/monte-carlo")
 def api_get_monte_carlo(
     backtest_id: int,
+    sims: int = Query(default=1000, ge=100, le=5000),
+    ruin: float = Query(default=0.4, ge=0.05, le=0.9),
+    seed: int = Query(default=42, ge=0, le=1_000_000),
     db: Session = Depends(get_db),
     client_id: str = Depends(_client_id),
 ) -> dict[str, Any]:
@@ -985,13 +1003,26 @@ def api_get_monte_carlo(
         raise HTTPException(status_code=404, detail="Backtest not found")
 
     results = json.loads(record.results_json)
-    if "monte_carlo" in results and results["monte_carlo"].get("num_simulations", 0) > 0:
-        return results["monte_carlo"]
+    defaults = sims == 1000 and abs(ruin - 0.4) < 1e-9 and seed == 42
+    cached = results.get("monte_carlo")
+    if (
+        defaults
+        and isinstance(cached, dict)
+        and cached.get("num_simulations", 0) > 0
+        and not cached.get("error")
+    ):
+        return cached
 
     trades = results.get("trades", [])
     config = json.loads(record.config_json)
     initial_cap = float(config.get("initial_capital", 100_000.0))
-    return run_monte_carlo_simulation(trades, initial_capital=initial_cap)
+    return run_monte_carlo_simulation(
+        trades,
+        initial_capital=initial_cap,
+        num_simulations=sims,
+        ruin_drawdown_threshold=ruin,
+        seed=seed,
+    )
 
 
 @router.post("/backtests/{backtest_id}/live-signal")
