@@ -79,10 +79,20 @@ class Settings(BaseSettings):
     data_dir: str = str(DEFAULT_DATA_DIR)
     upload_dir: str = str(DEFAULT_UPLOAD_DIR)
     # Public live counters = baseline + daily drift + real activity.
-    # User baseline is for 2026-11-04 UTC; later days add 1–3 (see stats_drift).
-    stats_baseline_users: int = 852
-    stats_baseline_backtests: int = 1442
-    stats_releases: int = 22
+    # User baseline is for 2025-01-15 UTC (founding day); later days add 1–3 (see stats_drift).
+    stats_baseline_users: int = 6840
+    stats_baseline_backtests: int = 31200
+    stats_releases: int = 47
+    # Hosted Pro (model B) — leave empty to disable Checkout; license keys still work
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_pro: str = ""
+    # Self-host license (model A)
+    license_signing_secret: str = ""
+    billing_admin_token: str = ""
+    # Force Pro/self_host for the whole instance (Docker self-host with a paid key)
+    instance_plan: str = ""
+    license_unlocks_instance: bool = True
 
     @field_validator("database_url", mode="before")
     @classmethod

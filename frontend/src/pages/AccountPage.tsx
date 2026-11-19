@@ -75,10 +75,13 @@ export function AccountPage() {
           <p className="eyebrow">Account</p>
           <h1>{info?.signed_in ? `Signed in as ${info.username}` : 'Keep your history everywhere'}</h1>
           <p className="lede">
-            Without an account, results live in this browser only. With one, your backtests follow you
-            to any browser or device. No email needed: a username and password are enough.
+            Without an account, results live in this browser only. With one, history follows you — and Hosted Pro /
+            license unlocks attach to the account. Username + password (keep it safe; no email reset yet).
           </p>
         </div>
+        <Link className="btn primary" to="/pricing">
+          Pricing
+        </Link>
       </div>
 
       {error ? (
@@ -104,8 +107,30 @@ export function AccountPage() {
               <dt>Member since</dt>
               <dd>{info.created_at ? new Date(info.created_at).toLocaleDateString() : '—'}</dd>
             </div>
+            <div>
+              <dt>Plan</dt>
+              <dd className="mono">
+                {info.plan ?? 'free'}
+                {info.plan_status && info.plan_status !== 'none' ? ` · ${info.plan_status}` : ''}
+              </dd>
+            </div>
+            {info.limits ? (
+              <div>
+                <dt>Daily backtests</dt>
+                <dd className="mono">{String(info.limits.backtests_per_day)}</dd>
+              </div>
+            ) : null}
+            {info.limits ? (
+              <div>
+                <dt>Forward slots</dt>
+                <dd className="mono">{String(info.limits.forward_tests)}</dd>
+              </div>
+            ) : null}
           </dl>
           <div className="btn-row">
+            <Link className="btn primary" to="/pricing">
+              {(info.plan === 'pro' || info.plan === 'self_host') ? 'Manage plan' : 'Upgrade to Pro'}
+            </Link>
             <Link className="btn secondary" to="/history">
               Open results
             </Link>

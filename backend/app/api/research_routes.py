@@ -6,11 +6,13 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.api.accounts import account_for_session
 from app.api.routes import _client_id
+from app.billing.entitlements import forward_cap, require_feature
 from app.backtesting.engine import BacktestEngine, BacktestError
 from app.data.loader import load_dataset
 from app.data.market_fetcher import fetch_market_frame, market_dataset_source
@@ -228,10 +230,20 @@ async def api_forward_create(
     body: ForwardCreate,
     db: Session = Depends(get_db),
     client_id: str = Depends(_client_id),
+    x_session: str | None = Header(default=None, alias="X-Session"),
 ) -> dict[str, Any]:
     scope = _scope(client_id)
-    if db.query(ForwardTest).filter(ForwardTest.client_id == scope).count() >= MAX_FORWARD_TESTS:
-        raise HTTPException(status_code=429, detail=f"Up to {MAX_FORWARD_TESTS} forward tests; delete one first.")
+    account = account_for_session(db, x_session)
+    cap = forward_cap(account)
+    if db.query(ForwardTest).filter(ForwardTest.client_id == scope).count() >= cap:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "code": "forward_cap",
+                "cap": cap,
+                "message": f"Up to {cap} forward tests on your plan; delete one or upgrade at /pricing.",
+            },
+        )
 
     ticker = (body.ticker or "").strip().upper()
     if body.backtest_id is not None:
@@ -354,8 +366,13 @@ class FarmRequest(BaseModel):
 
 
 @router.post("/farm")
-async def api_research_farm(body: FarmRequest) -> dict[str, Any]:
+async def api_research_farm(
+    body: FarmRequest,
+    db: Session = Depends(get_db),
+    x_session: str | None = Header(default=None, alias="X-Session"),
+) -> dict[str, Any]:
     """Mass research: one strategy × many tickers, or playbook × universe (blocking)."""
+    require_feature("farm_jobs", x_session=x_session, db=db)
     try:
         if body.mode == "playbook":
             return run_playbook_farm(
@@ -374,8 +391,13 @@ async def api_research_farm(body: FarmRequest) -> dict[str, Any]:
 
 
 @router.post("/farm/jobs")
-async def api_farm_job_start(body: FarmRequest) -> dict[str, Any]:
+async def api_farm_job_start(
+    body: FarmRequest,
+    db: Session = Depends(get_db),
+    x_session: str | None = Header(default=None, alias="X-Session"),
+) -> dict[str, Any]:
     """Start a background farm job; poll GET /farm/jobs/{id}."""
+    require_feature("farm_jobs", x_session=x_session, db=db)
     try:
         if body.mode == "playbook":
             raw = start_playbook_farm(
@@ -421,8 +443,14 @@ def api_farm_job_cancel(job_id: str) -> dict[str, Any]:
 
 
 @router.get("/benchmark-suite")
-def api_benchmark_suite(force: bool = False) -> dict[str, Any]:
+def api_benchmark_suite(
+    force: bool = False,
+    db: Session = Depends(get_db),
+    x_session: str | None = Header(default=None, alias="X-Session"),
+) -> dict[str, Any]:
     """Fixed playbook × markets board (builds in background on first hit)."""
+    if force:
+        require_feature("matrix_refresh", x_session=x_session, db=db)
     return benchmark_suite(force=force)
 
 
@@ -440,8 +468,11 @@ async def api_paper_bridge(
     body: PaperRequest,
     db: Session = Depends(get_db),
     client_id: str = Depends(_client_id),
+    x_session: str | None = Header(default=None, alias="X-Session"),
 ) -> dict[str, Any]:
     """Next-open paper signals for a ticker list; optional webhook; journals by default."""
+    if body.webhook_url:
+        require_feature("paper_webhook", x_session=x_session, db=db)
     strategy, _ = await _strategy(body.strategy_text, body.strategy)
     if not body.tickers:
         raise HTTPException(status_code=422, detail="Add at least one ticker.")

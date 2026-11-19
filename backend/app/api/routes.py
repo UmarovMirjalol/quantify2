@@ -450,7 +450,14 @@ async def api_run_backtest(
     body: BacktestRequest,
     db: Session = Depends(get_db),
     client_id: str = Depends(_client_id),
+    x_session: str | None = Header(default=None, alias="X-Session"),
 ) -> dict[str, Any]:
+    from app.api.accounts import account_for_session
+    from app.billing.entitlements import bump_backtest, enforce_backtest_quota
+
+    account = account_for_session(db, x_session)
+    enforce_backtest_quota(db, client_id if client_id != "_anonymous" else (account.client_id if account else "_anonymous"), account)
+
     settings = get_settings()
     parser_used = "llm" if settings.llm_enabled else "builtin"
     parsed_warnings: list[str] = []
@@ -550,6 +557,10 @@ async def api_run_backtest(
     db.refresh(record)
     _touch_visitor(db, client_id)
     record_backtest()
+    try:
+        bump_backtest(db, client_id if client_id != "_anonymous" else (account.client_id if account else "_anon"))
+    except Exception:  # noqa: BLE001
+        pass
 
     return {
         "id": record.id,

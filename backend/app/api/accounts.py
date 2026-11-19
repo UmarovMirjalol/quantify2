@@ -122,16 +122,20 @@ def me(
     x_session: str | None = Header(default=None, alias="X-Session"),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    from app.billing.entitlements import entitlements_payload
+
     account = account_for_session(db, x_session)
     if account is None:
-        return {"signed_in": False}
+        return {"signed_in": False, **entitlements_payload(None)}
     count = db.query(BacktestRecord).filter(BacktestRecord.client_id == account.client_id).count()
+    ent = entitlements_payload(account)
     return {
         "signed_in": True,
         "username": account.username,
         "client_id": account.client_id,
         "backtests": count,
         "created_at": account.created_at.isoformat() if account.created_at else None,
+        **ent,
     }
 
 

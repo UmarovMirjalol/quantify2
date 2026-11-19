@@ -187,8 +187,8 @@ function BenchmarkSuiteTeaser() {
   return (
     <section className="landing-suite-teaser" aria-label="Published benchmark suite">
       <p className="mono">{line}</p>
-      <Link className="btn ghost small" to="/farm">
-        Inspect the farm →
+      <Link className="btn ghost small" to="/matrix">
+        Open the matrix →
       </Link>
     </section>
   );
@@ -196,8 +196,8 @@ function BenchmarkSuiteTeaser() {
 
 export function LandingPage() {
   usePageMeta(
-    'Quantify — Prove the edge before you risk money',
-    'Plain-English strategies, look-ahead-safe fills, 9 overfitting tests, and a published study: most backtest winners do not keep winning. Engine verified 1,065/1,065 trades vs backtrader.',
+    'Quantify — Research terminal since 2025',
+    'Founded 2025 by Mirjalol Umarov. Plain-English strategies, look-ahead-safe fills, nine overfitting tests, playbook matrix and ops desk. Engine verified 1,065/1,065 trades vs backtrader.',
   );
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>(reduced ? 'hold' : 'boot');
@@ -322,7 +322,7 @@ export function LandingPage() {
           </span>
           <span className="brand-text">
             <span className="brand-name">Quantify</span>
-            <span className="brand-tag">Quant research</span>
+            <span className="brand-tag">Est. 2025</span>
           </span>
         </Link>
         <button
@@ -347,6 +347,9 @@ export function LandingPage() {
           <Link className="btn ghost" to="/check">
             Guru check
           </Link>
+          <Link className="btn ghost" to="/pricing">
+            Pricing
+          </Link>
           <Link className="btn ghost" to="/about">
             About
           </Link>
@@ -364,11 +367,11 @@ export function LandingPage() {
             <span aria-hidden="true">→</span>
           </Link>
           <h1 className="reveal" style={{ ['--d' as string]: '90ms' }}>
-            A research-grade backtester that tries to <em>break</em> your edge.
+            The research desk that tries to <em>break</em> your edge.
           </h1>
           <p className="lede reveal" style={{ ['--d' as string]: '160ms' }}>
-            Plain English in. Look-ahead-safe fills, real fees, nine overfitting tests, and a verified engine —
-            cross-checked against backtrader to the cent. Built to answer whether the curve is skill or luck.
+            Founded 2025 by Mirjalol Umarov. Plain English in. Look-ahead-safe fills, real fees, nine overfitting
+            tests, matrix and morning ops — cross-checked against backtrader to the cent.
           </p>
           <div className="hero-actions reveal" style={{ ['--d' as string]: '230ms' }}>
             <a className="btn primary" href="#try">
@@ -762,18 +765,20 @@ export function LandingPage() {
 
       <section className="landing-section seo-copy in-view">
         <div className="section-head">
-          <p className="eyebrow">Free backtesting</p>
-          <h2>SMA, RSI, MACD, Bollinger — no API key.</h2>
+          <p className="eyebrow">Research terminal · since 2025</p>
+          <h2>Matrix, ops desk, book — not only a curve.</h2>
           <p className="section-lede">
-            Quantify is a free trading strategy backtester. Start from the playbook or the guide,
-            then run a simulation in the workspace.
+            Quantify is the open research desk for strategy work: playbook × market matrix, morning promotion to
+            forward/live, multi-run books, and a look-ahead-safe engine. No API key required.
           </p>
         </div>
         <div className="seo-links">
-          <Link to="/guide">How to backtest →</Link>
-          <Link to="/playbook">Strategy playbook →</Link>
-          <Link to="/research">Study: do backtest winners keep winning? →</Link>
-          <Link to="/about">About →</Link>
+          <Link to="/matrix">Playbook matrix →</Link>
+          <Link to="/desk">Ops desk →</Link>
+          <Link to="/book">Research book →</Link>
+            <Link to="/pricing">Pricing (Free / Pro / self-host) →</Link>
+            <Link to="/archive">Archive since 2025 →</Link>
+          <Link to="/about">Founder →</Link>
         </div>
       </section>
 
@@ -796,27 +801,28 @@ export function LandingPage() {
           </span>
           <div>
             <strong>Quantify</strong>
-            <p>Free strategy backtester. Research output, not investment advice.</p>
+            <p>Research terminal founded 2025 by Mirjalol Umarov. Not investment advice.</p>
           </div>
         </div>
         <nav className="footer-cols" aria-label="Footer">
           <div>
-            <h4>Tools</h4>
+            <h4>Desks</h4>
+            <Link to="/matrix">Matrix</Link>
+            <Link to="/desk">Ops desk</Link>
+            <Link to="/book">Research book</Link>
             <Link to="/app">Workspace</Link>
-            <Link to="/check">Guru check</Link>
-            <Link to="/leaderboard">Leaderboard</Link>
-            <Link to="/whatif">What if…</Link>
           </div>
           <div>
             <h4>Learn</h4>
-            <Link to="/guide">Guide</Link>
-            <Link to="/playbook">Playbook</Link>
+            <Link to="/archive">Archive</Link>
             <Link to="/research">Research</Link>
-            <Link to="/about">About</Link>
+            <Link to="/pricing">Pricing</Link>
+            <Link to="/about">Founder</Link>
+            <Link to="/playbook">Playbook</Link>
           </div>
         </nav>
         <p className="footer-fine mono">
-          Signal at close → fill next open · 1,065/1,065 vs backtrader · study on 106 assets · Est. 2025
+          Founded 15 Jan 2025 · Mirjalol Umarov · Free / Pro / self-host · next-open fills · 1,065/1,065 vs backtrader
         </p>
       </footer>
     </div>

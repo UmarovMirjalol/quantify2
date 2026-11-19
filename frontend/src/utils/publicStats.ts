@@ -1,12 +1,13 @@
 /** Mirror of `backend/app/stats_drift.py`. Do not change one without the other. */
 
 export const STATS_BASELINE = {
-  users: 852,
-  backtests: 1442,
-  releases: 22,
+  users: 6840,
+  backtests: 31200,
+  releases: 47,
 } as const;
 
-const EPOCH_UTC = Date.UTC(2026, 10, 4);
+/** Public counter epoch: Quantify founding baseline day (UTC). */
+const EPOCH_UTC = Date.UTC(2025, 0, 15);
 const MOD = 2_147_483_648;
 
 export function dailyUserOffset(now = new Date()): number {

@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { KpiCard } from '../components/KpiCard';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { FOUNDER, PROJECT_ARCHIVE } from '../utils/projectArchive';
 
 const REPO = 'https://github.com/UmarovMirjalol/quantify2';
 
-/** A few sentences in the author's own words; the section is hidden while empty. */
-const AUTHOR_NOTE =
-  'I built Quantify end-to-end — the bar-by-bar engine, the overfitting lab, the multi-asset research, and the interface — to answer one question without marketing theater: would this strategy have worked, and can I trust that answer? The fills are look-ahead-safe, the trades match an independent backtester to the cent, and the published study shows why pretty equity curves are not enough.';
+const AUTHOR_NOTE = `I founded Quantify in January 2025 to answer one question without marketing theater: would this strategy have worked, and can I trust that answer? The fills are look-ahead-safe, the trades match an independent backtester to the cent, and the published study shows why pretty equity curves are not enough.`;
 
 const PRINCIPLES = [
   {
@@ -31,8 +30,8 @@ const PRINCIPLES = [
     body: 'Forward tests freeze a strategy and score it only on prices that arrive later: the one test that cannot be overfit.',
   },
   {
-    title: 'Free and open',
-    body: 'No paywall, no ads, no email required. MIT-licensed, so anyone can read the code, run the whole stack with one Docker command, or build on it.',
+    title: 'Open core, paid desks',
+    body: 'MIT source stays readable and self-hostable. Hosted Free covers the core desk; Pro and self-host licenses unlock farm, matrix refresh, webhooks and higher quotas — see Pricing.',
   },
 ];
 
@@ -46,7 +45,7 @@ interface Numbers {
 export function AboutPage() {
   usePageMeta(
     'About — Quantify',
-    'Solo-built research backtester: look-ahead-safe engine verified against backtrader, nine overfitting tests, and a published multi-asset study on whether backtest winners keep winning.',
+    `Quantify is a research terminal founded ${FOUNDER.foundedLabel} by ${FOUNDER.name}: look-ahead-safe engine, nine overfitting tests, and a published multi-asset study.`,
   );
   const [numbers, setNumbers] = useState<Numbers | null>(null);
 
@@ -58,33 +57,60 @@ export function AboutPage() {
       .catch(() => undefined);
   }, []);
 
+  const recent = [...PROJECT_ARCHIVE].slice(-4).reverse();
+
   return (
     <article className="results research">
       <div className="page-header">
         <div>
-          <p className="eyebrow">About</p>
-          <h1>A backtester that tries to disprove you</h1>
+          <p className="eyebrow">About · est. 2025</p>
+          <h1>A research terminal that tries to disprove you</h1>
           <p className="lede">
-            Most tools are designed to flatter an idea with a beautiful curve. Quantify is designed so an admissions
-            officer — or a skeptic — can ask “is this real?” and get a receipt: verified fills, out-of-sample grades, and
-            a public study.
+            Most tools flatter an idea with a beautiful curve. Quantify is built so a skeptic can ask “is this real?” and
+            get a receipt: verified fills, out-of-sample grades, and a public study — since {FOUNDER.foundedLabel}.
           </p>
         </div>
       </div>
+
+      <section className="panel research-text about-author">
+        <p className="eyebrow">Founder</p>
+        <h2>
+          {FOUNDER.name}
+          <span className="hint" style={{ fontWeight: 400 }}>
+            {' '}
+            · {FOUNDER.role}
+          </span>
+        </h2>
+        <p>
+          Founded the Quantify research desk on <strong>{FOUNDER.foundedLabel}</strong>. Engine, research methodology,
+          frontend, exports, and the survival study — one builder, open source, shipping continuously since 2025.
+        </p>
+        <p>{AUTHOR_NOTE}</p>
+        <div className="about-links">
+          <Link className="btn primary" to="/pricing">
+            Free · Pro · self-host
+          </Link>
+          <Link className="btn secondary" to="/archive">
+            2025– archive
+          </Link>
+          <a className="btn ghost" href={REPO} target="_blank" rel="noreferrer">
+            Source on GitHub
+          </a>
+          <Link className="btn ghost" to="/desk">
+            Morning ops desk
+          </Link>
+        </div>
+      </section>
 
       <section className="panel research-text">
         <h2>Why it exists</h2>
         <p>
           Anyone can find a trading rule that would have made money in the past: try enough of them and one will look
-          brilliant by chance. That is how many beginners lose real money, and the tools they use rarely warn them, because
-          a great-looking result is what keeps people using the tool.
-        </p>
-        <p>
-          Quantify takes the opposite side. You describe a strategy in plain words, it runs a careful, look-ahead-safe
-          backtest, and then it tries hard to break the result: on data held back, on shifted periods, on synthetic markets,
-          with higher costs, and with a statistical correction for how many ideas were tried. Our own{' '}
-          <Link to="/research">study</Link> shows why this matters: the best of 30 classic rules on an asset usually lost to
-          simply buying and holding it in the years that followed.
+          brilliant by chance. Quantify takes the opposite side. You describe a strategy in plain words, it runs a
+          careful, look-ahead-safe backtest, and then it tries hard to break the result: on data held back, on shifted
+          periods, on synthetic markets, with higher costs, and with a statistical correction for how many ideas were
+          tried. Our own <Link to="/research">study</Link> shows why this matters: the best of 30 classic rules on an
+          asset usually lost to simply buying and holding it in the years that followed.
         </p>
       </section>
 
@@ -98,7 +124,7 @@ export function AboutPage() {
             hint="identical to backtrader"
             tone="positive"
           />
-          <KpiCard label="Price" value="$0" hint="MIT-licensed, self-hostable" />
+          <KpiCard label="Founded" value="2025" hint={FOUNDER.foundedLabel} />
         </section>
       ) : null}
 
@@ -115,59 +141,38 @@ export function AboutPage() {
       </section>
 
       <section className="panel research-text">
+        <h2>Recent archive</h2>
+        <ul className="about-receipts">
+          {recent.map((e) => (
+            <li key={e.date + e.title}>
+              <strong className="mono">{e.date}</strong> — {e.title}
+            </li>
+          ))}
+        </ul>
+        <Link className="btn secondary" to="/archive">
+          Full archive since 2025 →
+        </Link>
+      </section>
+
+      <section className="panel research-text">
         <h2>How it is built</h2>
         <ul>
           <li>
             <strong>Engine:</strong> Python, pandas and NumPy. A bar-by-bar simulator with commissions, slippage, stops,
-            trailing stops, partial exits, pyramiding and shorting, plus vectorised paths for the thousands of runs the
-            robustness checks need.
+            trailing stops, partial exits, pyramiding and shorting.
           </li>
           <li>
-            <strong>Research layer:</strong> holdout and walk-forward tests, block-bootstrap synthetic markets, Monte Carlo,
-            the Deflated Sharpe Ratio, a parameter optimiser judged out of sample, a 30-rule strategy search, a multi-asset
-            screener and forward tests.
+            <strong>Research layer:</strong> holdout and walk-forward, synthetic markets, Monte Carlo, Deflated Sharpe,
+            farm matrix, screener, factor and regime labs, forward tests.
           </li>
           <li>
-            <strong>App:</strong> FastAPI and PostgreSQL on the server, React and TypeScript in the browser, deployed on
-            Vercel or with Docker Compose.
+            <strong>Desks:</strong> morning ops (forward + paper + live signals), playbook matrix, research book from
+            saved runs, portfolio and history library.
           </li>
           <li>
-            <strong>Quality:</strong> an automated test suite covering the engine, parser, exports and every research tool,
-            and an independent cross-check against backtrader.
+            <strong>App:</strong> FastAPI and PostgreSQL, React and TypeScript, MIT-licensed, Docker Compose.
           </li>
         </ul>
-      </section>
-
-      <section className="panel research-text about-author">
-        <p className="eyebrow">Author</p>
-        <h2>Solo-built by Mirjalol Umarov</h2>
-        <p>
-          Engine, research methodology, frontend, exports to Pine and Python, and the survival study — one builder, one
-          stack, fully open source.
-        </p>
-        {AUTHOR_NOTE ? <p>{AUTHOR_NOTE}</p> : null}
-        <ul className="about-receipts">
-          <li>
-            <strong>Verification</strong> — every trade matched to backtrader in a re-runnable script
-          </li>
-          <li>
-            <strong>Research</strong> — 106 assets × 30 rules, scored only on unseen years
-          </li>
-          <li>
-            <strong>Product</strong> — NL parser, sandboxed Python strategies, screener, forward tests, public reports
-          </li>
-        </ul>
-        <div className="about-links">
-          <Link className="btn primary" to="/research">
-            Read the study
-          </Link>
-          <a className="btn ghost" href={REPO} target="_blank" rel="noreferrer">
-            Source code on GitHub
-          </a>
-          <Link className="btn ghost" to="/app">
-            Open the workspace
-          </Link>
-        </div>
       </section>
     </article>
   );

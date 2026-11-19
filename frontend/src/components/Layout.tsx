@@ -30,6 +30,8 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
       { to: '/history', label: 'Results', icon: 'M4 6h16M4 12h16M4 18h10' },
       { to: '/forward', label: 'Forward tests', icon: 'M3 17l6-6 4 4 8-8M15 7h6v6' },
       { to: '/paper', label: 'Paper desk', icon: 'M4 4h16v4H4zM4 10h10v10H4zM16 14h4v6h-4z' },
+      { to: '/desk', label: 'Morning desk', icon: 'M4 6h16M4 12h10M4 18h16M16 12h4' },
+      { to: '/book', label: 'Research book', icon: 'M4 19h16M6 17V7l6-3 6 3v10' },
     ],
   },
   {
@@ -54,6 +56,11 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
         icon: 'M3 21h18M5 21V10l7-6 7 6v11M9 21v-6h6v6',
       },
       {
+        to: '/matrix',
+        label: 'Matrix',
+        icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+      },
+      {
         to: '/data-health',
         label: 'Data health',
         icon: 'M4 19h16M6 16V9M10 16V5M14 16v-4M18 16V7',
@@ -71,6 +78,8 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
         label: 'Research',
         icon: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3M7.5 15h9',
       },
+      { to: '/archive', label: 'Archive', icon: 'M4 7h16v12H4zM8 3h8v4H8z' },
+      { to: '/pricing', label: 'Pricing', icon: 'M12 3v18M8 8h7a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h7' },
       { to: '/about', label: 'About', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v6M12 7.5v.01' },
     ],
   },
@@ -83,6 +92,7 @@ const NAV: { title: string; items: { to: string; label: string; icon: string }[]
         icon: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.4 1.4M16.1 16.1l1.4 1.4M6.5 17.5l1.4-1.4M16.1 7.9l1.4-1.4',
       },
       { to: '/account', label: 'Account', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0' },
+      { to: '/pricing', label: 'Upgrade', icon: 'M5 12h14M12 5l7 7-7 7' },
     ],
   },
 ];

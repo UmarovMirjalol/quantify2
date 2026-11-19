@@ -21,6 +21,8 @@ PUBLIC_PATHS = {
     "/api/pulse",
     "/api/playbook",
     "/api/releases",
+    "/api/billing/plans",
+    "/api/billing/webhook",
     "/healthz",
     "/",
 }

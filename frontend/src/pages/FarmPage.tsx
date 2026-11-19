@@ -21,6 +21,7 @@ import {
 } from '../services/api';
 import type { ScreenerUniverse } from '../types';
 import { toast } from '../components/ToastHost';
+import { ProGate } from '../components/ProGate';
 import { WatchlistBar } from '../components/WatchlistBar';
 import { FarmSweepLibrary } from '../components/FarmSweepLibrary';
 import { logActivity } from '../utils/activityLog';
@@ -194,6 +195,8 @@ export function FarmPage() {
           </p>
         </div>
       </div>
+
+      <ProGate feature="farm_jobs" label="Research farm is Pro" />
 
       <ActivityPulse />
       <WatchlistBar

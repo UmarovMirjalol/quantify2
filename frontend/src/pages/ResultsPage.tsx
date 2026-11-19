@@ -24,14 +24,15 @@ import { TradeTable } from '../components/TradeTable';
 import { VerdictCard } from '../components/VerdictCard';
 import { LiveSignalCard } from '../components/LiveSignalCard';
 import {
-  createForwardTest,
   getFactorReport,
   getMultiFactorReport,
+  getVerdict,
   shareBacktest,
   unshareBacktest,
   type FactorReport,
   type MultiFactorReport,
 } from '../services/api';
+import { PromoteControl } from '../components/PromoteControl';
 import type { BacktestResult } from '../types';
 import { buildBuyAndHold } from '../utils/buyAndHold';
 import { WalkForward } from '../components/WalkForward';
@@ -554,12 +555,14 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
 
   async function trackForward() {
     setShareBusy(true);
-    setShareNote('Freezing the rules and loading the latest bars…');
+    setShareNote('Running verdict gate before promote…');
     try {
-      await createForwardTest({ backtest_id: result.id });
-      navigate('/forward');
+      const v = await getVerdict(result.id);
+      setShareNote(`Verdict ${v.grade} · score ${v.score}. Use Promote below to send to the ops desk.`);
+      toast(`Verdict · ${v.grade}`, { tone: 'ok', body: v.headline });
     } catch (err) {
-      setShareNote(err instanceof Error ? err.message : 'Could not start the forward test.');
+      setShareNote(err instanceof Error ? err.message : 'Could not grade this run.');
+    } finally {
       setShareBusy(false);
     }
   }
@@ -689,10 +692,13 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
                 Edit & re-run
               </button>
               {!isCustom ? (
-                <button type="button" className="btn secondary" onClick={trackForward} disabled={shareBusy}>
-                  Track forward
+                <button type="button" className="btn secondary" onClick={() => void trackForward()} disabled={shareBusy}>
+                  Grade for promote
                 </button>
               ) : null}
+              <Link className="btn secondary" to="/desk">
+                Ops desk
+              </Link>
               <Link className="btn primary" to="/app">
                 New Backtest
               </Link>
@@ -700,6 +706,13 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
           )}
         </div>
       </div>
+
+      {!readOnly && !isCustom ? (
+        <section className="panel promote-on-results no-print">
+          <h2 style={{ marginTop: 0, fontSize: '1rem' }}>Promote to morning desk</h2>
+          <PromoteControl result={result} />
+        </section>
+      ) : null}
 
       {!readOnly && compareNote ? (
         <div className="share-bar no-print">

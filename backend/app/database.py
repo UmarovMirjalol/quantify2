@@ -30,6 +30,7 @@ def init_db() -> None:
     from app.models import forward  # noqa: F401
     from app.models import paper  # noqa: F401
     from app.models import stats  # noqa: F401
+    from app.models import usage  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     cols = {c["name"] for c in inspect(engine).get_columns("backtests")}
@@ -40,6 +41,22 @@ def init_db() -> None:
     with engine.begin() as conn:
         for name, ddl in added.items():
             if cols and name not in cols:
+                conn.execute(text(ddl))
+        # Account billing columns (Hosted Pro + license)
+        try:
+            acct_cols = {c["name"] for c in inspect(engine).get_columns("accounts")}
+        except Exception:  # noqa: BLE001
+            acct_cols = set()
+        acct_added = {
+            "plan": "ALTER TABLE accounts ADD COLUMN plan VARCHAR(16) DEFAULT 'free'",
+            "plan_status": "ALTER TABLE accounts ADD COLUMN plan_status VARCHAR(24) DEFAULT 'none'",
+            "stripe_customer_id": "ALTER TABLE accounts ADD COLUMN stripe_customer_id VARCHAR(64)",
+            "stripe_subscription_id": "ALTER TABLE accounts ADD COLUMN stripe_subscription_id VARCHAR(64)",
+            "license_key_hint": "ALTER TABLE accounts ADD COLUMN license_key_hint VARCHAR(32)",
+            "license_licensee": "ALTER TABLE accounts ADD COLUMN license_licensee VARCHAR(120)",
+        }
+        for name, ddl in acct_added.items():
+            if acct_cols and name not in acct_cols:
                 conn.execute(text(ddl))
 
 

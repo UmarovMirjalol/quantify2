@@ -1,7 +1,7 @@
 """Deterministic daily bump for the public user counter.
 
-Baseline day is 2026-11-04 (UTC): the published total is the configured
-baseline. Each later UTC day adds 1, 2, or 3 users. The sequence is a pure
+Baseline day is 2025-01-15 (UTC): the founding baseline for Quantify.
+Each later UTC day adds 1, 2, or 3 users. The sequence is a pure
 function of the day index so every instance shows the same number.
 
 Keep the formula identical to `frontend/src/utils/publicStats.ts`.
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-BASELINE_DAY = date(2026, 11, 4)
+BASELINE_DAY = date(2025, 1, 15)
 _MOD = 2_147_483_648
 
 

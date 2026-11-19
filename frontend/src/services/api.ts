@@ -175,6 +175,11 @@ export interface AccountInfo {
   client_id?: string;
   backtests?: number;
   created_at?: string | null;
+  plan?: 'free' | 'pro' | 'self_host';
+  plan_status?: string;
+  limits?: Record<string, number | boolean>;
+  billing_enabled?: boolean;
+  instance_plan?: string | null;
 }
 
 async function startSession(path: string, username: string, password: string): Promise<number> {
@@ -387,13 +392,17 @@ export type BenchmarkSuite = {
   count?: number;
   beat_hold?: number;
   beat_hold_share?: number | null;
+  tickers?: string[];
   rows?: {
     id: string;
     title: string;
     ticker: string;
     sharpe: number | null;
     total_return: number | null;
+    max_drawdown?: number | null;
+    trades?: number | null;
     buy_hold: number | null;
+    beat_hold?: boolean | null;
     var_95?: number | null;
   }[];
 };

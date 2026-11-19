@@ -24,6 +24,14 @@ class Account(Base):
     # Backtests are scoped by client_id; an account's runs use this id on every device.
     client_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    # Hosted billing (model B)
+    plan: Mapped[str] = mapped_column(String(16), default="free")
+    plan_status: Mapped[str] = mapped_column(String(24), default="none")  # none|active|past_due|canceled
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Self-host / redeemed license (model A)
+    license_key_hint: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    license_licensee: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
 
 class AccountSession(Base):

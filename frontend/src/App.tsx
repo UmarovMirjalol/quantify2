@@ -46,6 +46,13 @@ const CheckPage = lazy(() => import('./pages/CheckPage').then((m) => ({ default:
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
+const ArchivePage = lazy(() => import('./pages/ArchivePage').then((m) => ({ default: m.ArchivePage })));
+const BenchmarkMatrixPage = lazy(() =>
+  import('./pages/BenchmarkMatrixPage').then((m) => ({ default: m.BenchmarkMatrixPage })),
+);
+const OpsDeskPage = lazy(() => import('./pages/OpsDeskPage').then((m) => ({ default: m.OpsDeskPage })));
+const BookDeskPage = lazy(() => import('./pages/BookDeskPage').then((m) => ({ default: m.BookDeskPage })));
+const PricingPage = lazy(() => import('./pages/PricingPage').then((m) => ({ default: m.PricingPage })));
 const AccountPage = lazy(() =>
   import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })),
 );
@@ -248,6 +255,11 @@ export default function App() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/research" element={<ResearchPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/archive" element={<ArchivePage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/matrix" element={<BenchmarkMatrixPage />} />
+          <Route path="/desk" element={<OpsDeskPage />} />
+          <Route path="/book" element={<BookDeskPage />} />
           <Route path="/r/:token" element={<ReportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/account" element={<AccountPage />} />

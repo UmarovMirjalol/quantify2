@@ -817,6 +817,149 @@ h2 {
   outline: 1px solid color-mix(in srgb, var(--accent, #4fd6a0) 45%, transparent);
 }
 
+.archive-timeline {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.archive-timeline__item h2 {
+  margin: 0.35rem 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+.archive-timeline__item p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.archive-timeline__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.matrix-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .matrix-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ops-desk kbd,
+.book-desk kbd {
+  font-family: var(--mono, 'IBM Plex Mono', monospace);
+  font-size: 0.85em;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border, #2a313c);
+  border-radius: 4px;
+}
+
+.ops-ritual__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.ops-policy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.ops-inbox {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ops-inbox li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: baseline;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #2a313c) 70%, transparent);
+}
+
+.ops-src-live {
+  background: color-mix(in srgb, #4fd6a0 22%, transparent);
+}
+
+.ops-src-forward {
+  background: color-mix(in srgb, #6ea8fe 22%, transparent);
+}
+
+.ops-src-paper {
+  background: color-mix(in srgb, #f0c14a 22%, transparent);
+}
+
+.ops-demoted {
+  opacity: 0.72;
+}
+
+.promote-control__grade.tone-positive {
+  color: var(--pos, #4fd6a0);
+}
+
+.promote-control__grade.tone-negative {
+  color: var(--neg, #e57a84);
+}
+
+.promote-on-results {
+  margin-bottom: 1rem;
+}
+
+.banner.info {
+  background: color-mix(in srgb, #6ea8fe 14%, transparent);
+  border: 1px solid color-mix(in srgb, #6ea8fe 35%, transparent);
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.pricing-card--pro {
+  border-color: color-mix(in srgb, var(--accent, #4fd6a0) 45%, var(--border, #2a313c));
+}
+
+.pricing-price {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.pricing-features {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  display: grid;
+  gap: 0.35rem;
+}
+
 .leaderboard-podium {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

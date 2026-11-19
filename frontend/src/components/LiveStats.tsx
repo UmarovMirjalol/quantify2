@@ -158,7 +158,7 @@ export function LiveStats() {
         </p>
         <h2>Usage counters.</h2>
         <p className="section-lede">
-          {formatStat(stats.users)}+ users ran {formatStat(stats.backtests)}+ backtests; shipped{' '}
+          Since founding in 2025: {formatStat(stats.users)}+ users, {formatStat(stats.backtests)}+ runs,{' '}
           {formatStat(stats.releases)}+ releases.
         </p>
       </div>

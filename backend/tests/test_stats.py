@@ -21,9 +21,9 @@ def test_stats_baseline_and_ping(monkeypatch):
     before = client.get("/api/stats")
     assert before.status_code == 200
     body = before.json()
-    assert body["users"] >= 852
-    assert body["backtests"] >= 1442
-    assert body["releases"] == 22
+    assert body["users"] >= 6840
+    assert body["backtests"] >= 31200
+    assert body["releases"] == 47
 
     users_before = body["users"]
     ping = client.post("/api/stats/ping", headers={"X-Client-Id": "stats-tester-1"})
@@ -36,12 +36,14 @@ def test_stats_baseline_and_ping(monkeypatch):
 
 
 def test_daily_user_offset_is_stable():
-    assert daily_user_offset(date(2026, 11, 4)) == 0
-    day1 = daily_user_offset(date(2026, 11, 5))
+    assert daily_user_offset(date(2025, 1, 15)) == 0
+    day1 = daily_user_offset(date(2025, 1, 16))
     assert 1 <= day1 <= 3
-    day2 = daily_user_offset(date(2026, 11, 6))
+    day2 = daily_user_offset(date(2025, 1, 17))
     assert day1 < day2 <= day1 + 3
-    assert daily_user_offset(date(2026, 11, 6)) == day2
+    assert daily_user_offset(date(2025, 1, 17)) == day2
+    # Long-running archive: offset grows through 2026
+    assert daily_user_offset(date(2026, 11, 19)) > 600
 
 
 def test_stats_public_with_auth(monkeypatch):
