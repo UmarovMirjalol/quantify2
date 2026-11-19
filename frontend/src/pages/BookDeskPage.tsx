@@ -7,7 +7,7 @@ import { toast } from '../components/ToastHost';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { exportAllBacktests } from '../services/api';
 import type { BacktestResult } from '../types';
-import { blendBook } from '../utils/bookBlend';
+import { blendBook, leaveOneOutLift } from '../utils/bookBlend';
 import { downloadText, toCsv } from '../utils/download';
 import { listFavorites } from '../utils/favorites';
 
@@ -99,6 +99,12 @@ export function BookDeskPage() {
   }, [library, query]);
 
   const report = useMemo(() => blendBook(members, weights), [members, weights]);
+  const lifts = useMemo(() => leaveOneOutLift(members, weights), [members, weights]);
+  const liftMap = useMemo(() => Object.fromEntries(lifts.map((l) => [l.id, l.lift])), [lifts]);
+  const weightSum = useMemo(
+    () => picked.reduce((s, id) => s + Math.max(0, weights[id] ?? 1), 0) || 1,
+    [picked, weights],
+  );
 
   function toggle(id: number) {
     setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-10)));
@@ -110,13 +116,21 @@ export function BookDeskPage() {
     toast('Equal weights applied', { tone: 'ok' });
   }
 
+  function normalizeWeights() {
+    if (!picked.length) return;
+    const sum = picked.reduce((s, id) => s + Math.max(0, weights[id] ?? 1), 0) || 1;
+    setWeights(Object.fromEntries(picked.map((id) => [id, Math.round(((weights[id] ?? 1) / sum) * 1000) / 10])));
+    toast('Weights normalized to 100', { tone: 'ok' });
+  }
+
   function exportBookCsv() {
     if (!members.length) return;
     const rows: (string | number | null)[][] = [
-      ['id', 'weight', 'strategy', 'dataset', 'return', 'sharpe', 'max_dd'],
+      ['id', 'weight', 'lift', 'strategy', 'dataset', 'return', 'sharpe', 'max_dd'],
       ...members.map((r) => [
         r.id,
         weights[r.id] ?? 1,
+        liftMap[r.id] ?? '',
         r.strategy_description,
         r.dataset_name,
         r.metrics.total_return ?? '',
@@ -163,8 +177,8 @@ export function BookDeskPage() {
 
       {library ? (
         <>
-          <section className="panel table-wrap">
-            <div className="btn-row" style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <section className="panel table-wrap table-wrap--tall">
+            <div className="panel-toolbar">
               <h2 style={{ margin: 0, flex: 1 }}>Members ({picked.length}/10)</h2>
               <input
                 value={query}
@@ -179,6 +193,14 @@ export function BookDeskPage() {
               <button
                 type="button"
                 className="btn secondary small"
+                disabled={!picked.length}
+                onClick={normalizeWeights}
+              >
+                Normalize 100%
+              </button>
+              <button
+                type="button"
+                className="btn secondary small"
                 disabled={!members.length}
                 onClick={exportBookCsv}
               >
@@ -186,8 +208,8 @@ export function BookDeskPage() {
               </button>
             </div>
             <p className="hint">
-              Pinned favorites pre-select when present; History cohort links land via{' '}
-              <span className="mono">?ids=</span>. Adjust weights, then read the book below.
+              Weight bars + leave-one-out lift (book return with vs without the member). History cohort →{' '}
+              <span className="mono">?ids=</span>.
             </p>
             <table className="data-table">
               <thead>
@@ -198,40 +220,63 @@ export function BookDeskPage() {
                   <th>Return</th>
                   <th>Sharpe</th>
                   <th>Weight</th>
+                  <th>Lift</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleLibrary.map((r) => (
-                  <tr key={r.id} className={picked.includes(r.id) ? 'is-selected' : undefined}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={picked.includes(r.id)}
-                        onChange={() => toggle(r.id)}
-                        aria-label={`Include #${r.id}`}
-                      />
-                    </td>
-                    <td className="mono">
-                      <Link to={`/results/${r.id}`}>#{r.id}</Link>
-                    </td>
-                    <td className="truncate">{r.strategy_description}</td>
-                    <td className={(r.metrics.total_return ?? 0) >= 0 ? 'pos' : 'neg'}>
-                      {r.metrics.total_return == null ? '—' : `${(r.metrics.total_return * 100).toFixed(1)}%`}
-                    </td>
-                    <td className="mono">{r.metrics.sharpe_ratio?.toFixed(2) ?? '—'}</td>
-                    <td>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        disabled={!picked.includes(r.id)}
-                        value={weights[r.id] ?? 1}
-                        onChange={(e) => setWeights((w) => ({ ...w, [r.id]: Number(e.target.value) }))}
-                        style={{ width: '4.5rem' }}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {visibleLibrary.map((r) => {
+                  const on = picked.includes(r.id);
+                  const w = Math.max(0, weights[r.id] ?? 1);
+                  const pctW = on ? (w / weightSum) * 100 : 0;
+                  const lift = on ? liftMap[r.id] : null;
+                  return (
+                    <tr key={r.id} className={on ? 'is-selected' : undefined}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => toggle(r.id)}
+                          aria-label={`Include #${r.id}`}
+                        />
+                      </td>
+                      <td className="mono">
+                        <Link to={`/results/${r.id}`}>#{r.id}</Link>
+                      </td>
+                      <td className="truncate">{r.strategy_description}</td>
+                      <td className={(r.metrics.total_return ?? 0) >= 0 ? 'pos' : 'neg'}>
+                        {r.metrics.total_return == null ? '—' : `${(r.metrics.total_return * 100).toFixed(1)}%`}
+                      </td>
+                      <td className="mono">{r.metrics.sharpe_ratio?.toFixed(2) ?? '—'}</td>
+                      <td>
+                        <div className="book-weight-cell">
+                          <span className="book-weight-bar" aria-hidden>
+                            <span style={{ width: `${Math.min(100, pctW)}%` }} />
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.1}
+                            disabled={!on}
+                            value={weights[r.id] ?? 1}
+                            onChange={(e) => setWeights((prev) => ({ ...prev, [r.id]: Number(e.target.value) }))}
+                            style={{ width: '4.5rem' }}
+                          />
+                          <span className="hint mono">{on ? `${pctW.toFixed(0)}%` : ''}</span>
+                        </div>
+                      </td>
+                      <td>
+                        {lift == null ? (
+                          <span className="hint">—</span>
+                        ) : (
+                          <span className={`desk-pill ${lift >= 0 ? 'desk-pill--pass' : 'desk-pill--block'}`}>
+                            {lift >= 0 ? '+' : ''}
+                            {(lift * 100).toFixed(1)}%
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {!visibleLibrary.length ? <p className="hint">No runs match this filter.</p> : null}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { EquityChart, RollingSharpeChart } from '../components/Charts';
 import {
   CompareResearchGrid,
@@ -7,6 +7,8 @@ import {
   type ResearchPack,
 } from '../components/CompareResearchGrid';
 import { EquitySparkline } from '../components/EquitySparkline';
+import { toast } from '../components/ToastHost';
+import { usePageMeta } from '../hooks/usePageMeta';
 import {
   getBacktest,
   getMonteCarlo,
@@ -17,7 +19,9 @@ import {
   getWalkForward,
 } from '../services/api';
 import type { BacktestResult, EquityPoint, VerdictReport } from '../types';
+import { clearCompareA, getCompareA, setCompareA } from '../utils/compareQueue';
 import { downloadText } from '../utils/download';
+import { listRecentRuns } from '../utils/recentRuns';
 import { strategyFingerprint } from '../utils/strategyFingerprint';
 import { duelTearsheetMarkdown } from '../utils/tearsheetMarkdown';
 
@@ -47,8 +51,13 @@ function rebase(points: EquityPoint[], start: number): EquityPoint[] {
 }
 
 export function ComparePage() {
+  usePageMeta('Compare — Quantify', 'Duel two saved runs side by side: metrics, equity, research packs.');
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const ids = [Number(params.get('a')), Number(params.get('b'))];
+  const idsReady = ids.every((id) => Number.isFinite(id) && id > 0);
+  const [queuedA, setQueuedA] = useState<number | null>(() => getCompareA());
+  const [recent, setRecent] = useState(() => listRecentRuns());
   const [runs, setRuns] = useState<BacktestResult[] | null>(null);
   const [verdicts, setVerdicts] = useState<(VerdictReport | null)[]>([null, null]);
   const [packs, setPacks] = useState<[ResearchPack, ResearchPack]>([
@@ -59,11 +68,26 @@ export function ComparePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!ids.every((id) => Number.isFinite(id) && id > 0)) {
-      setError('Pick two runs on the Results or History page to compare.');
+    const sync = () => {
+      setQueuedA(getCompareA());
+      setRecent(listRecentRuns());
+    };
+    window.addEventListener('quantify-compare-queue', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('quantify-compare-queue', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!idsReady) {
+      setRuns(null);
+      setError('');
       return;
     }
     setPacks([emptyResearchPack(), emptyResearchPack()]);
+    setError('');
     Promise.all(ids.map((id) => getBacktest(id)))
       .then((loaded) => {
         setRuns(loaded);
@@ -119,6 +143,95 @@ export function ComparePage() {
       { label: 'Verdict score', a: verdicts[0]?.score, b: verdicts[1]?.score, format: count, better: 'higher' },
     ];
   }, [runs, verdicts]);
+
+  if (!idsReady) {
+    return (
+      <div className="results compare">
+        <div className="page-header">
+          <div>
+            <p className="eyebrow">Side by side</p>
+            <h1>Compare launcher</h1>
+            <p className="lede">
+              Queue run A from Results, then pick B here — or set both from recent runs. Cmd+K → Compare lands here when
+              nothing is queued yet.
+            </p>
+          </div>
+          <div className="btn-row">
+            <Link className="btn secondary" to="/history">
+              History
+            </Link>
+            <Link className="btn ghost" to="/app">
+              New backtest
+            </Link>
+          </div>
+        </div>
+
+        {queuedA ? (
+          <div className="banner ok compare-launcher__waiting">
+            Run <strong className="mono">#{queuedA}</strong> is waiting for B.{' '}
+            <Link to={`/results/${queuedA}`}>Open A</Link>
+            <div className="btn-row" style={{ marginTop: '0.55rem' }}>
+              <Link className="btn primary small" to="/history">
+                Pick B in History →
+              </Link>
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => {
+                  clearCompareA();
+                  setQueuedA(null);
+                }}
+              >
+                Clear A
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state compare-launcher">
+            <p>No compare pair yet. Set A from a recent run, or open any result and hit Compare.</p>
+          </div>
+        )}
+
+        <section className="panel">
+          <h2>Recent runs</h2>
+          {recent.length ? (
+            <div className="compare-launcher__recent">
+              {recent.slice(0, 6).map((r) => {
+                const isA = queuedA === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className={`compare-launcher__chip${isA ? ' is-a' : ''}`}
+                    onClick={() => {
+                      if (!queuedA) {
+                        setCompareA(r.id);
+                        setQueuedA(r.id);
+                        toast(`Compare · #${r.id} waiting`, {
+                          tone: 'ok',
+                          body: 'Pick a second run as B.',
+                        });
+                        return;
+                      }
+                      if (queuedA === r.id) return;
+                      clearCompareA();
+                      navigate(`/compare?a=${queuedA}&b=${r.id}`);
+                    }}
+                  >
+                    <span className="mono">#{r.id}</span>
+                    <span className="truncate">{r.title || 'Untitled'}</span>
+                    <span className="hint">{isA ? 'A' : queuedA ? 'Set as B' : 'Set as A'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="hint">No recent runs in this browser yet — run a backtest first.</p>
+          )}
+        </section>
+      </div>
+    );
+  }
 
   if (error) {
     return (

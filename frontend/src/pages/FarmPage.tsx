@@ -67,6 +67,20 @@ export function FarmPage() {
     };
   }, []);
 
+  const suiteTeaser = useMemo(() => {
+    const rows = suite?.rows ?? [];
+    const withEdge = rows
+      .map((r) => {
+        const edge =
+          r.total_return != null && r.buy_hold != null ? r.total_return - r.buy_hold : null;
+        return { ...r, edge };
+      })
+      .filter((r) => r.edge != null && (r.edge as number) > 0)
+      .sort((a, b) => (b.edge as number) - (a.edge as number))
+      .slice(0, 3);
+    return withEdge;
+  }, [suite]);
+
   const custom = useMemo(
     () =>
       tickers
@@ -193,6 +207,17 @@ export function FarmPage() {
             Sweep a strategy across a universe, or grid the playbook × markets. Then push next-open paper signals to a
             webhook.
           </p>
+        </div>
+        <div className="btn-row">
+          <Link className="btn secondary" to="/matrix">
+            Playbook matrix →
+          </Link>
+          <Link className="btn ghost" to="/matrix?beat=1">
+            Winners only →
+          </Link>
+          <Link className="btn ghost" to="/paper">
+            Paper desk
+          </Link>
         </div>
       </div>
 
@@ -570,42 +595,43 @@ export function FarmPage() {
         ) : null}
       </section>
 
-      <section className="panel">
-        <h2>Published benchmark suite</h2>
+      <section className="panel farm-matrix-handoff">
+        <div className="btn-row" style={{ marginBottom: '0.55rem' }}>
+          <h2 style={{ margin: 0, flex: 1 }}>Matrix control tower</h2>
+          <Link className="btn primary small" to="/matrix">
+            Open full matrix →
+          </Link>
+        </div>
         {!suite || suite.status === 'building' ? (
-          <p className="hint">Building in the background — refresh in a minute.</p>
+          <p className="hint">
+            Suite building in the background —{' '}
+            <Link to="/matrix">open the matrix</Link> to watch progress.
+          </p>
         ) : (
           <>
             <p className="hint">
-              {suite.count} runs · beat hold {suite.beat_hold_share == null ? '—' : pct(suite.beat_hold_share)} · as of{' '}
+              {suite.count} published cells · beat hold{' '}
+              {suite.beat_hold_share == null ? '—' : pct(suite.beat_hold_share)} · as of{' '}
               {suite.as_of?.slice(0, 16) ?? '—'}
             </p>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Strategy</th>
-                    <th>Ticker</th>
-                    <th>Sharpe</th>
-                    <th>Return</th>
-                    <th>Hold</th>
-                    <th>VaR 95%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(suite.rows ?? []).slice(0, 30).map((r) => (
-                    <tr key={`${r.id}-${r.ticker}`}>
-                      <td>{r.title}</td>
-                      <td className="mono">{r.ticker}</td>
-                      <td className="mono">{r.sharpe == null ? '—' : r.sharpe.toFixed(2)}</td>
-                      <td className="mono">{r.total_return == null ? '—' : pct(r.total_return)}</td>
-                      <td className="mono">{r.buy_hold == null ? '—' : pct(r.buy_hold)}</td>
-                      <td className="mono">{r.var_95 == null ? '—' : `${r.var_95}%`}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {suiteTeaser.length ? (
+              <div className="farm-matrix-chips">
+                {suiteTeaser.map((r) => (
+                  <Link
+                    key={`${r.id}-${r.ticker}`}
+                    className="farm-matrix-chip"
+                    to={`/check?q=${encodeURIComponent(r.title)}&t=${encodeURIComponent(r.ticker)}`}
+                    title="Open in Guru check"
+                  >
+                    <span className="truncate">{r.title}</span>
+                    <span className="mono">{r.ticker}</span>
+                    <span className="pos mono">+{pct(r.edge as number)}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="hint">No beat-hold cells yet — open the matrix for the full grid.</p>
+            )}
           </>
         )}
       </section>

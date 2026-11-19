@@ -45,7 +45,21 @@ export type MorningReport = {
   errors: string[];
 };
 
-export type MorningProgress = { step: string; done: number; total: number };
+export type RitualPhase = 'grade' | 'forwards' | 'live' | 'paper';
+
+export type MorningProgress = {
+  step: string;
+  phase: RitualPhase;
+  done: number;
+  total: number;
+};
+
+export const RITUAL_PHASES: { id: RitualPhase; label: string }[] = [
+  { id: 'grade', label: 'Grade & demote' },
+  { id: 'forwards', label: 'Refresh forwards' },
+  { id: 'live', label: 'Live signals' },
+  { id: 'paper', label: 'Paper fleet' },
+];
 
 /**
  * One morning ritual: re-grade promotions, demote failures, refresh forwards + live,
@@ -76,9 +90,9 @@ export async function runMorningRitual(
   const total =
     gradeTargets.length + active.length + Math.min(12, favs.length) + (opts.runPaper ? 1 : 0);
   let done = 0;
-  const tick = (step: string) => {
+  const tick = (phase: RitualPhase, step: string) => {
     done += 1;
-    opts.onProgress?.({ step, done, total: Math.max(total, 1) });
+    opts.onProgress?.({ phase, step, done, total: Math.max(total, 1) });
   };
 
   for (const id of gradeTargets) {
@@ -100,14 +114,14 @@ export async function runMorningRitual(
     } catch (err) {
       errors.push(`#${id} verdict: ${err instanceof Error ? err.message : 'failed'}`);
     }
-    tick(`Graded #${id}`);
+    tick('grade', `Graded #${id}`);
   }
 
   for (const p of active) {
     if (!p.forward_id) continue;
     // Skip if just demoted in this pass
     if (getPromotion(p.backtest_id)?.status === 'demoted') {
-      tick(`Skip demoted forward #${p.forward_id}`);
+      tick('forwards', `Skip demoted forward #${p.forward_id}`);
       continue;
     }
     try {
@@ -117,7 +131,7 @@ export async function runMorningRitual(
     } catch (err) {
       errors.push(`forward #${p.forward_id}: ${err instanceof Error ? err.message : 'failed'}`);
     }
-    tick(`Forward #${p.forward_id}`);
+    tick('forwards', `Forward #${p.forward_id}`);
   }
 
   let forwards: ForwardSummary[] = [];
@@ -134,7 +148,7 @@ export async function runMorningRitual(
     } catch (err) {
       errors.push(`live #${fav.id}: ${err instanceof Error ? err.message : 'failed'}`);
     }
-    tick(`Live #${fav.id}`);
+    tick('live', `Live #${fav.id}`);
   }
 
   let paper: PaperJournalItem | null = null;
@@ -164,7 +178,7 @@ export async function runMorningRitual(
     } else {
       errors.push('Paper skipped — need an active strategy text and a watchlist.');
     }
-    tick('Paper fleet');
+    tick('paper', 'Paper fleet');
   }
 
   const inbox = buildInbox({ lives, forwards, paper, favs: favs.map((f) => ({ id: f.id, title: f.title })) });

@@ -17,8 +17,10 @@ import {
 import type { LiveSignal, VerdictReport } from '../types';
 import { listFavorites, type FavoriteRun } from '../utils/favorites';
 import {
+  RITUAL_PHASES,
   type MorningProgress,
   type InboxItem,
+  type MorningReport,
   runMorningRitual,
 } from '../utils/morningRitual';
 import {
@@ -63,6 +65,20 @@ export function OpsDeskPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState<MorningProgress | null>(null);
+  const [receipt, setReceipt] = useState<{
+    at: string;
+    forwards_refreshed: number;
+    lives_refreshed: number;
+    demotions: number;
+    inbox: number;
+    paper_actionable: number;
+  } | null>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('quantify_last_ritual') || 'null');
+    } catch {
+      return null;
+    }
+  });
   const [runPaper, setRunPaper] = useState(true);
   const [webhook, setWebhook] = useState(() => localStorage.getItem('quantify_paper_webhook') || '');
   const [policy, setPolicy] = useState<PromotePolicy>(() => getPromotePolicy());
@@ -198,10 +214,10 @@ export function OpsDeskPage() {
     setRefreshing(true);
     setError(null);
     setLastErrors([]);
-    setProgress({ step: 'Starting…', done: 0, total: 1 });
+    setProgress({ phase: 'grade', step: 'Starting…', done: 0, total: 1 });
     try {
       localStorage.setItem('quantify_paper_webhook', webhook.trim());
-      const report = await runMorningRitual({
+      const report: MorningReport = await runMorningRitual({
         runPaper,
         webhookUrl: webhook,
         onProgress: setProgress,
@@ -213,6 +229,20 @@ export function OpsDeskPage() {
       setPaper(report.paper ?? null);
       setLastErrors(report.errors);
       reloadLocal();
+      const nextReceipt = {
+        at: new Date().toISOString(),
+        forwards_refreshed: report.forwards_refreshed,
+        lives_refreshed: report.lives_refreshed,
+        demotions: report.demotions,
+        inbox: report.inbox.length,
+        paper_actionable: report.paper_actionable,
+      };
+      setReceipt(nextReceipt);
+      try {
+        localStorage.setItem('quantify_last_ritual', JSON.stringify(nextReceipt));
+      } catch {
+        // ignore
+      }
       toast('Morning ritual done', {
         tone: 'ok',
         body: `${report.forwards_refreshed} fwd · ${report.lives_refreshed} live · ${report.demotions} demoted · inbox ${report.inbox.length}`,
@@ -224,6 +254,32 @@ export function OpsDeskPage() {
       setProgress(null);
     }
   }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !refreshing) {
+        e.preventDefault();
+        void morningGo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshing, runPaper, webhook]);
+
+  const phaseStates = useMemo(() => {
+    const order = RITUAL_PHASES.map((p) => p.id);
+    if (!progress) {
+      return Object.fromEntries(order.map((id) => [id, receipt ? 'done' : 'pending'])) as Record<
+        string,
+        'done' | 'active' | 'pending'
+      >;
+    }
+    const idx = order.indexOf(progress.phase);
+    return Object.fromEntries(
+      order.map((id, i) => [id, i < idx ? 'done' : i === idx ? 'active' : 'pending']),
+    ) as Record<string, 'done' | 'active' | 'pending'>;
+  }, [progress, receipt]);
 
   function savePolicy(next: PromotePolicy) {
     setPromotePolicy(next);
@@ -269,11 +325,6 @@ export function OpsDeskPage() {
       </div>
 
       {error ? <div className="banner error">{error}</div> : null}
-      {progress ? (
-        <div className="banner info" aria-live="polite">
-          {progress.step} · {progress.done}/{progress.total}
-        </div>
-      ) : null}
 
       <section className="kpi-grid">
         <KpiCard label="Pinned" value={String(favs.length)} />
@@ -293,28 +344,79 @@ export function OpsDeskPage() {
         />
       </section>
 
-      <section className="panel ops-ritual">
-        <h2>Morning options</h2>
-        <div className="ops-ritual__row">
-          <label className="chip">
-            <input type="checkbox" checked={runPaper} onChange={(e) => setRunPaper(e.target.checked)} />
-            Run paper fleet on watchlist
-          </label>
-          <label className="field" style={{ flex: '1 1 220px', margin: 0 }}>
-            <span>Webhook (optional)</span>
-            <input
-              value={webhook}
-              onChange={(e) => setWebhook(e.target.value)}
-              placeholder="https://hooks.slack.com/…"
-            />
-          </label>
+      <section className={`ops-ritual-console${refreshing ? ' is-running' : ''}`}>
+        <div className="panel ops-ritual">
+          <h2>Morning options</h2>
+          <div className="ops-ritual__row">
+            <label className="chip">
+              <input type="checkbox" checked={runPaper} onChange={(e) => setRunPaper(e.target.checked)} />
+              Run paper fleet on watchlist
+            </label>
+            <label className="field" style={{ flex: '1 1 220px', margin: 0 }}>
+              <span>Webhook (optional)</span>
+              <input
+                value={webhook}
+                onChange={(e) => setWebhook(e.target.value)}
+                placeholder="https://hooks.slack.com/…"
+              />
+            </label>
+          </div>
+          <p className="hint">
+            <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> runs the ritual · policy allow{' '}
+            <span className="mono">{policy.allow.join(', ')}</span> · min{' '}
+            <span className="mono">{policy.min_score}</span>
+            {watch.length ? ` · watchlist ${watch.join(', ')}` : ' · add tickers on Paper / Screener watchlist'}
+          </p>
         </div>
-        <p className="hint">
-          Policy: allow <span className="mono">{policy.allow.join(', ')}</span> · min score{' '}
-          <span className="mono">{policy.min_score}</span> · demote on{' '}
-          <span className="mono">{policy.demote_on.join(', ')}</span>
-          {watch.length ? ` · watchlist ${watch.join(', ')}` : ' · add tickers on Paper / Screener watchlist'}
-        </p>
+
+        <aside className={`panel panel-tight status-panel${refreshing ? ' running' : ''}`} aria-live="polite">
+          <h2>Ritual pipeline</h2>
+          <ul className="pipeline">
+            {RITUAL_PHASES.filter((p) => (p.id === 'paper' ? runPaper || progress?.phase === 'paper' : true)).map(
+              (p, i) => {
+                const state = phaseStates[p.id] ?? 'pending';
+                return (
+                  <li key={p.id} className={state}>
+                    <span className="step-icon">
+                      {state === 'done' ? '✓' : state === 'active' ? '●' : String(i + 1)}
+                    </span>
+                    <span>
+                      {p.label}
+                      {refreshing && state === 'active' && progress ? (
+                        <span className="hint"> — {progress.step}</span>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              },
+            )}
+          </ul>
+          {progress ? (
+            <div className="ops-ritual-bar" aria-hidden>
+              <div
+                className="ops-ritual-bar__fill"
+                style={{ width: `${Math.min(100, (100 * progress.done) / Math.max(progress.total, 1))}%` }}
+              />
+              <span className="mono">
+                {progress.done}/{progress.total}
+              </span>
+            </div>
+          ) : null}
+          {receipt && !refreshing ? (
+            <div className="banner ok ops-ritual-receipt">
+              <strong>Last ritual</strong>
+              <span className="mono">
+                {new Date(receipt.at).toLocaleString()} · {receipt.forwards_refreshed} fwd · {receipt.lives_refreshed}{' '}
+                live · {receipt.demotions} demoted · inbox {receipt.inbox}
+              </span>
+              {receipt.paper_actionable > 0 ? (
+                <Link className="btn secondary small" to="/paper">
+                  Paper actionable ({receipt.paper_actionable}) →
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+        </aside>
       </section>
 
       <section className="panel">
@@ -383,8 +485,10 @@ export function OpsDeskPage() {
           </Link>
         </div>
       ) : (
-        <div className="panel table-wrap">
-          <h2>Pinned pipeline</h2>
+        <div className="panel table-wrap table-wrap--tall">
+          <div className="panel-toolbar">
+            <h2 style={{ margin: 0 }}>Pinned pipeline</h2>
+          </div>
           <table className="data-table">
             <thead>
               <tr>
@@ -419,8 +523,24 @@ export function OpsDeskPage() {
                       {cachedGrade ?? '—'}
                       {v ? ` · ${v.score}` : row.promo?.last_score != null ? ` · ${row.promo.last_score}` : ''}
                     </td>
-                    <td className="hint">{gate.ok ? 'pass' : 'block'}</td>
-                    <td className="mono">{row.promo?.status ?? '—'}</td>
+                    <td>
+                      <span className={`desk-pill ${gate.ok ? 'desk-pill--pass' : 'desk-pill--block'}`}>
+                        {gate.ok ? 'pass' : 'block'}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`desk-pill${
+                          row.promo?.status === 'demoted'
+                            ? ' desk-pill--demoted'
+                            : row.promo?.status === 'active'
+                              ? ' desk-pill--pass'
+                              : ''
+                        }`}
+                      >
+                        {row.promo?.status ?? '—'}
+                      </span>
+                    </td>
                     <td className="mono">
                       {row.forward ? <Link to="/forward">#{row.forward.id}</Link> : '—'}
                     </td>

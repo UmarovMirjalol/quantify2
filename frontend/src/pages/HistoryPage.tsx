@@ -387,7 +387,7 @@ export function HistoryPage() {
               </p>
             ) : null}
           </section>
-          <div className="table-wrap panel">
+          <div className="table-wrap table-wrap--tall panel">
             <table className="data-table">
               <thead>
                 <tr>

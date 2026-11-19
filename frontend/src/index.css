@@ -30,16 +30,25 @@
   --warn: #dfb45c;
   --warn-dim: rgba(223, 180, 92, 0.1);
 
-  --sidebar-w: 232px;
-  --radius: 7px;
-  --radius-sm: 5px;
-  --radius-lg: 10px;
+  --sidebar-w: 240px;
+  --radius: 8px;
+  --radius-sm: 7px;
+  --radius-lg: 14px;
   /* IBM Plex stack — research terminal, not startup-AI grotesk */
   --font: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --display: 'IBM Plex Serif', 'IBM Plex Sans', var(--font);
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --shadow: 0 0 0 1px var(--border), 0 24px 60px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 0 0 1px var(--border), 0 10px 28px rgba(0, 0, 0, 0.32);
+  --shadow: 0 0 0 1px var(--border), 0 28px 64px rgba(0, 0, 0, 0.48);
+  --shadow-soft: 0 0 0 1px var(--border), 0 12px 32px rgba(0, 0, 0, 0.3);
+
+  --panel-rail: rgba(79, 214, 160, 0.42);
+  --panel-rail-dim: rgba(79, 214, 160, 0.14);
+  --table-head-bg: rgba(10, 13, 18, 0.94);
+  --table-row-hover: rgba(79, 214, 160, 0.05);
+  --table-sticky-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  --pill-pass-bg: rgba(79, 214, 160, 0.12);
+  --pill-block-bg: rgba(229, 122, 132, 0.12);
+  --pill-demoted-bg: rgba(223, 180, 92, 0.12);
 
   font-family: var(--font);
   font-size: 14px;
@@ -69,11 +78,16 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(1100px 620px at 82% 12%, rgba(79, 214, 160, 0.1), transparent 58%),
-    radial-gradient(800px 480px at 12% 88%, rgba(79, 214, 160, 0.045), transparent 55%),
-    radial-gradient(900px 500px at 50% 100%, rgba(20, 28, 34, 0.9), transparent 60%),
+    radial-gradient(1100px 620px at 82% 12%, rgba(79, 214, 160, 0.09), transparent 58%),
+    radial-gradient(800px 480px at 12% 88%, rgba(79, 214, 160, 0.04), transparent 55%),
+    radial-gradient(900px 500px at 50% 100%, rgba(20, 28, 34, 0.88), transparent 60%),
     var(--bg);
   background-attachment: fixed;
+  letter-spacing: -0.011em;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 #root {
@@ -110,6 +124,10 @@ code,
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .landing-motion,
   .landing-motion *,
   .hero-stage-float,

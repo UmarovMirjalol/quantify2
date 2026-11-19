@@ -203,7 +203,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
         </div>
       </aside>
 
-      <div>
+      <div className="app-stage">
         <div className="mobile-top">
           <button
             type="button"

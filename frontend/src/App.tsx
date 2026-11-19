@@ -6,6 +6,7 @@ import { getHealth, listDatasets } from './services/api';
 import { clearAccessToken, getAccessToken } from './services/session';
 import type { HealthStatus } from './types';
 import './App.css';
+import './craft.css';
 
 const LandingPage = lazy(() =>
   import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),

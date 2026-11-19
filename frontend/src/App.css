@@ -346,12 +346,76 @@ h2 {
   margin-bottom: 0.85rem;
   box-shadow: none;
   position: relative;
+  overflow: hidden;
 }
 
-.panel::before { content: none; }
+.panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--panel-rail), var(--panel-rail-dim) 45%, transparent 85%);
+  pointer-events: none;
+  opacity: 0.9;
+}
 
 .panel-tight {
   padding: 1rem 1.05rem;
+}
+
+.panel-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 0.78em;
+  padding: 0.08rem 0.32rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+
+.desk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+
+.desk-pill--pass {
+  color: var(--positive);
+  border-color: rgba(79, 214, 160, 0.35);
+  background: var(--pill-pass-bg);
+}
+
+.desk-pill--block {
+  color: var(--negative);
+  border-color: rgba(229, 122, 132, 0.35);
+  background: var(--pill-block-bg);
+}
+
+.desk-pill--demoted {
+  color: var(--warn);
+  border-color: rgba(223, 180, 92, 0.4);
+  background: var(--pill-demoted-bg);
 }
 
 /* —— Forms —— */
@@ -941,13 +1005,64 @@ h2 {
   }
 }
 
-.ops-desk kbd,
-.book-desk kbd {
-  font-family: var(--mono, 'IBM Plex Mono', monospace);
-  font-size: 0.85em;
-  padding: 0.1rem 0.35rem;
-  border: 1px solid var(--border, #2a313c);
-  border-radius: 4px;
+.ops-ritual-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+  align-items: stretch;
+}
+
+.ops-ritual-console.is-running .status-panel {
+  border-color: rgba(79, 214, 160, 0.28);
+}
+
+.ops-ritual-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+  height: 1.35rem;
+}
+
+.ops-ritual-bar__fill {
+  height: 4px;
+  flex: 1;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(79, 214, 160, 0.35);
+  transition: width 0.2s ease;
+  min-width: 0;
+}
+
+.ops-ritual-bar::before {
+  content: '';
+  position: absolute;
+}
+
+.ops-ritual-bar {
+  position: relative;
+}
+
+.ops-ritual-bar__fill {
+  position: relative;
+  background: linear-gradient(90deg, rgba(79, 214, 160, 0.35), var(--accent));
+}
+
+.ops-ritual-receipt {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ops-ritual-receipt .btn {
+  justify-self: start;
+}
+
+@media (max-width: 960px) {
+  .ops-ritual-console {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ops-ritual__row {
@@ -956,6 +1071,31 @@ h2 {
   gap: 0.75rem;
   align-items: flex-end;
   margin-bottom: 0.5rem;
+}
+
+.book-weight-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 11rem;
+}
+
+.book-weight-bar {
+  display: inline-block;
+  width: 3.5rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.book-weight-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  border-radius: inherit;
 }
 
 .ops-policy {
@@ -1365,6 +1505,10 @@ h2 {
   overflow: auto;
 }
 
+.table-wrap--tall {
+  max-height: min(70vh, 640px);
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -1386,8 +1530,12 @@ h2 {
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  background: rgba(255, 255, 255, 0.012);
+  background: var(--table-head-bg);
   font-family: var(--mono);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: var(--table-sticky-shadow);
 }
 
 .data-table tbody tr {
@@ -1395,7 +1543,7 @@ h2 {
 }
 
 .data-table tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--table-row-hover);
 }
 
 .data-table .truncate {
@@ -7823,6 +7971,75 @@ h2 {
     rgba(255, 255, 255, 0.02);
 }
 
+.farm-matrix-handoff {
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(79, 214, 160, 0.07), transparent 55%),
+    var(--bg-panel);
+}
+
+.farm-matrix-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.farm-matrix-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  max-width: 100%;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.82rem;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.farm-matrix-chip:hover {
+  border-color: rgba(79, 214, 160, 0.4);
+  background: rgba(79, 214, 160, 0.07);
+  transform: translateY(-1px);
+}
+
+.farm-matrix-chip .truncate {
+  max-width: 14rem;
+}
+
+.compare-launcher__recent {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.compare-launcher__chip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.compare-launcher__chip:hover {
+  border-color: rgba(110, 168, 254, 0.4);
+  background: rgba(110, 168, 254, 0.07);
+}
+
+.compare-launcher__chip.is-a {
+  border-color: rgba(79, 214, 160, 0.4);
+  background: rgba(79, 214, 160, 0.08);
+}
+
 .farm-empty h2 {
   margin: 0 0 0.35rem;
   font-family: var(--display);
@@ -7864,8 +8081,12 @@ h2 {
   .results-dock__flash strong,
   .compare-strip,
   .compare-strip__pulse,
-  .pricing-card {
+  .pricing-card,
+  .ops-ritual-bar__fill,
+  .farm-matrix-chip,
+  .book-weight-bar > span {
     animation: none !important;
+    transition: none !important;
     transform: none !important;
   }
 }

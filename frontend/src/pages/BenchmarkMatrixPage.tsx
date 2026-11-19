@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Plot from 'react-plotly.js';
 import { KpiCard } from '../components/KpiCard';
 import { ProGate } from '../components/ProGate';
@@ -24,10 +24,11 @@ export function BenchmarkMatrixPage() {
     'Published rule × market control tower: Sharpe, edge vs hold and VaR across the playbook universe. Research desk staple since 2025.',
   );
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [suite, setSuite] = useState<BenchmarkSuite | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [metric, setMetric] = useState<Metric>('sharpe');
-  const [beatOnly, setBeatOnly] = useState(false);
+  const [beatOnly, setBeatOnly] = useState(() => searchParams.get('beat') === '1');
   const [selected, setSelected] = useState<Cell | null>(null);
   const [running, setRunning] = useState(false);
   const [playbook, setPlaybook] = useState<PlaybookItem[]>([]);

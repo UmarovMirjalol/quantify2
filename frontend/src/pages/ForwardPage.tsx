@@ -233,7 +233,23 @@ export function ForwardPage() {
           <h2>Freeze</h2>
           <label className="field">
             <span>Strategy to freeze</span>
-            <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea
+              rows={2}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  (e.metaKey || e.ctrlKey) &&
+                  e.key === 'Enter' &&
+                  !busy &&
+                  ticker.trim().length >= 1 &&
+                  text.trim().length >= 5
+                ) {
+                  e.preventDefault();
+                  void create();
+                }
+              }}
+            />
           </label>
           <div className="btn-row">
             <input
@@ -241,6 +257,18 @@ export function ForwardPage() {
               placeholder="Ticker: SPY, AAPL, BTC-USD"
               value={ticker}
               onChange={(e) => setTicker(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  (e.metaKey || e.ctrlKey) &&
+                  e.key === 'Enter' &&
+                  !busy &&
+                  ticker.trim().length >= 1 &&
+                  text.trim().length >= 5
+                ) {
+                  e.preventDefault();
+                  void create();
+                }
+              }}
             />
             <button
               type="button"
@@ -261,6 +289,7 @@ export function ForwardPage() {
               </button>
             ) : null}
           </div>
+          <p className="hint">Ctrl/⌘+Enter starts a forward test.</p>
           <p className="hint">
             Or start from any live-market backtest on Results. Up to 25 forward tests. If already in a position on the
             start day, the book joins at the next open.

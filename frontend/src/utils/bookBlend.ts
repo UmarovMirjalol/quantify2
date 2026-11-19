@@ -82,6 +82,21 @@ export function blendBook(runs: BacktestResult[], weights?: Record<number, numbe
   return { equity, total_return, max_drawdown: equity.length ? maxDd : null, correlations, labels };
 }
 
+/** Leave-one-out contribution: book return minus blend without each member. */
+export function leaveOneOutLift(
+  runs: BacktestResult[],
+  weights?: Record<number, number>,
+): { id: number; lift: number | null }[] {
+  if (runs.length < 2) return runs.map((r) => ({ id: r.id, lift: null }));
+  const full = blendBook(runs, weights).total_return;
+  return runs.map((r) => {
+    const rest = runs.filter((x) => x.id !== r.id);
+    const without = blendBook(rest, weights).total_return;
+    if (full == null || without == null) return { id: r.id, lift: null };
+    return { id: r.id, lift: full - without };
+  });
+}
+
 function pearson(xs: number[], ys: number[]): number {
   const n = Math.min(xs.length, ys.length);
   if (n < 5) return 0;

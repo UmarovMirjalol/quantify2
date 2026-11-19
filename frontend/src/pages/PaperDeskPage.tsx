@@ -171,12 +171,31 @@ export function PaperDeskPage() {
           <h2>Pull</h2>
           <label className="field">
             <span>Strategy</span>
-            <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea
+              rows={3}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !busy) {
+                  e.preventDefault();
+                  void pull();
+                }
+              }}
+            />
           </label>
           <div className="param-grid">
             <label className="field">
               <span>Tickers</span>
-              <input value={tickers} onChange={(e) => setTickers(e.target.value)} />
+              <input
+                value={tickers}
+                onChange={(e) => setTickers(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !busy) {
+                    e.preventDefault();
+                    void pull();
+                  }
+                }}
+              />
             </label>
             <label className="field">
               <span>History</span>
@@ -194,6 +213,7 @@ export function PaperDeskPage() {
           <button type="button" className="btn primary" disabled={busy} onClick={() => void pull()}>
             {busy ? 'Pulling…' : 'Pull & journal'}
           </button>
+          <p className="hint">Ctrl/⌘+Enter pulls signals into the journal.</p>
           {error ? <div className="banner error">{error}</div> : null}
         </section>
 

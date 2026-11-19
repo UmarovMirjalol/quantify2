@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { HistoryPicker } from '../components/HistoryPicker';
 import { KpiCard } from '../components/KpiCard';
 import { ResearchScatter } from '../components/ResearchScatter';
@@ -60,6 +60,18 @@ export function DiscoverPage() {
       .then(setDatasets)
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !running && !fetching) {
+        e.preventDefault();
+        void search();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, fetching, datasetId]);
 
   async function loadTicker(sym: string) {
     setFetching(true);
@@ -179,6 +191,19 @@ export function DiscoverPage() {
             one-click full tests.
           </p>
         </div>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => void search()}
+            disabled={running || fetching}
+          >
+            {running ? 'Searching…' : 'Find strategies'}
+          </button>
+          <Link className="btn ghost" to="/screener">
+            Screener
+          </Link>
+        </div>
       </div>
 
       {archive.length ? (
@@ -245,11 +270,24 @@ export function DiscoverPage() {
           ))}
         </div>
         <div className="btn-row">
-          <button type="button" className="btn primary" onClick={search} disabled={running || fetching}>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={search}
+            disabled={running || fetching}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !running && !fetching) {
+                e.preventDefault();
+                void search();
+              }
+            }}
+          >
             {running ? 'Testing 30 strategies…' : 'Find strategies'}
           </button>
         </div>
-        <p className="hint">Every template trades the full allocation with 0.1% commission and 0.05% slippage per side.</p>
+        <p className="hint">
+          <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> runs discovery · 0.1% commission · 0.05% slippage per side.
+        </p>
         {error ? <div className="banner warn">{error}</div> : null}
       </section>
 
