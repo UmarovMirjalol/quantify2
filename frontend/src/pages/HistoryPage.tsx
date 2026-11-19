@@ -362,6 +362,15 @@ export function HistoryPage() {
               <div style={{ marginTop: '1rem' }}>
                 <div className="btn-row" style={{ marginBottom: '0.5rem' }}>
                   <h3 style={{ margin: 0, flex: 1 }}>Cohort equity overlay</h3>
+                  {cohort.length >= 2 ? (
+                    <Link
+                      className="btn primary small"
+                      to={`/book?ids=${cohort.join(',')}`}
+                      title="Blend this cohort in the research book desk"
+                    >
+                      Build research book ({cohort.length})
+                    </Link>
+                  ) : null}
                   <button type="button" className="btn secondary small" onClick={exportCohortPack}>
                     Download tearsheet pack
                   </button>

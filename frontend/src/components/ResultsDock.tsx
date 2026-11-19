@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { BacktestResult } from '../types';
+import { getCompareA } from '../utils/compareQueue';
 import { EquitySparkline } from './EquitySparkline';
 
 function pct(v: number | null | undefined): string {
@@ -23,12 +25,24 @@ export function ResultsDock({
   const equity = result.equity_curve.map((p) => p.equity);
   const up = (m.total_return ?? 0) >= 0;
   const grade = result.verdict?.grade?.replace(/_/g, ' ');
+  const [queued, setQueued] = useState<number | null>(() => getCompareA());
+
+  useEffect(() => {
+    const sync = () => setQueued(getCompareA());
+    window.addEventListener('quantify-compare-queue', sync);
+    return () => window.removeEventListener('quantify-compare-queue', sync);
+  }, []);
 
   return (
-    <div className="results-dock no-print" role="complementary" aria-label="Result summary">
+    <div
+      className={`results-dock no-print${up ? ' results-dock--up' : ' results-dock--down'}`}
+      role="complementary"
+      aria-label="Result summary"
+      data-positive={up ? 'true' : 'false'}
+    >
       <EquitySparkline values={equity} width={140} height={32} positive={up} />
       <div className="results-dock__metrics">
-        <span>
+        <span className="results-dock__flash">
           <small>Return</small>
           <strong className={up ? 'pos' : 'neg'}>{pct(m.total_return)}</strong>
         </span>
@@ -54,9 +68,15 @@ export function ResultsDock({
       <div className="results-dock__actions">
         {!readOnly && onCompare ? (
           <button type="button" className="btn ghost small" onClick={onCompare}>
-            Compare
+            {queued && queued !== result.id ? `Compare vs #${queued}` : queued === result.id ? `#${result.id} queued` : 'Compare'}
           </button>
         ) : null}
+        <Link className="btn ghost small" to="/desk">
+          Ops
+        </Link>
+        <Link className="btn ghost small" to="/book">
+          Book
+        </Link>
         <Link className="btn ghost small" to="/farm">
           Farm
         </Link>

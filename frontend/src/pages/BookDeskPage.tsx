@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
-import { EquityChart } from '../components/Charts';
+import { DrawdownChart, EquityChart } from '../components/Charts';
 import { KpiCard } from '../components/KpiCard';
 import { toast } from '../components/ToastHost';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { exportAllBacktests } from '../services/api';
 import type { BacktestResult } from '../types';
 import { blendBook } from '../utils/bookBlend';
+import { downloadText, toCsv } from '../utils/download';
 import { listFavorites } from '../utils/favorites';
 
 export function BookDeskPage() {
@@ -15,22 +16,41 @@ export function BookDeskPage() {
     'Research book — Quantify',
     'Blend pinned or chosen saved runs into a multi-strategy book: equity, drawdown and correlation — not another single-chart backtest.',
   );
+  const [params] = useSearchParams();
   const [library, setLibrary] = useState<BacktestResult[] | null>(null);
   const [picked, setPicked] = useState<number[]>([]);
   const [weights, setWeights] = useState<Record<number, number>>({});
+  const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const idsApplied = useRef(false);
 
-  async function load() {
+  async function load(opts?: { quiet?: boolean }) {
     setBusy(true);
     setError(null);
     try {
       const archive = await exportAllBacktests();
-      setLibrary(archive.backtests || []);
-      const favIds = listFavorites().map((f) => f.id);
-      const available = (archive.backtests || []).filter((r) => favIds.includes(r.id)).map((r) => r.id);
-      if (available.length) setPicked(available.slice(0, 8));
-      toast(`Loaded ${archive.count} runs`, { tone: 'ok' });
+      const rows = archive.backtests || [];
+      setLibrary(rows);
+
+      const raw = params.get('ids');
+      if (raw) {
+        const ids = raw
+          .split(/[\s,]+/)
+          .map(Number)
+          .filter((n) => n > 0);
+        const valid = ids.filter((id) => rows.some((r) => r.id === id)).slice(0, 10);
+        if (valid.length) {
+          setPicked(valid);
+          idsApplied.current = true;
+        }
+      } else if (!idsApplied.current) {
+        const favIds = listFavorites().map((f) => f.id);
+        const available = rows.filter((r) => favIds.includes(r.id)).map((r) => r.id);
+        if (available.length) setPicked(available.slice(0, 8));
+      }
+
+      if (!opts?.quiet) toast(`Loaded ${archive.count} runs`, { tone: 'ok' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load library');
     } finally {
@@ -38,15 +58,74 @@ export function BookDeskPage() {
     }
   }
 
+  useEffect(() => {
+    void load({ quiet: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
+  }, []);
+
+  useEffect(() => {
+    if (!library?.length) return;
+    const raw = params.get('ids');
+    if (!raw) return;
+    const ids = raw
+      .split(/[\s,]+/)
+      .map(Number)
+      .filter((n) => n > 0);
+    const valid = ids.filter((id) => library.some((r) => r.id === id)).slice(0, 10);
+    if (valid.length) {
+      setPicked(valid);
+      idsApplied.current = true;
+    }
+  }, [library, params]);
+
   const members = useMemo(() => {
     if (!library) return [];
     return library.filter((r) => picked.includes(r.id));
   }, [library, picked]);
 
+  const visibleLibrary = useMemo(() => {
+    if (!library) return [];
+    const q = query.trim().toLowerCase();
+    let rows = library;
+    if (q) {
+      rows = rows.filter(
+        (r) =>
+          r.strategy_description.toLowerCase().includes(q) ||
+          r.dataset_name.toLowerCase().includes(q) ||
+          String(r.id).includes(q),
+      );
+    }
+    return rows.slice(0, 80);
+  }, [library, query]);
+
   const report = useMemo(() => blendBook(members, weights), [members, weights]);
 
   function toggle(id: number) {
     setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-10)));
+  }
+
+  function equalWeights() {
+    if (!picked.length) return;
+    setWeights(Object.fromEntries(picked.map((id) => [id, 1])));
+    toast('Equal weights applied', { tone: 'ok' });
+  }
+
+  function exportBookCsv() {
+    if (!members.length) return;
+    const rows: (string | number | null)[][] = [
+      ['id', 'weight', 'strategy', 'dataset', 'return', 'sharpe', 'max_dd'],
+      ...members.map((r) => [
+        r.id,
+        weights[r.id] ?? 1,
+        r.strategy_description,
+        r.dataset_name,
+        r.metrics.total_return ?? '',
+        r.metrics.sharpe_ratio ?? '',
+        r.metrics.max_drawdown ?? '',
+      ]),
+    ];
+    downloadText(`quantify-book-${picked.join('-')}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
+    toast('Book CSV exported', { tone: 'ok' });
   }
 
   return (
@@ -73,13 +152,43 @@ export function BookDeskPage() {
         </div>
       </div>
 
-      {error ? <div className="banner error">{error}</div> : null}
+      {error ? (
+        <div className="banner error">
+          {error}{' '}
+          <button type="button" className="btn ghost small" onClick={() => void load()}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {library ? (
         <>
           <section className="panel table-wrap">
-            <h2>Members (up to 10)</h2>
-            <p className="hint">Pinned favorites are pre-selected when present. Adjust weights, then read the book below.</p>
+            <div className="btn-row" style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h2 style={{ margin: 0, flex: 1 }}>Members ({picked.length}/10)</h2>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search strategy, dataset, or id…"
+                aria-label="Filter book members"
+                style={{ minWidth: '14rem', flex: '1 1 12rem' }}
+              />
+              <button type="button" className="btn secondary small" disabled={!picked.length} onClick={equalWeights}>
+                Equal weights
+              </button>
+              <button
+                type="button"
+                className="btn secondary small"
+                disabled={!members.length}
+                onClick={exportBookCsv}
+              >
+                Export book CSV
+              </button>
+            </div>
+            <p className="hint">
+              Pinned favorites pre-select when present; History cohort links land via{' '}
+              <span className="mono">?ids=</span>. Adjust weights, then read the book below.
+            </p>
             <table className="data-table">
               <thead>
                 <tr>
@@ -92,7 +201,7 @@ export function BookDeskPage() {
                 </tr>
               </thead>
               <tbody>
-                {library.slice(0, 80).map((r) => (
+                {visibleLibrary.map((r) => (
                   <tr key={r.id} className={picked.includes(r.id) ? 'is-selected' : undefined}>
                     <td>
                       <input
@@ -125,6 +234,7 @@ export function BookDeskPage() {
                 ))}
               </tbody>
             </table>
+            {!visibleLibrary.length ? <p className="hint">No runs match this filter.</p> : null}
           </section>
 
           {members.length >= 2 ? (
@@ -148,6 +258,10 @@ export function BookDeskPage() {
                 <EquityChart data={report.equity} name="Book" />
               </section>
               <section className="panel">
+                <h2>Book drawdown</h2>
+                <DrawdownChart data={report.equity} />
+              </section>
+              <section className="panel">
                 <h2>Return correlation</h2>
                 <CorrelationHeatmap assets={report.labels} matrix={report.correlations} />
               </section>
@@ -158,7 +272,7 @@ export function BookDeskPage() {
         </>
       ) : (
         <div className="panel">
-          <p>Load your saved backtests to assemble a research book.</p>
+          <p>{busy ? 'Loading saved runs…' : 'Load your saved backtests to assemble a research book.'}</p>
         </div>
       )}
     </div>

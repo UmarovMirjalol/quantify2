@@ -29,6 +29,8 @@ const COMMANDS: Cmd[] = [
   { id: 'research', label: 'Research study', hint: 'Survival evidence', to: '/research', group: 'Learn' },
   { id: 'archive', label: 'Archive since 2025', hint: 'Founding timeline', to: '/archive', group: 'Learn' },
   { id: 'pricing', label: 'Pricing', hint: 'Free · Pro · self-host', to: '/pricing', group: 'You' },
+  { id: 'upgrade', label: 'Upgrade to Pro', hint: 'Checkout · license', to: '/pricing', group: 'You' },
+  { id: 'account', label: 'Account', hint: 'Plan · entitlements · license', to: '/account', group: 'You' },
   { id: 'about', label: 'About & founder', hint: 'Mirjalol Umarov · 2025', to: '/about', group: 'Learn' },
   { id: 'home', label: 'Landing', hint: 'Marketing + proof', to: '/', group: 'Learn' },
   { id: 'settings', label: 'Settings', hint: 'Secrets & density', to: '/settings', group: 'You' },

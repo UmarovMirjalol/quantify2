@@ -62,6 +62,7 @@ import { TradeEquityPath } from '../components/TradeEquityPath';
 import { ExcursionPanel } from '../components/ExcursionPanel';
 import { toast } from '../components/ToastHost';
 import { logActivity } from '../utils/activityLog';
+import { clearCompareA, getCompareA, setCompareA } from '../utils/compareQueue';
 import { isFavorite, toggleFavorite } from '../utils/favorites';
 import { pushRecentRun } from '../utils/recentRuns';
 import { tradeStreaks } from '../utils/streaks';
@@ -337,15 +338,18 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   }, [tab, result.equity_curve, factorBench]);
 
   function queueForCompare() {
-    const key = 'quantify_compare_a';
-    const prev = sessionStorage.getItem(key);
-    if (prev && Number(prev) !== result.id) {
-      sessionStorage.removeItem(key);
+    const prev = getCompareA();
+    if (prev && prev !== result.id) {
+      clearCompareA();
       navigate(`/compare?a=${prev}&b=${result.id}`);
       return;
     }
-    sessionStorage.setItem(key, String(result.id));
+    setCompareA(result.id);
     setCompareNote(`Run #${result.id} queued. Open another result and hit Compare again.`);
+    toast(`Compare · #${result.id} waiting`, {
+      tone: 'ok',
+      body: 'Open a second run and hit Compare.',
+    });
   }
 
   function exportTearsheet() {

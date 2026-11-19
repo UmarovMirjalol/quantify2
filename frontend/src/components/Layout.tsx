@@ -3,10 +3,12 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useDensity } from '../hooks/useDensity';
 import { CommandHint, CommandPalette } from './CommandPalette';
 import { ActivityFeed } from './ActivityFeed';
+import { CompareStrip } from './CompareStrip';
 import { FavoritesRail } from './FavoritesRail';
 import { ToastHost } from './ToastHost';
 import { getAccount } from '../services/session';
 import type { HealthStatus } from '../types';
+import { isPro, readCachedEntitlements, refreshEntitlements } from '../utils/entitlements';
 
 interface Props {
   health: HealthStatus | null;
@@ -103,6 +105,7 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
   const isLanding = location.pathname === '/';
   const llmOn = Boolean(health?.llm_enabled);
   const [username, setUsername] = useState(() => getAccount()?.username ?? null);
+  const [pro, setPro] = useState(() => isPro(readCachedEntitlements()));
   const { density, toggle: toggleDensity } = useDensity();
 
   useEffect(() => {
@@ -113,6 +116,15 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
       window.removeEventListener('quantify-account', sync);
       window.removeEventListener('storage', sync);
     };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setPro(isPro(readCachedEntitlements()));
+    window.addEventListener('quantify-entitlements', sync);
+    void refreshEntitlements()
+      .then((e) => setPro(isPro(e)))
+      .catch(() => undefined);
+    return () => window.removeEventListener('quantify-entitlements', sync);
   }, []);
 
   useEffect(() => {
@@ -151,7 +163,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
             <img src="/logo.svg" width={28} height={28} alt="" />
           </span>
           <span className="brand-text">
-            <span className="brand-name">Quantify</span>
+            <span className="brand-name">
+              Quantify
+              {pro ? <span className="brand-pro">Pro</span> : null}
+            </span>
             <span className="brand-tag">Quant research</span>
           </span>
         </Link>
@@ -207,7 +222,10 @@ export function Layout({ children, health }: React.PropsWithChildren<Props>) {
           </Link>
           <CommandHint />
         </div>
-        <main className="main">{children}</main>
+        <CompareStrip />
+        <main key={location.pathname} className="main main-page">
+          {children}
+        </main>
       </div>
       <CommandPalette />
       <ToastHost />
