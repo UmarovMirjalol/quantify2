@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { clearCompareA, duelRecentPair, getCompareA } from '../utils/compareQueue';
 import { listFavorites } from '../utils/favorites';
 import { listRecentRuns } from '../utils/recentRuns';
+import { toast } from './ToastHost';
 
-type Cmd = { id: string; label: string; hint: string; to: string; group: string };
+type Cmd = {
+  id: string;
+  label: string;
+  hint: string;
+  to?: string;
+  group: string;
+  run?: () => void;
+};
 
 const COMMANDS: Cmd[] = [
   { id: 'backtest', label: 'New backtest', hint: 'Write a rule', to: '/app', group: 'Build' },
@@ -23,7 +32,7 @@ const COMMANDS: Cmd[] = [
   { id: 'check', label: 'Guru check', hint: 'Paste a claim', to: '/check', group: 'Explore' },
   { id: 'whatif', label: 'What if…', hint: 'Buy & hold math', to: '/whatif', group: 'Explore' },
   { id: 'tools', label: 'Tools', hint: 'Calculators', to: '/tools', group: 'Explore' },
-  { id: 'compare', label: 'Compare', hint: 'Duel two runs · or pick in History', to: '/compare', group: 'Build' },
+  { id: 'compare', label: 'Compare launcher', hint: 'Duel two runs', to: '/compare', group: 'Build' },
   { id: 'playbook', label: 'Playbook', hint: 'Rule library', to: '/playbook', group: 'Learn' },
   { id: 'guide', label: 'Guide', hint: 'How to research', to: '/guide', group: 'Learn' },
   { id: 'research', label: 'Research study', hint: 'Survival evidence', to: '/research', group: 'Learn' },
@@ -49,16 +58,72 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
+  const [compareA, setCompareAState] = useState<number | null>(() => getCompareA());
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const open = () => setOpen(true);
-    window.addEventListener('quantify-cmdk', open);
-    return () => window.removeEventListener('quantify-cmdk', open);
+    const openPal = () => setOpen(true);
+    window.addEventListener('quantify-cmdk', openPal);
+    return () => window.removeEventListener('quantify-cmdk', openPal);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setCompareAState(getCompareA());
+    window.addEventListener('quantify-compare-queue', sync);
+    return () => window.removeEventListener('quantify-compare-queue', sync);
   }, []);
 
   const filtered = useMemo(() => {
-    const recent: Cmd[] = listRecentRuns().slice(0, 5).map((r) => ({
+    const recentRuns = listRecentRuns();
+    const compareCmds: Cmd[] = [];
+    if (compareA) {
+      compareCmds.push({
+        id: 'cmp-finish',
+        label: `Finish duel · #${compareA} waiting`,
+        hint: 'Open launcher / pick B',
+        to: '/compare',
+        group: 'Compare',
+      });
+      compareCmds.push({
+        id: 'cmp-open-a',
+        label: `Open queued A · #${compareA}`,
+        hint: 'Results',
+        to: `/results/${compareA}`,
+        group: 'Compare',
+      });
+      compareCmds.push({
+        id: 'cmp-clear',
+        label: 'Clear compare queue',
+        hint: `Drop #${compareA}`,
+        group: 'Compare',
+        run: () => {
+          clearCompareA();
+          setCompareAState(null);
+          toast('Compare cleared', { tone: 'info' });
+        },
+      });
+    } else {
+      compareCmds.push({
+        id: 'cmp-launch',
+        label: 'Open compare launcher',
+        hint: 'Queue A from recent',
+        to: '/compare',
+        group: 'Compare',
+      });
+    }
+    if (recentRuns.length >= 2) {
+      compareCmds.push({
+        id: 'cmp-recent',
+        label: `Duel last two · #${recentRuns[0].id} vs #${recentRuns[1].id}`,
+        hint: 'Recent',
+        group: 'Compare',
+        run: () => {
+          if (!duelRecentPair(navigate)) toast('Need two recent runs', { tone: 'warn' });
+        },
+      });
+    }
+
+    const recent: Cmd[] = recentRuns.slice(0, 5).map((r) => ({
       id: `recent-${r.id}`,
       label: `#${r.id} ${r.title.slice(0, 42)}`,
       hint: 'Recent',
@@ -72,7 +137,7 @@ export function CommandPalette() {
       to: `/results/${f.id}`,
       group: 'Pinned',
     }));
-    const all = [...recent, ...favs, ...COMMANDS];
+    const all = [...compareCmds, ...recent, ...favs, ...COMMANDS];
     const needle = q.trim().toLowerCase();
     if (!needle) return all;
     return all.filter(
@@ -80,9 +145,18 @@ export function CommandPalette() {
         c.label.toLowerCase().includes(needle) ||
         c.hint.toLowerCase().includes(needle) ||
         c.group.toLowerCase().includes(needle) ||
-        c.to.includes(needle),
+        (c.to ? c.to.includes(needle) : false),
     );
-  }, [q, open]);
+  }, [q, open, compareA, navigate]);
+
+  function runCmd(cmd: Cmd) {
+    setOpen(false);
+    if (cmd.run) {
+      cmd.run();
+      return;
+    }
+    if (cmd.to) navigate(cmd.to);
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -105,14 +179,12 @@ export function CommandPalette() {
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const cmd = filtered[active];
-        if (cmd) {
-          setOpen(false);
-          navigate(cmd.to);
-        }
+        if (cmd) runCmd(cmd);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, filtered, active, navigate]);
 
   useEffect(() => {
@@ -140,7 +212,7 @@ export function CommandPalette() {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Jump to… farm, paper, results, research"
+            placeholder="Jump to… compare, desk, matrix, book"
             autoComplete="off"
             spellCheck={false}
           />
@@ -156,10 +228,7 @@ export function CommandPalette() {
                   type="button"
                   className={`cmdk__item${i === active ? ' active' : ''}`}
                   onMouseEnter={() => setActive(i)}
-                  onClick={() => {
-                    setOpen(false);
-                    navigate(c.to);
-                  }}
+                  onClick={() => runCmd(c)}
                 >
                   <span className="cmdk__group">{c.group}</span>
                   <span className="cmdk__label">{c.label}</span>
@@ -172,6 +241,12 @@ export function CommandPalette() {
         <p className="cmdk__foot">
           <kbd>{isMac() ? '⌘' : 'Ctrl'}</kbd>
           <kbd>K</kbd> anywhere · ↑↓ enter
+          {compareA ? (
+            <>
+              {' '}
+              · <span className="mono">A #{compareA}</span>
+            </>
+          ) : null}
         </p>
       </div>
     </div>

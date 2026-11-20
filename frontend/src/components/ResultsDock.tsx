@@ -68,8 +68,17 @@ export function ResultsDock({
       <div className="results-dock__actions">
         {!readOnly && onCompare ? (
           <button type="button" className="btn ghost small" onClick={onCompare}>
-            {queued && queued !== result.id ? `Compare vs #${queued}` : queued === result.id ? `#${result.id} queued` : 'Compare'}
+            {queued && queued !== result.id
+              ? `Compare vs #${queued}`
+              : queued === result.id
+                ? `#${result.id} queued`
+                : 'Compare'}
           </button>
+        ) : null}
+        {queued ? (
+          <Link className="btn ghost small" to="/compare">
+            Launcher
+          </Link>
         ) : null}
         <Link className="btn ghost small" to="/desk">
           Ops
@@ -77,8 +86,8 @@ export function ResultsDock({
         <Link className="btn ghost small" to="/book">
           Book
         </Link>
-        <Link className="btn ghost small" to="/farm">
-          Farm
+        <Link className="btn ghost small" to="/matrix">
+          Matrix
         </Link>
         <a className="btn ghost small" href="#results-tabs">
           Tabs

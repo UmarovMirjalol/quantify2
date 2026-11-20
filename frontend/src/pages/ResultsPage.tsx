@@ -62,7 +62,7 @@ import { TradeEquityPath } from '../components/TradeEquityPath';
 import { ExcursionPanel } from '../components/ExcursionPanel';
 import { toast } from '../components/ToastHost';
 import { logActivity } from '../utils/activityLog';
-import { clearCompareA, getCompareA, setCompareA } from '../utils/compareQueue';
+import { toggleCompareRun } from '../utils/compareQueue';
 import { isFavorite, toggleFavorite } from '../utils/favorites';
 import { pushRecentRun } from '../utils/recentRuns';
 import { tradeStreaks } from '../utils/streaks';
@@ -338,18 +338,19 @@ export function ResultsView({ result, readOnly = false }: { result: BacktestResu
   }, [tab, result.equity_curve, factorBench]);
 
   function queueForCompare() {
-    const prev = getCompareA();
-    if (prev && prev !== result.id) {
-      clearCompareA();
-      navigate(`/compare?a=${prev}&b=${result.id}`);
-      return;
+    const res = toggleCompareRun(result.id, navigate);
+    if (res.kind === 'queued') {
+      setCompareNote(`Run #${result.id} queued. Open another result and hit Compare again.`);
+      toast(`Compare · #${result.id} waiting`, {
+        tone: 'ok',
+        body: 'Open a second run and hit Compare.',
+      });
+    } else if (res.kind === 'cleared') {
+      setCompareNote('');
+      toast('Compare cleared', { tone: 'info' });
+    } else {
+      setCompareNote('');
     }
-    setCompareA(result.id);
-    setCompareNote(`Run #${result.id} queued. Open another result and hit Compare again.`);
-    toast(`Compare · #${result.id} waiting`, {
-      tone: 'ok',
-      body: 'Open a second run and hit Compare.',
-    });
   }
 
   function exportTearsheet() {

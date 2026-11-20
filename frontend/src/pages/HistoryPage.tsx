@@ -7,6 +7,7 @@ import { ResearchScatter } from '../components/ResearchScatter';
 import { toast } from '../components/ToastHost';
 import { exportAllBacktests, listBacktests } from '../services/api';
 import type { BacktestResult, BacktestSummary, EquityPoint } from '../types';
+import { getCompareA, toggleCompareRun } from '../utils/compareQueue';
 import { downloadText } from '../utils/download';
 import { isFavorite, listFavorites, toggleFavorite } from '../utils/favorites';
 import { getNote } from '../utils/researchNotes';
@@ -30,6 +31,7 @@ export function HistoryPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [picked, setPicked] = useState<number[]>([]);
   const [cohort, setCohort] = useState<number[]>([]);
+  const [compareA, setCompareAState] = useState<number | null>(() => getCompareA());
   const [archiving, setArchiving] = useState(false);
   const [libraryBusy, setLibraryBusy] = useState(false);
   const [library, setLibrary] = useState<BacktestResult[] | null>(null);
@@ -49,6 +51,22 @@ export function HistoryPage() {
   function toggleCohort(id: number) {
     setCohort((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-8)));
   }
+
+  function queueCompare(id: number) {
+    const res = toggleCompareRun(id, navigate);
+    setCompareAState(getCompareA());
+    if (res.kind === 'queued') {
+      toast(`Compare · #${id} waiting`, { tone: 'ok', body: 'Pick another run as B.' });
+    } else if (res.kind === 'cleared') {
+      toast('Compare cleared', { tone: 'info' });
+    }
+  }
+
+  useEffect(() => {
+    const sync = () => setCompareAState(getCompareA());
+    window.addEventListener('quantify-compare-queue', sync);
+    return () => window.removeEventListener('quantify-compare-queue', sync);
+  }, []);
 
   async function downloadArchive() {
     setArchiving(true);
@@ -271,6 +289,11 @@ export function HistoryPage() {
                 ))}
               </select>
             ) : null}
+            {compareA ? (
+              <span className="desk-pill desk-pill--pass" title="Global compare queue">
+                A · #{compareA}
+              </span>
+            ) : null}
             <button
               type="button"
               className="btn primary small"
@@ -280,6 +303,9 @@ export function HistoryPage() {
             >
               Compare {picked.length}/2
             </button>
+            <Link className="btn ghost small" to="/compare">
+              Launcher
+            </Link>
             <button
               type="button"
               className="btn secondary small"
@@ -433,7 +459,9 @@ export function HistoryPage() {
                 {filtered.map((item) => (
                   <tr
                     key={item.id}
-                    className={`${picked.includes(item.id) ? 'picked' : ''}${cohort.includes(item.id) ? ' cohort' : ''}`}
+                    className={`${picked.includes(item.id) ? 'picked' : ''}${cohort.includes(item.id) ? ' cohort' : ''}${
+                      compareA === item.id ? ' history-row--compare-a' : ''
+                    }`}
                     onClick={(e) => {
                       if (e.shiftKey) {
                         e.preventDefault();
@@ -444,7 +472,7 @@ export function HistoryPage() {
                     <td>
                       <input
                         type="checkbox"
-                        aria-label={`Compare run ${item.id}`}
+                        aria-label={`Pick run ${item.id} for bulk compare`}
                         checked={picked.includes(item.id)}
                         onChange={() => togglePick(item.id)}
                       />
@@ -477,9 +505,32 @@ export function HistoryPage() {
                     <td className="neg">{pct(item.max_drawdown)}</td>
                     <td className="mono">{item.number_of_trades ?? '—'}</td>
                     <td>
-                      <Link className="btn secondary small" to={`/results/${item.id}`}>
-                        Open
-                      </Link>
+                      <div className="btn-row" style={{ gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          className={`btn ${compareA === item.id ? 'primary' : 'ghost'} small`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            queueCompare(item.id);
+                          }}
+                          title={
+                            compareA && compareA !== item.id
+                              ? `Duel vs #${compareA}`
+                              : compareA === item.id
+                                ? 'Clear compare A'
+                                : 'Queue as compare A'
+                          }
+                        >
+                          {compareA && compareA !== item.id
+                            ? `vs #${compareA}`
+                            : compareA === item.id
+                              ? 'A · clear'
+                              : 'Compare'}
+                        </button>
+                        <Link className="btn secondary small" to={`/results/${item.id}`}>
+                          Open
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -588,6 +588,94 @@ html[data-density='compact'] .btn {
   }
 }
 
+/* —— Sidebar rails —— */
+.fav-rail,
+.activity-feed {
+  margin: 0.15rem 0.2rem 0.55rem;
+  padding: 0.55rem 0.55rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background:
+    linear-gradient(180deg, rgba(79, 214, 160, 0.06), transparent 42%),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.fav-rail__head,
+.activity-feed__label {
+  margin-bottom: 0.4rem;
+}
+
+.activity-feed {
+  padding-bottom: 0.35rem;
+}
+
+.activity-feed ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.activity-feed a {
+  color: var(--text-secondary);
+  text-underline-offset: 0.16em;
+}
+
+.activity-feed a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(79, 214, 160, 0.4);
+}
+
+.fav-chip {
+  transition:
+    transform 0.18s var(--ease-spring),
+    border-color 0.18s var(--ease-out),
+    background 0.18s var(--ease-out);
+}
+
+.fav-chip:hover {
+  transform: translateY(-1px);
+}
+
+.cmdk__item.active {
+  background: rgba(79, 214, 160, 0.1) !important;
+  border-radius: 10px;
+}
+
+.compare-launcher__chip:hover {
+  border-color: rgba(79, 214, 160, 0.45) !important;
+  background: rgba(79, 214, 160, 0.08) !important;
+}
+
+.history-row--compare-a td {
+  background: rgba(79, 214, 160, 0.07);
+}
+
+.history-row--compare-a td:first-child {
+  box-shadow: inset 2.5px 0 0 var(--accent);
+}
+
+.sidebar-cmd .cmd-hint {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out);
+}
+
+.sidebar-cmd .cmd-hint:hover {
+  border-color: rgba(79, 214, 160, 0.3);
+  background: rgba(79, 214, 160, 0.06);
+}
+
+.density-toggle {
+  border-radius: 999px;
+  transition: background 0.18s var(--ease-out), border-color 0.18s var(--ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .main-page,
   .banner,
@@ -596,7 +684,8 @@ html[data-density='compact'] .btn {
   .pricing-card,
   .chip,
   .nav a,
-  .brand-mark-lg {
+  .brand-mark-lg,
+  .fav-chip {
     animation: none !important;
     transition: none !important;
     filter: none !important;
